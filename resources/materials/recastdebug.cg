@@ -1,0 +1,52 @@
+//////////////////////////////////////////////////////////////////////////////
+
+void recastwalk_vs(
+    float4 InPos : POSITION,
+      float3 InCol : COLOR,
+
+      out float4 OutPos : POSITION,
+      out float3 OutCol : COLOR, 
+
+    uniform float4x4 wvp
+    ) 
+{
+      OutCol = InCol ;
+    OutPos = mul(wvp, InPos);
+}
+
+
+void recastwalk_ps(
+   float4 InPos : POSITION,
+   float3 InCol : COLOR,
+   out float4 Colour : COLOR
+) 
+{
+    Colour = float4(InCol*0.9, 1);
+}
+
+
+//////////////////////////////////////////////////////////////////////////////
+
+void recastline_vs(
+    float4 InPos : POSITION,
+      float3 InCol : COLOR,
+
+      out float4 OutPos : POSITION,
+      out float3 OutCol : COLOR, 
+
+    uniform float4x4 wvp
+    ) 
+{
+      OutCol = InCol ;
+    OutPos = mul(wvp, InPos);
+}
+
+
+void recastline_ps(
+   float4 InPos : POSITION,
+   float3 InCol : COLOR,
+   out float4 Colour : COLOR
+) 
+{
+    Colour = float4(InCol*0.9, 1);
+}
