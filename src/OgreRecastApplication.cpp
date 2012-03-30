@@ -37,9 +37,28 @@ void OgreRecastApplication::createScene(void)
     Ogre::SceneNode* mapNode = mSceneMgr->getRootSceneNode()->createChildSceneNode("MapNode");
     mapNode->attachObject(mapE);
 
-    // Create the navmesh
+    // RECAST
+    // Create the navmesh and show it
     mRecastDemo = new OgreRecastDemo(mSceneMgr);
-    mRecastDemo->NavMeshBuild(mapE);
+    if(mRecastDemo->NavMeshBuild(mapE)) {
+        mRecastDemo->drawNavMesh();
+    } else {
+        Ogre::LogManager::getSingletonPtr()->logMessage("ERROR: could not generate useable navmesh from mesh.");
+        return;
+    }
+
+    // DETOUR
+    // Do a pathing on the navmesh and draw the path
+    int pathNb = 0;     // The index number for the slot in which the found path is to be stored
+    int targetId = 0;   // Number identifying the target the path leads to
+    float startPos[3]; OgreVect3ToFloatA(Ogre::Vector3(0,0,0), startPos);
+    float endPos[3]; OgreVect3ToFloatA(Ogre::Vector3(5,0,5), endPos);
+
+    int ret = mRecastDemo->FindPath(startPos, endPos, pathNb, targetId) ;
+    if( ret >= 0)
+        mRecastDemo->CreateRecastPathLine(0) ; // Draw a line showing path at slot 0
+    else
+        Ogre::LogManager::getSingletonPtr()->logMessage("ERROR: could not find a path. ("+Ogre::StringConverter::toString(ret)+")");
 }
 
 

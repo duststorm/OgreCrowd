@@ -18,6 +18,7 @@ public:
    int FindPath(float* pStartPos, float* pEndPos, int nPathSlot, int nTarget) ;
    void CreateRecastPolyMesh(const struct rcPolyMesh& mesh);
    void CreateRecastPathLine(int nPathSlot);
+   void drawNavMesh(void);
 
    unsigned char* m_triareas;
    rcHeightfield* m_solid;
@@ -88,7 +89,7 @@ public:
   * Convenience function for converting between Ogre::Vector3
   * and float* used by recast
  **/
-void OgreVect3ToFloatA(const Ogre::Vector3 vect, float* result);
+void inline OgreVect3ToFloatA(const Ogre::Vector3 vect, float* result);
 
 
 /**

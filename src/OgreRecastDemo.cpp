@@ -91,6 +91,9 @@ void OgreRecastDemo::testPathFind()
 **/
 bool OgreRecastDemo::NavMeshBuild(Ogre::Entity* srcMesh)
 {
+    // TODO: clean up unused variables
+
+
    // convert our geometry into the recast format
 
    m_pLog->logMessage("NavMeshBuild Start");
@@ -142,7 +145,7 @@ bool OgreRecastDemo::NavMeshBuild(Ogre::Entity* srcMesh)
    // TODO clean this up
    m_cellSize = /*9.0 ;//*/0.3;
    m_cellHeight = /*6.0 ;//*/0.2;
-   m_agentMaxSlope = 45;
+   m_agentMaxSlope = /*45*/20;
    m_agentHeight = /*64.0;*/0.5;
    m_agentMaxClimb = 16;
    m_agentRadius = /*16;*/0.5;
@@ -593,10 +596,10 @@ bool OgreRecastDemo::NavMeshBuild(Ogre::Entity* srcMesh)
 //   delete [] rc_tris ;
 //   delete [] rc_trinorms ;
 
-   CreateRecastPolyMesh(*m_pmesh) ;
+   //CreateRecastPolyMesh(*m_pmesh) ;   // Debug render it
 
    m_pLog->logMessage("NavMeshBuild End");
-   return true ;
+   return true;
 }
 
 
@@ -604,12 +607,24 @@ bool OgreRecastDemo::NavMeshBuild(Ogre::Entity* srcMesh)
 
 
 
-
-
+#include <math.h>
+static float frand()
+{
+        return (float)rand()/(float)RAND_MAX;
+}
 
 /**
  * Now for the pathfinding code. 
  * This takes a start point and an end point and, if possible, generates a list of lines in a path. It might fail if the start or end points aren't near any navmesh polygons, or if the path is too long, or it can't make a path, or various other reasons. So far I've not had problems though.
+ *
+ * Return codes:
+ *  0   found path
+ *  -1  Couldn't find polygon nearest to start point
+ *  -2  Couldn't find polygon nearest to end point
+ *  -3  Couldn't create a path
+ *  -4  Couldn't find a path
+ *  -5  Couldn't create a straight path
+ *  -6  Couldn't find a straight path
 **/
 int OgreRecastDemo::FindPath(float* pStartPos, float* pEndPos, int nPathSlot, int nTarget)
 {
@@ -630,6 +645,10 @@ int OgreRecastDemo::FindPath(float* pStartPos, float* pEndPos, int nPathSlot, in
    Filter.setIncludeFlags(0xFFFF) ;
    Filter.setExcludeFlags(0) ;
    Filter.setAreaCost(SAMPLE_POLYAREA_GROUND, 1.0f) ;
+
+
+   m_navQuery->findRandomPoint(&Filter, frand, &StartPoly, pStartPos);
+   m_navQuery->findRandomPoint(&Filter, frand, &EndPoly, pEndPos);
 
    // find the start polygon
    status=m_navQuery->findNearestPoly(pStartPos, pExtents, &Filter, &StartPoly, StartNearest) ;
@@ -677,9 +696,12 @@ int OgreRecastDemo::FindPath(float* pStartPos, float* pEndPos, int nPathSlot, in
  * Debug drawing functionality:
 **/
 
+void OgreRecastDemo::drawNavMesh() {
+    CreateRecastPolyMesh(*m_pmesh);
+}
+
 void OgreRecastDemo::CreateRecastPolyMesh(const struct rcPolyMesh& mesh)
 {
-
    const int nvp = mesh.nvp; 
    const float cs = mesh.cs;
    const float ch = mesh.ch;
@@ -842,10 +864,6 @@ void OgreRecastDemo::CreateRecastPathLine(int nPathSlot)
 
    m_pRecastMOPath->end() ;
    m_pRecastSN->attachObject(m_pRecastMOPath) ;
-
-
-
-
 }
 
 
@@ -853,6 +871,9 @@ void OgreRecastDemo::CreateRecastPathLine(int nPathSlot)
 
 
 
+/**
+  * Helpers
+  **/
 
 void OgreVect3ToFloatA(const Ogre::Vector3 vect, float* result)
 {
