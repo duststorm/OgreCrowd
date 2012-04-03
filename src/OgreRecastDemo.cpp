@@ -837,6 +837,7 @@ void OgreRecastDemo::CreateRecastPolyMesh(const struct rcPolyMesh& mesh)
 
 void OgreRecastDemo::CreateRecastPathLine(int nPathSlot)
 {
+   // Remove previously drawn line
    if(m_pRecastMOPath)
    {
       m_pRecastSN->detachObject("RecastMOPath") ;
@@ -844,7 +845,7 @@ void OgreRecastDemo::CreateRecastPathLine(int nPathSlot)
       m_pRecastMOPath=NULL ;
    }
 
-
+   // Create new manualobject for the line
    m_pRecastMOPath = m_pSceneMgr->createManualObject("RecastMOPath");
    m_pRecastMOPath->begin("recastline", Ogre::RenderOperation::OT_LINE_STRIP) ;
 
@@ -853,13 +854,11 @@ void OgreRecastDemo::CreateRecastPathLine(int nPathSlot)
    for(int nVert=0 ; nVert<nVertCount ; nVert++)
    {
       m_pRecastMOPath->position(m_PathStore[nPathSlot].PosX[nVert], m_PathStore[nPathSlot].PosY[nVert]+8.0f, m_PathStore[nPathSlot].PosZ[nVert]) ;
-      m_pRecastMOPath->colour(1,0,0) ;
+      m_pRecastMOPath->colour(1,0,0);   // Assign red as vertex color
 
       //sprintf(m_chBug, "Line Vert %i, %f %f %f", nVert, m_PathStore[nPathSlot].PosX[nVert], m_PathStore[nPathSlot].PosY[nVert], m_PathStore[nPathSlot].PosZ[nVert]) ;
       //m_pLog->logMessage(m_chBug);
    }
-               
-
 
 
    m_pRecastMOPath->end() ;
@@ -875,7 +874,7 @@ void OgreRecastDemo::CreateRecastPathLine(int nPathSlot)
   * Helpers
   **/
 
-void OgreVect3ToFloatA(const Ogre::Vector3 vect, float* result)
+void OgreRecastDemo::OgreVect3ToFloatA(const Ogre::Vector3 vect, float* result)
 {
     result[0] = vect[0];
     result[1] = vect[1];
@@ -883,7 +882,7 @@ void OgreVect3ToFloatA(const Ogre::Vector3 vect, float* result)
 };
 
 
-void getMeshInformation(const Ogre::MeshPtr mesh,
+void OgreRecastDemo::getMeshInformation(const Ogre::MeshPtr mesh,
                         size_t &vertex_count,
                         Ogre::Vector3* &vertices,
                         size_t &index_count,
