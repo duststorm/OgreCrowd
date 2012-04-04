@@ -29,11 +29,13 @@ OgreRecastApplication::~OgreRecastApplication(void)
 //-------------------------------------------------------------------------------------
 void OgreRecastApplication::createScene(void)
 {
+    // Create navigateable dungeon
     mSceneMgr->setAmbientLight(Ogre::ColourValue(0.5f, 0.5f, 0.5f));
     Ogre::Light* light = mSceneMgr->createLight( "MainLight" );
     light->setPosition(20, 80, 50);
 
     Ogre::Entity* mapE = mSceneMgr->createEntity("Map", "dungeon.mesh");
+    mapE->setMaterialName("dungeon");
     Ogre::SceneNode* mapNode = mSceneMgr->getRootSceneNode()->createChildSceneNode("MapNode");
     mapNode->attachObject(mapE);
 
@@ -59,6 +61,9 @@ void OgreRecastApplication::createScene(void)
         mRecastDemo->CreateRecastPathLine(0) ; // Draw a line showing path at slot 0
     else
         Ogre::LogManager::getSingletonPtr()->logMessage("ERROR: could not find a path. ("+Ogre::StringConverter::toString(ret)+")");
+
+
+    // TODO: Voeg steering toe, en cylinders om agents aan te geven, en allow mouseclick path defining
 }
 
 

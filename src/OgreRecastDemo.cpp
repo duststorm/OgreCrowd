@@ -179,11 +179,11 @@ bool OgreRecastDemo::NavMeshBuild(Ogre::Entity* srcMesh)
    m_navMeshEdgesOffsetFromGround = m_cellHeight/3;        // Distance above ground for drawing edges of navmesh (should be slightly higher than navmesh polygons)
    m_pathOffsetFromGround = m_agentHeight+m_navMeshOffsetFromGround; // Distance above ground for drawing path debug lines relative to cellheight (should be higher than navmesh polygons)
 
-   m_navmeshNeighbourEdgeCol= Ogre::ColourValue(1,1,0);     // Yellow
-   m_navmeshOuterEdgeCol    = Ogre::ColourValue(0,1,0);     // Green
-   m_navmeshGroundPolygonCol= Ogre::ColourValue(0,0.7,0);   // Green
-   m_navmeshOtherPolygonCol = Ogre::ColourValue(0,0.175,0); // Dark green
-   m_pathCol                = Ogre::ColourValue(1,0,0);     // Red
+   m_navmeshNeighbourEdgeCol= Ogre::ColourValue(0.9,0.9,0.9);   // Light Grey
+   m_navmeshOuterEdgeCol    = Ogre::ColourValue(0,0,0);         // Black
+   m_navmeshGroundPolygonCol= Ogre::ColourValue(0,0.7,0);       // Green
+   m_navmeshOtherPolygonCol = Ogre::ColourValue(0,0.175,0);     // Dark green
+   m_pathCol                = Ogre::ColourValue(1,0,0);         // Red
 
    
 
