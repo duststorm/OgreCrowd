@@ -2,10 +2,10 @@
 
 //////////////////////////////////////////////////////////////////////////////
 
-vertex_program recastwalk_vs cg         
+vertex_program recastdebug_vs cg         
 {
    source recastdebug.cg
-   entry_point recastwalk_vs
+   entry_point recastdebug_vs
    profiles arbvp1 vs_2_x
 
       default_params
@@ -14,15 +14,15 @@ vertex_program recastwalk_vs cg
       }
 }
 
-fragment_program recastwalk_ps cg         
+fragment_program recastdebug_ps cg         
 {
    source recastdebug.cg
-   entry_point recastwalk_ps
+   entry_point recastdebug_ps
    profiles ps_2_x fp40 arbfp1 fp30
 }
 
 
-material recastwalk
+material recastdebug
 {
    technique
    {
@@ -34,11 +34,11 @@ material recastwalk
                specular 0 0 0 0
                emissive 0 0 0
 
-               vertex_program_ref recastwalk_vs
+               vertex_program_ref recastdebug_vs
                {
                }
 
-               fragment_program_ref recastwalk_ps
+               fragment_program_ref recastdebug_ps
                {
                }
        }
@@ -47,49 +47,4 @@ material recastwalk
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-vertex_program recastline_vs cg         
-{
-   source recastdebug.cg
-   entry_point recastline_vs
-   profiles arbvp1 vs_2_x
-
-      default_params
-    {
-        param_named_auto wvp worldviewproj_matrix
-      }
-}
-
-fragment_program recastline_ps cg         
-{
-   source recastdebug.cg
-   entry_point recastline_ps
-   profiles ps_2_x fp40 arbfp1 fp30
-}
-
-
-material recastline
-{
-   technique
-   {
-
-       pass
-       {
-               ambient  0 0 0
-               diffuse  0 0 0
-               specular 0 0 0 0
-               emissive 0 0 0
-
-                     depth_bias 16
-
-               vertex_program_ref recastline_vs
-               {
-               }
-
-               fragment_program_ref recastline_ps
-               {
-               }
-       }
-   }
-}_
 

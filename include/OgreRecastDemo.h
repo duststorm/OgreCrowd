@@ -16,7 +16,7 @@ public:
    void testPathFind();
    bool NavMeshBuild(Ogre::Entity* srcMesh);
    int FindPath(float* pStartPos, float* pEndPos, int nPathSlot, int nTarget) ;
-   void CreateRecastPolyMesh(const struct rcPolyMesh& mesh);
+   void CreateRecastPolyMesh(const struct rcPolyMesh& mesh, bool colorRegions=true);
    void CreateRecastPathLine(int nPathSlot);
    void drawNavMesh(void);
 
@@ -100,6 +100,16 @@ public:
    float *m_normals;
    int m_flDataX;
    int m_flDataY;
+
+   float m_pathOffsetFromGround;
+   float m_navMeshOffsetFromGround;
+   float m_navMeshEdgesOffsetFromGround;
+
+   Ogre::ColourValue m_navmeshNeighbourEdgeCol;
+   Ogre::ColourValue m_navmeshOuterEdgeCol;
+   Ogre::ColourValue m_navmeshGroundPolygonCol;
+   Ogre::ColourValue m_navmeshOtherPolygonCol;
+   Ogre::ColourValue m_pathCol;
 
    /**
     * Stores all created paths

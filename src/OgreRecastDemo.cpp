@@ -142,14 +142,14 @@ bool OgreRecastDemo::NavMeshBuild(Ogre::Entity* srcMesh)
    // cellsize (1.5, 1.0) was the most accurate at finding all the places we could go, but was also slow to generate.
    // Might be suitable for pre-generated meshes. Though it also produces a lot more polygons.
 
-   // TODO clean this up
-   m_cellSize = /*9.0 ;//*/0.3;
-   m_cellHeight = /*6.0 ;//*/0.2;
-   m_agentMaxSlope = /*45*/20;
-   m_agentHeight = /*64.0;*/0.5;
-   m_agentMaxClimb = 16;
-   m_agentRadius = /*16;*/0.5;
-   m_edgeMaxLen = 512;
+   // TODO clean this up, put in some more clear place, allow config file
+   m_cellSize = /*9.0 ;//*/0.3;         //*
+   m_cellHeight = /*6.0 ;//*/0.2;       //*
+   m_agentMaxSlope = /*45*/20;          //*
+   m_agentHeight = /*64.0;*/0.5;        //*
+   m_agentMaxClimb = 16;                //*
+   m_agentRadius = /*16;*/0.5;          //*
+   m_edgeMaxLen = 12/*512*/;
    m_edgeMaxError = 1.3;
    m_regionMinSize = 50;
    m_regionMergeSize = 20;
@@ -173,6 +173,18 @@ bool OgreRecastDemo::NavMeshBuild(Ogre::Entity* srcMesh)
    m_cfg.maxVertsPerPoly = (int)m_vertsPerPoly;
    m_cfg.detailSampleDist = m_detailSampleDist < 0.9f ? 0 : m_cellSize * m_detailSampleDist;
    m_cfg.detailSampleMaxError = m_cellHeight * m_detailSampleMaxError;
+
+
+   m_navMeshOffsetFromGround = m_cellHeight/5;//0.25;      // Distance above ground for drawing navmesh polygons
+   m_navMeshEdgesOffsetFromGround = m_cellHeight/3;        // Distance above ground for drawing edges of navmesh (should be slightly higher than navmesh polygons)
+   m_pathOffsetFromGround = m_agentHeight+m_navMeshOffsetFromGround; // Distance above ground for drawing path debug lines relative to cellheight (should be higher than navmesh polygons)
+
+   m_navmeshNeighbourEdgeCol= Ogre::ColourValue(1,1,0);     // Yellow
+   m_navmeshOuterEdgeCol    = Ogre::ColourValue(0,1,0);     // Green
+   m_navmeshGroundPolygonCol= Ogre::ColourValue(0,0.7,0);   // Green
+   m_navmeshOtherPolygonCol = Ogre::ColourValue(0,0.175,0); // Dark green
+   m_pathCol                = Ogre::ColourValue(1,0,0);     // Red
+
    
 
    // Set the area where the navigation mesh will be build.
@@ -700,7 +712,7 @@ void OgreRecastDemo::drawNavMesh() {
     CreateRecastPolyMesh(*m_pmesh);
 }
 
-void OgreRecastDemo::CreateRecastPolyMesh(const struct rcPolyMesh& mesh)
+void OgreRecastDemo::CreateRecastPolyMesh(const struct rcPolyMesh& mesh, bool colorRegions)
 {
    const int nvp = mesh.nvp; 
    const float cs = mesh.cs;
@@ -709,21 +721,29 @@ void OgreRecastDemo::CreateRecastPolyMesh(const struct rcPolyMesh& mesh)
 
    m_flDataX=mesh.npolys ;
    m_flDataY=mesh.nverts ;
+
+   // When drawing regions choose different random colors for each region
+   Ogre::ColourValue* regionColors = NULL;
+   if(colorRegions) {
+       regionColors = new Ogre::ColourValue[mesh.maxpolys];
+       for (int i = 0; i < mesh.maxpolys; ++i) {
+           regionColors[i] = Ogre::ColourValue(Ogre::Math::RangeRandom(0,1), Ogre::Math::RangeRandom(0,1), Ogre::Math::RangeRandom(0,1), 1);
+       }
+   }
    
    // create scenenodes
    m_pRecastSN=m_pSceneMgr->getRootSceneNode()->createChildSceneNode("RecastSN") ;
 
    int nIndex=0 ;
-   m_nAreaCount=mesh.npolys ;
-
+   m_nAreaCount=mesh.npolys;
 
 
    if(m_nAreaCount)
    {
 
-      // start defining the manualObject
+      // start defining the manualObject with the navmesh planes
       m_pRecastMOWalk = m_pSceneMgr->createManualObject("RecastMOWalk");
-      m_pRecastMOWalk->begin("recastwalk", Ogre::RenderOperation::OT_TRIANGLE_LIST) ;
+      m_pRecastMOWalk->begin("recastdebug", Ogre::RenderOperation::OT_TRIANGLE_LIST) ;
       for (int i = 0; i < mesh.npolys; ++i) // go through all polygons
          if (mesh.areas[i] == SAMPLE_POLYAREA_GROUND)
          {
@@ -740,14 +760,18 @@ void OgreRecastDemo::CreateRecastPolyMesh(const struct rcPolyMesh& mesh)
                {
                   const unsigned short* v = &mesh.verts[vi[k]*3];
                   const float x = orig[0] + v[0]*cs;
-                  const float y = orig[1] + (v[1]+1)*ch;
+                  const float y = orig[1] + (v[1]/*+1*/)*ch;
                   const float z = orig[2] + v[2]*cs;
 
-                  m_pRecastMOWalk->position(x, y, z) ;
-                  if (mesh.areas[i] == SAMPLE_POLYAREA_GROUND)
-                     m_pRecastMOWalk->colour(0,0.7,0) ;
-                  else
-                     m_pRecastMOWalk->colour(0,0.175,0) ;
+                  m_pRecastMOWalk->position(x, y+m_navMeshOffsetFromGround, z);
+                  if(colorRegions) {
+                      m_pRecastMOWalk->colour(regionColors[mesh.regs[i]]);
+                  } else {
+                      if (mesh.areas[i] == SAMPLE_POLYAREA_GROUND)
+                         m_pRecastMOWalk->colour(m_navmeshGroundPolygonCol);
+                      else
+                         m_pRecastMOWalk->colour(m_navmeshOtherPolygonCol);
+                  }
 
                }
                m_pRecastMOWalk->triangle(nIndex, nIndex+1, nIndex+2) ;
@@ -759,9 +783,9 @@ void OgreRecastDemo::CreateRecastPolyMesh(const struct rcPolyMesh& mesh)
 
 
 
-      
+      // Define manualObject with the navmesh edges between neighbouring polygons
       m_pRecastMONeighbour = m_pSceneMgr->createManualObject("RecastMONeighbour");
-      m_pRecastMONeighbour->begin("recastline", Ogre::RenderOperation::OT_LINE_LIST) ;
+      m_pRecastMONeighbour->begin("recastdebug", Ogre::RenderOperation::OT_LINE_LIST) ;
 
       for (int i = 0; i < mesh.npolys; ++i)
       {
@@ -780,11 +804,11 @@ void OgreRecastDemo::CreateRecastPolyMesh(const struct rcPolyMesh& mesh)
             {
                const unsigned short* v = &mesh.verts[vi[k]*3];
                const float x = orig[0] + v[0]*cs;
-               const float y = orig[1] + (v[1]+1)*ch + 0.1f;
+               const float y = orig[1] + (v[1]/*+1*/)*ch /*+ 0.1f*/;
                const float z = orig[2] + v[2]*cs;
                //dd->vertex(x, y, z, coln);
-               m_pRecastMONeighbour->position(x, y+0.25, z) ;
-               m_pRecastMONeighbour->colour(0,1,1) ;
+               m_pRecastMONeighbour->position(x, y+m_navMeshOffsetFromGround, z) ;
+               m_pRecastMONeighbour->colour(m_navmeshNeighbourEdgeCol) ;
 
             }
          }
@@ -794,8 +818,9 @@ void OgreRecastDemo::CreateRecastPolyMesh(const struct rcPolyMesh& mesh)
       m_pRecastSN->attachObject(m_pRecastMONeighbour) ;
       
 
+      // Define manualObject with navmesh outer edges (boundaries)
       m_pRecastMOBoundary = m_pSceneMgr->createManualObject("RecastMOBoundary");
-      m_pRecastMOBoundary->begin("recastline", Ogre::RenderOperation::OT_LINE_LIST) ;
+      m_pRecastMOBoundary->begin("recastdebug", Ogre::RenderOperation::OT_LINE_LIST) ;
 
       for (int i = 0; i < mesh.npolys; ++i)
       {
@@ -814,12 +839,12 @@ void OgreRecastDemo::CreateRecastPolyMesh(const struct rcPolyMesh& mesh)
             {
                const unsigned short* v = &mesh.verts[vi[k]*3];
                const float x = orig[0] + v[0]*cs;
-               const float y = orig[1] + (v[1]+1)*ch + 0.1f;
+               const float y = orig[1] + (v[1]/*+1*/)*ch /*+ 0.1f*/;
                const float z = orig[2] + v[2]*cs;
                //dd->vertex(x, y, z, colb);
 
-               m_pRecastMOBoundary->position(x, y+0.25, z) ;
-               m_pRecastMOBoundary->colour(0,1,0) ;
+               m_pRecastMOBoundary->position(x, y+m_navMeshEdgesOffsetFromGround, z) ;
+               m_pRecastMOBoundary->colour(m_navmeshOuterEdgeCol);
             }
          }
       }
@@ -832,6 +857,8 @@ void OgreRecastDemo::CreateRecastPolyMesh(const struct rcPolyMesh& mesh)
 
    }// end areacount
 
+   if(regionColors)
+       delete[] regionColors;
 
 }
 
@@ -847,14 +874,14 @@ void OgreRecastDemo::CreateRecastPathLine(int nPathSlot)
 
    // Create new manualobject for the line
    m_pRecastMOPath = m_pSceneMgr->createManualObject("RecastMOPath");
-   m_pRecastMOPath->begin("recastline", Ogre::RenderOperation::OT_LINE_STRIP) ;
+   m_pRecastMOPath->begin("recastdebug", Ogre::RenderOperation::OT_LINE_STRIP) ;
 
    
    int nVertCount=m_PathStore[nPathSlot].MaxVertex ;
    for(int nVert=0 ; nVert<nVertCount ; nVert++)
    {
-      m_pRecastMOPath->position(m_PathStore[nPathSlot].PosX[nVert], m_PathStore[nPathSlot].PosY[nVert]+8.0f, m_PathStore[nPathSlot].PosZ[nVert]) ;
-      m_pRecastMOPath->colour(1,0,0);   // Assign red as vertex color
+      m_pRecastMOPath->position(m_PathStore[nPathSlot].PosX[nVert], m_PathStore[nPathSlot].PosY[nVert]+m_pathOffsetFromGround, m_PathStore[nPathSlot].PosZ[nVert]) ;
+      m_pRecastMOPath->colour(m_pathCol);   // Assign vertex color
 
       //sprintf(m_chBug, "Line Vert %i, %f %f %f", nVert, m_PathStore[nPathSlot].PosX[nVert], m_PathStore[nPathSlot].PosY[nVert], m_PathStore[nPathSlot].PosZ[nVert]) ;
       //m_pLog->logMessage(m_chBug);
