@@ -807,7 +807,7 @@ void OgreRecastDemo::CreateRecastPolyMesh(const struct rcPolyMesh& mesh, bool co
                const float y = orig[1] + (v[1]/*+1*/)*ch /*+ 0.1f*/;
                const float z = orig[2] + v[2]*cs;
                //dd->vertex(x, y, z, coln);
-               m_pRecastMONeighbour->position(x, y+m_navMeshOffsetFromGround, z) ;
+               m_pRecastMONeighbour->position(x, y+m_navMeshEdgesOffsetFromGround, z) ;
                m_pRecastMONeighbour->colour(m_navmeshNeighbourEdgeCol) ;
 
             }
