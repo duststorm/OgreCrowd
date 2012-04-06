@@ -70,6 +70,8 @@ void OgreRecastApplication::createScene(void)
     // The rest of this method is specific to the demo
 
     // PLACE PATH BEGIN AND END MARKERS
+    beginPos.y = beginPos.y + mRecastDemo->m_navMeshOffsetFromGround;
+    endPos.y = endPos.y + mRecastDemo->m_navMeshOffsetFromGround;
     getOrCreateMarker("BeginPos", "Cylinder/Wires/DarkGreen")->setPosition(beginPos);
     getOrCreateMarker("EndPos", "Cylinder/Wires/Brown")->setPosition(endPos);
 
@@ -87,10 +89,12 @@ void OgreRecastApplication::createScene(void)
     navMeshNode->getAttachedObject("RecastMOBoundary")->setQueryFlags(DEFAULT_MASK);
     mapE->setQueryFlags(DEFAULT_MASK);
 
-    // TODO: Voeg steering toe
+    // TODO: Voeg steering toe (possibilities: Millington, Buckland, opensteer)
     // TODO: Agents plaatsen
     // TODO: voeg meerdere paden toe
     // TODO: DetourCrowd toevoegen
+
+    // TODO: klassen maken voor DetourPath etc, ipv gedoe met path slot
 }
 
 
