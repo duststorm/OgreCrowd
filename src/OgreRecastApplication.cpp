@@ -221,7 +221,6 @@ bool OgreRecastApplication::mousePressed( const OIS::MouseEvent &arg, OIS::Mouse
 
         if(markerNode != NULL) {
             markerNode->setPosition(rayHitPoint);
-            //markerNode->setScale(0.1f, 0.1f, 0.1f);
         }
     }
 
@@ -240,6 +239,7 @@ Ogre::SceneNode* OgreRecastApplication::getOrCreateMarker(Ogre::String name, Ogr
             ent->setMaterialName(materialName);
         result->attachObject(ent);
         ent->setQueryFlags(DEFAULT_MASK);   // Exclude from ray queries
+        result->setScale(mRecastDemo->m_agentRadius*2, mRecastDemo->m_agentHeight,mRecastDemo->m_agentRadius*2);
     }
 
     return result;

@@ -146,7 +146,7 @@ bool OgreRecastDemo::NavMeshBuild(Ogre::Entity* srcMesh)
    m_cellSize = /*9.0 ;//*/0.3;         //*
    m_cellHeight = /*6.0 ;//*/0.2;       //*
    m_agentMaxSlope = /*45*/20;          //*
-   m_agentHeight = /*64.0;*/0.5;        //*
+   m_agentHeight = /*64.0;*/1;        //*
    m_agentMaxClimb = 16;                //*
    m_agentRadius = /*16;*/0.5;          //*
    m_edgeMaxLen = 12/*512*/;
