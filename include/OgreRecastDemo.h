@@ -38,6 +38,10 @@ public:
     **/
    void FloatAToOgreVect3(const float* vect, Ogre::Vector3 &result);
 
+   /**
+     * Translate error code of detour findPath into a readable explanation
+     **/
+   Ogre::String getPathFindErrorMsg(int errorCode);
 
 
    /**

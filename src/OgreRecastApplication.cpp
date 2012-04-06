@@ -30,9 +30,6 @@ OgreRecastApplication::~OgreRecastApplication(void)
 //-------------------------------------------------------------------------------------
 void OgreRecastApplication::createScene(void)
 {
-    Ogre::MovableObject::setDefaultQueryFlags(NAVMESH_MASK);
-    mSceneMgr->getRootSceneNode()->_update(true, false);
-
     // Create navigateable dungeon
     mSceneMgr->setAmbientLight(Ogre::ColourValue(0.5f, 0.5f, 0.5f));
     Ogre::Light* light = mSceneMgr->createLight( "MainLight" );
@@ -66,7 +63,19 @@ void OgreRecastApplication::createScene(void)
     if( ret >= 0)
         mRecastDemo->CreateRecastPathLine(pathNb) ; // Draw a line showing path at specified slot
     else
-        Ogre::LogManager::getSingletonPtr()->logMessage("ERROR: could not find a path. ("+Ogre::StringConverter::toString(ret)+")");
+        Ogre::LogManager::getSingletonPtr()->logMessage("ERROR: could not find a path. ("+mRecastDemo->getPathFindErrorMsg(ret)+")");
+
+
+    //-------------------------------------------------
+    // The rest of this method is specific to the demo
+
+    // PLACE PATH BEGIN AND END MARKERS
+    getOrCreateMarker("BeginPos", "Cylinder/Wires/DarkGreen")->setPosition(beginPos);
+    getOrCreateMarker("EndPos", "Cylinder/Wires/Brown")->setPosition(endPos);
+
+
+    // ADJUST CAMERA MOVING SPEED (default is 150)
+    mCameraMan->setTopSpeed(80);
 
 
     // SETUP RAY SCENE QUERYING
@@ -104,8 +113,9 @@ bool OgreRecastApplication::rayQueryPointInScene(Ogre::Ray ray, unsigned long qu
         Ogre::MovableObject *closest_movable;
         for (size_t qr_idx = 0; qr_idx < query_result.size(); qr_idx++)
         {
-            Ogre::LogManager::getSingletonPtr()->logMessage(query_result[qr_idx].movable->getName());
-            Ogre::LogManager::getSingletonPtr()->logMessage(query_result[qr_idx].movable->getMovableType());
+            // Debug:
+            //Ogre::LogManager::getSingletonPtr()->logMessage(query_result[qr_idx].movable->getName());
+            //Ogre::LogManager::getSingletonPtr()->logMessage(query_result[qr_idx].movable->getMovableType());
 
 
             // stop checking if we have found a raycast hit that is closer
@@ -258,7 +268,7 @@ void OgreRecastApplication::drawPathBetweenMarkers(int pathNb, int targetId)
         if( ret >= 0)
             mRecastDemo->CreateRecastPathLine(pathNb) ; // Draw a line showing path at slot 0
         else
-            Ogre::LogManager::getSingletonPtr()->logMessage("ERROR: could not find a path. ("+Ogre::StringConverter::toString(ret)+")");
+            Ogre::LogManager::getSingletonPtr()->logMessage("ERROR: could not find a path. ("+mRecastDemo->getPathFindErrorMsg(ret)+")");
     } catch(Ogre::Exception ex) {
         // Either begin or end marker have not yet been placed
         return;

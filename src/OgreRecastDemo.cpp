@@ -1165,3 +1165,27 @@ Ogre::Vector3 OgreRecastDemo::getRandomNavMeshPoint()
 
     return Ogre::Vector3(resultPoint[0], resultPoint[1], resultPoint[2]);
 }
+
+Ogre::String OgreRecastDemo::getPathFindErrorMsg(int errorCode)
+{
+    Ogre::String code = Ogre::StringConverter::toString(errorCode);
+    switch(errorCode) {
+        case 0:
+                return code +" -- No error.";
+        case -1:
+                return code +" -- Couldn't find polygon nearest to start point.";
+        case -2:
+                return code +" -- Couldn't find polygon nearest to end point.";
+        case -3:
+                return code +" -- Couldn't create a path.";
+        case -4:
+                return code +" -- Couldn't find a path.";
+        case -5:
+                return code +" -- Couldn't create a straight path.";
+        case -6:
+                return code +" -- Couldn't find a straight path.";
+        default:
+                return code + " -- Unknown detour error code.";
+    }
+}
+
