@@ -19,7 +19,8 @@ This source file is part of the
 //-------------------------------------------------------------------------------------
 OgreRecastApplication::OgreRecastApplication(void)
         : mRecastDemo(0),
-        mRayScnQuery(0)
+        mRayScnQuery(0),
+        mDetourCrowd(0)
 {
 }
 //-------------------------------------------------------------------------------------
@@ -89,12 +90,27 @@ void OgreRecastApplication::createScene(void)
     navMeshNode->getAttachedObject("RecastMOBoundary")->setQueryFlags(DEFAULT_MASK);
     mapE->setQueryFlags(DEFAULT_MASK);
 
+
+
+
+    // TODO: DetourCrowd toevoegen
+
+    // DETOUR CROWD
+    mDetourCrowd = new OgreDetourCrowd(mRecastDemo);
+    mDetourCrowd->addAgent(beginPos);
+    mDetourCrowd->setMoveTarget(endPos,false);
+    // TODO: werk met meerdere agents
+    // TODO: probeer paden te hergebruiken, zet scenarios op voor follow, flee, etc
+
+
     // TODO: Voeg steering toe (possibilities: Millington, Buckland, opensteer)
     // TODO: Agents plaatsen
     // TODO: voeg meerdere paden toe
-    // TODO: DetourCrowd toevoegen
 
     // TODO: klassen maken voor DetourPath etc, ipv gedoe met path slot
+    // TODO: getters definieren op eigen klassen
+    // TODO: path planning etc in aparte thread
+    // TODO: const en inline in method headings zetten waar mogelijk
 }
 
 
@@ -273,11 +289,28 @@ void OgreRecastApplication::drawPathBetweenMarkers(int pathNb, int targetId)
             mRecastDemo->CreateRecastPathLine(pathNb) ; // Draw a line showing path at slot 0
         else
             Ogre::LogManager::getSingletonPtr()->logMessage("ERROR: could not find a path. ("+mRecastDemo->getPathFindErrorMsg(ret)+")");
+
+        mDetourCrowd->removeAgent(0);
+        mDetourCrowd->addAgent(beginPos);
+        mDetourCrowd->setMoveTarget(endPos,false);
     } catch(Ogre::Exception ex) {
         // Either begin or end marker have not yet been placed
         return;
     }
 
+}
+
+bool OgreRecastApplication::frameRenderingQueued(const Ogre::FrameEvent& evt)
+{
+    mDetourCrowd->updateTick(evt.timeSinceLastFrame);
+    if(mDetourCrowd->m_crowd->getAgentCount() > 0) {
+        const float *pos = mDetourCrowd->m_crowd->getAgent(0)->npos;
+        Ogre::Vector3 agentPos;
+        mRecastDemo->FloatAToOgreVect3(pos,agentPos);
+        ((Ogre::SceneNode*)(mSceneMgr->getRootSceneNode()->getChild("BeginPosNode")))->setPosition(agentPos);
+    }
+
+    BaseApplication::frameRenderingQueued(evt);
 }
 
 

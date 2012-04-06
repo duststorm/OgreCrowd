@@ -20,6 +20,7 @@ This source file is part of the
 #include "BaseApplication.h"
 #include "OgreRecast.h"
 #include "OgreRecastDemo.h"
+#include "OgreDetourCrowd.h"
 
 class OgreRecastApplication : public BaseApplication
 {
@@ -41,11 +42,14 @@ public:
 protected:
     virtual void createScene(void);
     virtual bool mousePressed( const OIS::MouseEvent &arg, OIS::MouseButtonID id );
+    virtual bool frameRenderingQueued(const Ogre::FrameEvent& evt);
     void drawPathBetweenMarkers(int pathNb, int targetId);
 
 private:
         OgreRecastDemo* mRecastDemo;
         Ogre::RaySceneQuery* mRayScnQuery;
+
+        OgreDetourCrowd *mDetourCrowd;
 };
 
 

@@ -18,9 +18,9 @@ unix {
     # INCLUDEPATH += /usr/include/OGRE/Terrain
     # LIBS += -L/usr/lib/ \
     # -lOgreTerrain
-
     # Include Ogre Camera Control System addon (needs to be compiled and manually installed separately)
     INCLUDEPATH += /usr/include/OIS
+    
     # Include OIS
     LIBS += -L/usr/lib/ \
         -lOIS
@@ -29,8 +29,7 @@ unix {
     INCLUDEPATH += /usr/local/include/CEGUI
     LIBS += -L/usr/local/lib/CEGUI \
         -L/usr/local/lib # \
-
-
+    
     # INCLUDEPATH += dependencies/Caelum/include
     # INCLUDEPATH += dependencies/PagedGeometry/include
     # INCLUDEPATH += dependencies/CameraControlSystem/include
@@ -114,7 +113,8 @@ SOURCES += src/BaseApplication.cpp \
     src/Recast/Recast.cpp \
     src/Recast/RecastContour.cpp \
     src/Recast/RecastArea.cpp \
-    src/Recast/RecastRegion.cpp
+    src/Recast/RecastRegion.cpp \
+    src/OgreDetourCrowd.cpp
 HEADERS += include/BaseApplication.h \
     include/OgreRecastApplication.h \
     include/OgreRecastDemo.h \
@@ -136,4 +136,5 @@ HEADERS += include/BaseApplication.h \
     include/DetourCrowd/DetourPathCorridor.h \
     include/DetourCrowd/DetourObstacleAvoidance.h \
     include/DetourCrowd/DetourLocalBoundary.h \
-    include/DetourCrowd/DetourProximityGrid.h
+    include/DetourCrowd/DetourProximityGrid.h \
+    include/OgreDetourCrowd.h
