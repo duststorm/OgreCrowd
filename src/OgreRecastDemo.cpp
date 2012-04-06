@@ -765,7 +765,7 @@ void OgreRecastDemo::CreateRecastPolyMesh(const struct rcPolyMesh& mesh, bool co
 
                   m_pRecastMOWalk->position(x, y+m_navMeshOffsetFromGround, z);
                   if(colorRegions) {
-                      m_pRecastMOWalk->colour(regionColors[mesh.regs[i]]);
+                      m_pRecastMOWalk->colour(regionColors[mesh.regs[i]]);  // Assign vertex color
                   } else {
                       if (mesh.areas[i] == SAMPLE_POLYAREA_GROUND)
                          m_pRecastMOWalk->colour(m_navmeshGroundPolygonCol);
@@ -1025,3 +1025,111 @@ void OgreRecastDemo::getMeshInformation(const Ogre::MeshPtr mesh,
         current_offset = next_offset;
     }
 };
+
+
+
+
+void OgreRecastDemo::getManualMeshInformation(const Ogre::ManualObject *manual,
+                        size_t &vertex_count,
+                        Ogre::Vector3* &vertices,
+                        size_t &index_count,
+                        unsigned long* &indices,
+                        const Ogre::Vector3 &position,
+                        const Ogre::Quaternion &orient,
+                        const Ogre::Vector3 &scale)
+{
+        std::vector<Ogre::Vector3> returnVertices;
+        std::vector<unsigned long> returnIndices;
+        unsigned long thisSectionStart = 0;
+        for (int i=0; i<manual->getNumSections(); i++)
+        {
+                Ogre::ManualObject::ManualObjectSection * section = manual->getSection(i);
+                Ogre::RenderOperation * renderOp = section->getRenderOperation();
+
+                std::vector<Ogre::Vector3> pushVertices;
+                //Collect the vertices
+                {
+                        const Ogre::VertexElement * vertexElement = renderOp->vertexData->vertexDeclaration->findElementBySemantic(Ogre::VES_POSITION);
+                        Ogre::HardwareVertexBufferSharedPtr vertexBuffer = renderOp->vertexData->vertexBufferBinding->getBuffer(vertexElement->getSource());
+
+                        char * verticesBuffer = (char*)vertexBuffer->lock(Ogre::HardwareBuffer::HBL_READ_ONLY);
+                        float * positionArrayHolder;
+
+                        thisSectionStart = pushVertices.size();
+
+                        pushVertices.reserve(renderOp->vertexData->vertexCount);
+
+                        for (unsigned int j=0; j<renderOp->vertexData->vertexCount; j++)
+                        {
+                                vertexElement->baseVertexPointerToElement(verticesBuffer + j * vertexBuffer->getVertexSize(), &positionArrayHolder);
+                                Ogre::Vector3 vertexPos = Ogre::Vector3(positionArrayHolder[0],
+                                                                                                        positionArrayHolder[1],
+                                                                                                        positionArrayHolder[2]);
+
+                                vertexPos = (orient * (vertexPos * scale)) + position;
+
+                                pushVertices.push_back(vertexPos);
+                        }
+
+                        vertexBuffer->unlock();
+                }
+                //Collect the indices
+                {
+                        if (renderOp->useIndexes)
+                        {
+                                Ogre::HardwareIndexBufferSharedPtr indexBuffer = renderOp->indexData->indexBuffer;
+
+                                if (indexBuffer.isNull() || renderOp->operationType != Ogre::RenderOperation::OT_TRIANGLE_LIST)
+                                {
+                                        //No triangles here, so we just drop the collected vertices and move along to the next section.
+                                        continue;
+                                }
+                                else
+                                {
+                                        returnVertices.reserve(returnVertices.size() + pushVertices.size());
+                                        returnVertices.insert(returnVertices.end(), pushVertices.begin(), pushVertices.end());
+                                }
+
+                                unsigned int * pLong = (unsigned int*)indexBuffer->lock(Ogre::HardwareBuffer::HBL_READ_ONLY);
+                                unsigned short * pShort = (unsigned short*)pLong;
+
+                                returnIndices.reserve(returnIndices.size() + renderOp->indexData->indexCount);
+
+                                for (int j = 0; j < renderOp->indexData->indexCount; j++)
+                                {
+                                        unsigned long index;
+                                        //We also have got to remember that for a multi section object, each section has
+                                        //different vertices, so the indices will not be correct. To correct this, we
+                                        //have to add the position of the first vertex in this section to the index
+
+                                        //(At least I think so...)
+                                        if (indexBuffer->getType() == Ogre::HardwareIndexBuffer::IT_32BIT)
+                                                index = (unsigned long)pLong[j] + thisSectionStart;
+                                        else
+                                                index = (unsigned long)pShort[j] + thisSectionStart;
+
+                                        returnIndices.push_back(index);
+                                }
+
+                                indexBuffer->unlock();
+                        }
+                }
+        }
+
+        //Now we simply return the data.
+        index_count = returnIndices.size();
+        vertex_count = returnVertices.size();
+        vertices = new Ogre::Vector3[vertex_count];
+        for (unsigned long i = 0; i<vertex_count; i++)
+        {
+                vertices[i] = returnVertices[i];
+        }
+        indices = new unsigned long[index_count];
+        for (unsigned long i = 0; i<index_count; i++)
+        {
+                indices[i] = returnIndices[i];
+        }
+
+        //All done.
+        return;
+}

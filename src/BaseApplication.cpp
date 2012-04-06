@@ -98,6 +98,23 @@ void BaseApplication::createFrameListener(void)
     windowHndStr << windowHnd;
     pl.insert(std::make_pair(std::string("WINDOW"), windowHndStr.str()));
 
+
+    if(BaseApplication::DISABLE_LOCK_MOUSE)
+    {
+        // Fix OIS locking the mouse in render window. Especially useful when debugging
+        //      http://www.ogre3d.org/forums/viewtopic.php?f=5&t=61988
+        #if defined OIS_WIN32_PLATFORM
+           pl.insert(std::make_pair(std::string("w32_mouse"), std::string("DISCL_FOREGROUND" )));
+           pl.insert(std::make_pair(std::string("w32_mouse"), std::string("DISCL_NONEXCLUSIVE")));
+           pl.insert(std::make_pair(std::string("w32_keyboard"), std::string("DISCL_FOREGROUND")));
+           pl.insert(std::make_pair(std::string("w32_keyboard"), std::string("DISCL_NONEXCLUSIVE")));
+        #elif defined OIS_LINUX_PLATFORM
+           pl.insert(std::make_pair(std::string("x11_mouse_grab"), std::string("false")));
+           pl.insert(std::make_pair(std::string("x11_keyboard_grab"), std::string("false")));
+        #endif
+    }
+
+
     mInputManager = OIS::InputManager::createInputSystem( pl );
 
     mKeyboard = static_cast<OIS::Keyboard*>(mInputManager->createInputObject( OIS::OISKeyboard, true ));
@@ -383,6 +400,7 @@ bool BaseApplication::mousePressed( const OIS::MouseEvent &arg, OIS::MouseButton
 }
 
 bool BaseApplication::mouseReleased( const OIS::MouseEvent &arg, OIS::MouseButtonID id )
+
 {
     if (mTrayMgr->injectMouseUp(arg, id)) return true;
     mCameraMan->injectMouseUp(arg, id);

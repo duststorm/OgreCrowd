@@ -42,6 +42,8 @@ public:
 
     virtual void go(void);
 
+    const static bool DISABLE_LOCK_MOUSE = true;
+
 protected:
     virtual bool setup();
     virtual bool configure(void);

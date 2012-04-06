@@ -48,3 +48,165 @@ material recastdebug
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+// Default material for cylinder
+material Cylinder
+{
+	receive_shadows on
+	technique Default
+   {
+      pass Default
+      {
+         lighting on
+         //cull_hardware none
+         //cull_software none
+
+         //ambient 0.2 0.2 0.2
+         //diffuse 0.84 0.11 0.08
+         //specular 0 0 0 0
+
+//         emissive 0.8 0.03 0
+
+
+		 scene_blend alpha_blend
+         alpha_rejection greater 128
+         depth_write off
+
+         texture_unit ColorMap
+         {
+         	// Create a color by multiplying a grayscale + alpha texture with a chosen color
+            texture cylinder_filled.png
+            // The final parameter in this line specifies the color
+            colour_op_ex modulate src_texture src_manual 1 0 0.1
+         }
+      }
+   }
+}
+
+// Default base for wireframe cylinder materials
+material Cylinder/Wires : Cylinder
+{
+	technique Default
+	{
+		pass Default
+		{
+			texture_unit ColorMap
+			{
+				texture cylinder_wires.png	// Override texture to one with only wires
+			}
+		}
+	}
+}
+
+
+material Cylinder/Red : Cylinder
+{
+	technique Default
+	{
+		pass Default
+		{
+			texture_unit ColorMap
+			{
+				colour_op_ex modulate src_texture src_manual 1 0 0
+			}
+		}
+	}
+}
+
+material Cylinder/Green : Cylinder
+{
+	technique Default
+	{
+		pass Default
+		{
+			texture_unit ColorMap
+			{
+				colour_op_ex modulate src_texture src_manual 0 1 0
+			}
+		}
+	}
+}
+
+material Cylinder/Blue : Cylinder
+{
+	technique Default
+	{
+		pass Default
+		{
+			texture_unit ColorMap
+			{
+				colour_op_ex modulate src_texture src_manual 0 0 1
+			}
+		}
+	}
+}
+
+material Cylinder/Wires/Red : Cylinder/Wires
+{
+	technique Default
+	{
+		pass Default
+		{
+			texture_unit ColorMap
+			{
+				colour_op_ex modulate src_texture src_manual 1 0 0
+			}
+		}
+	}
+}
+
+material Cylinder/Wires/Green : Cylinder/Wires
+{
+	technique Default
+	{
+		pass Default
+		{
+			texture_unit ColorMap
+			{
+				colour_op_ex modulate src_texture src_manual 0 1 0
+			}
+		}
+	}
+}
+
+material Cylinder/Wires/Blue : Cylinder/Wires
+{
+	technique Default
+	{
+		pass Default
+		{
+			texture_unit ColorMap
+			{
+				colour_op_ex modulate src_texture src_manual 0 0 1
+			}
+		}
+	}
+}
+
+material Cylinder/Wires/Brown : Cylinder/Wires
+{
+	technique Default
+	{
+		pass Default
+		{
+			texture_unit ColorMap
+			{
+				colour_op_ex modulate src_texture src_manual 0.8 0.27 0.1
+			}
+		}
+	}
+}
+
+material Cylinder/Wires/DarkGreen : Cylinder/Wires
+{
+	technique Default
+	{
+		pass Default
+		{
+			texture_unit ColorMap
+			{
+				colour_op_ex modulate src_texture src_manual 0.52 0.90 0.44
+			}
+		}
+	}
+}
+
