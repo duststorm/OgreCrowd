@@ -620,14 +620,14 @@ bool OgreRecastDemo::NavMeshBuild(Ogre::Entity* srcMesh)
 
 
 #include <math.h>
-static float frand()
-{
-        return (float)rand()/(float)RAND_MAX;
-}
+
 
 /**
  * Now for the pathfinding code. 
  * This takes a start point and an end point and, if possible, generates a list of lines in a path. It might fail if the start or end points aren't near any navmesh polygons, or if the path is too long, or it can't make a path, or various other reasons. So far I've not had problems though.
+ *
+ * nTarget: The index number for the slot in which the found path is to be stored
+ * nPathSlot: Number identifying the target the path leads to
  *
  * Return codes:
  *  0   found path
@@ -657,10 +657,6 @@ int OgreRecastDemo::FindPath(float* pStartPos, float* pEndPos, int nPathSlot, in
    Filter.setIncludeFlags(0xFFFF) ;
    Filter.setExcludeFlags(0) ;
    Filter.setAreaCost(SAMPLE_POLYAREA_GROUND, 1.0f) ;
-
-
-   m_navQuery->findRandomPoint(&Filter, frand, &StartPoly, pStartPos);
-   m_navQuery->findRandomPoint(&Filter, frand, &EndPoly, pEndPos);
 
    // find the start polygon
    status=m_navQuery->findNearestPoly(pStartPos, pExtents, &Filter, &StartPoly, StartNearest) ;
@@ -696,7 +692,15 @@ int OgreRecastDemo::FindPath(float* pStartPos, float* pEndPos, int nPathSlot, in
 
 }
 
+int OgreRecastDemo::FindPath(Ogre::Vector3 startPos, Ogre::Vector3 endPos, int nPathSlot, int nTarget)
+{
+    float start[3];
+    float end[3];
+    OgreVect3ToFloatA(startPos, start);
+    OgreVect3ToFloatA(endPos, end);
 
+    return FindPath(start,end,nPathSlot,nTarget);
+}
 
 
 
@@ -907,6 +911,13 @@ void OgreRecastDemo::OgreVect3ToFloatA(const Ogre::Vector3 vect, float* result)
     result[1] = vect[1];
     result[2] = vect[2];
 };
+
+void OgreRecastDemo::FloatAToOgreVect3(const float* vect, Ogre::Vector3 &result)
+{
+    result.x = vect[0];
+    result.y = vect[1];
+    result.z = vect[2];
+}
 
 
 void OgreRecastDemo::getMeshInformation(const Ogre::MeshPtr mesh,
@@ -1132,4 +1143,25 @@ void OgreRecastDemo::getManualMeshInformation(const Ogre::ManualObject *manual,
 
         //All done.
         return;
+}
+
+
+static float frand()
+{
+        return (float)rand()/(float)RAND_MAX;
+}
+
+Ogre::Vector3 OgreRecastDemo::getRandomNavMeshPoint()
+{
+    // setup the filter
+    dtQueryFilter Filter;
+    Filter.setIncludeFlags(0xFFFF) ;
+    Filter.setExcludeFlags(0) ;
+    Filter.setAreaCost(SAMPLE_POLYAREA_GROUND, 1.0f) ;
+
+    float resultPoint[3];
+    dtPolyRef resultPoly;
+    m_navQuery->findRandomPoint(&Filter, frand, &resultPoly, resultPoint);
+
+    return Ogre::Vector3(resultPoint[0], resultPoint[1], resultPoint[2]);
 }

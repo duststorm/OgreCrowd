@@ -59,10 +59,10 @@ void OgreRecastApplication::createScene(void)
     // Do a pathing on the navmesh and draw the path
     int pathNb = 0;     // The index number for the slot in which the found path is to be stored
     int targetId = 0;   // Number identifying the target the path leads to
-    float startPos[3]; mRecastDemo->OgreVect3ToFloatA(Ogre::Vector3(0,0,0), startPos);
-    float endPos[3]; mRecastDemo->OgreVect3ToFloatA(Ogre::Vector3(5,0,5), endPos);
+    Ogre::Vector3 beginPos = mRecastDemo->getRandomNavMeshPoint();
+    Ogre::Vector3 endPos = mRecastDemo->getRandomNavMeshPoint();
 
-    int ret = mRecastDemo->FindPath(startPos, endPos, pathNb, targetId) ;
+    int ret = mRecastDemo->FindPath(beginPos, endPos, pathNb, targetId) ;
     if( ret >= 0)
         mRecastDemo->CreateRecastPathLine(0) ; // Draw a line showing path at slot 0
     else
@@ -239,6 +239,7 @@ Ogre::SceneNode* OgreRecastApplication::getOrCreateMarker(Ogre::String name, Ogr
             ent->setMaterialName(materialName);
         result->attachObject(ent);
         ent->setQueryFlags(DEFAULT_MASK);   // Exclude from ray queries
+        // Set marker scale to size of agent
         result->setScale(mRecastDemo->m_agentRadius*2, mRecastDemo->m_agentHeight,mRecastDemo->m_agentRadius*2);
     }
 

@@ -16,15 +16,28 @@ public:
    void testPathFind();
    bool NavMeshBuild(Ogre::Entity* srcMesh);
    int FindPath(float* pStartPos, float* pEndPos, int nPathSlot, int nTarget) ;
+   int FindPath(Ogre::Vector3 startPos, Ogre::Vector3 endPos, int nPathSlot, int nTarget);
    void CreateRecastPolyMesh(const struct rcPolyMesh& mesh, bool colorRegions=true);
    void CreateRecastPathLine(int nPathSlot);
    void drawNavMesh(void);
+
+   /**
+     * Returns a random point on the navmesh
+     **/
+   Ogre::Vector3 getRandomNavMeshPoint();
 
    /**
      * Convenience function for converting between Ogre::Vector3
      * and float* used by recast
     **/
    void OgreVect3ToFloatA(const Ogre::Vector3 vect, float* result);
+
+   /**
+     * Convenience function for converting between float* used by recast
+     * and Ogre::Vector3
+    **/
+   void FloatAToOgreVect3(const float* vect, Ogre::Vector3 &result);
+
 
 
    /**
