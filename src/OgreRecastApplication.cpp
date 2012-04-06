@@ -56,7 +56,7 @@ void OgreRecastApplication::createScene(void)
 
 
     // DETOUR
-    // Do a pathing on the navmesh and draw the path
+    // Do a pathing between two random points on the navmesh and draw the path
     int pathNb = 0;     // The index number for the slot in which the found path is to be stored
     int targetId = 0;   // Number identifying the target the path leads to
     Ogre::Vector3 beginPos = mRecastDemo->getRandomNavMeshPoint();
@@ -64,7 +64,7 @@ void OgreRecastApplication::createScene(void)
 
     int ret = mRecastDemo->FindPath(beginPos, endPos, pathNb, targetId) ;
     if( ret >= 0)
-        mRecastDemo->CreateRecastPathLine(0) ; // Draw a line showing path at slot 0
+        mRecastDemo->CreateRecastPathLine(pathNb) ; // Draw a line showing path at specified slot
     else
         Ogre::LogManager::getSingletonPtr()->logMessage("ERROR: could not find a path. ("+Ogre::StringConverter::toString(ret)+")");
 
@@ -222,6 +222,8 @@ bool OgreRecastApplication::mousePressed( const OIS::MouseEvent &arg, OIS::Mouse
         if(markerNode != NULL) {
             markerNode->setPosition(rayHitPoint);
         }
+
+        drawPathBetweenMarkers(1,1);
     }
 
     BaseApplication::mousePressed(arg, id);
@@ -244,6 +246,24 @@ Ogre::SceneNode* OgreRecastApplication::getOrCreateMarker(Ogre::String name, Ogr
     }
 
     return result;
+}
+
+void OgreRecastApplication::drawPathBetweenMarkers(int pathNb, int targetId)
+{
+    try {
+        Ogre::Vector3 beginPos = ((Ogre::SceneNode*)(mSceneMgr->getRootSceneNode()->getChild("BeginPosNode")))->getPosition();
+        Ogre::Vector3 endPos = ((Ogre::SceneNode*)(mSceneMgr->getRootSceneNode()->getChild("EndPosNode")))->getPosition();
+
+        int ret = mRecastDemo->FindPath(beginPos, endPos, pathNb, targetId) ;
+        if( ret >= 0)
+            mRecastDemo->CreateRecastPathLine(pathNb) ; // Draw a line showing path at slot 0
+        else
+            Ogre::LogManager::getSingletonPtr()->logMessage("ERROR: could not find a path. ("+Ogre::StringConverter::toString(ret)+")");
+    } catch(Ogre::Exception ex) {
+        // Either begin or end marker have not yet been placed
+        return;
+    }
+
 }
 
 

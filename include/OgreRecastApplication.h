@@ -41,6 +41,7 @@ public:
 protected:
     virtual void createScene(void);
     virtual bool mousePressed( const OIS::MouseEvent &arg, OIS::MouseButtonID id );
+    void drawPathBetweenMarkers(int pathNb, int targetId);
 
 private:
         OgreRecastDemo* mRecastDemo;
