@@ -1,0 +1,18 @@
+// Cursor in the center of the screen
+GUI/Crosshair
+{
+    zorder 200
+
+    container Panel(GUI/Panels/CrosshairPanel)
+    {
+    	metrics_mode pixels
+        horz_align center
+        vert_align center
+        left -32
+        top -32
+        width 64
+        height 64
+    
+        material GUI/Materials/Crosshair
+    }
+}
