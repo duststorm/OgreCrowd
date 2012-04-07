@@ -92,9 +92,6 @@ void OgreRecastApplication::createScene(void)
 
 
 
-
-    // TODO: DetourCrowd toevoegen
-
     // DETOUR CROWD
     mDetourCrowd = new OgreDetourCrowd(mRecastDemo);
     mDetourCrowd->addAgent(beginPos);
@@ -102,19 +99,20 @@ void OgreRecastApplication::createScene(void)
     // Create a first agent that always starts at begin position
     Ogre::SceneNode *marker = getOrCreateMarker("Agent0", "Cylinder/Yellow");
     marker->setPosition(beginPos);
-    // TODO: werk met meerdere agents
-    // TODO: probeer paden te hergebruiken, zet scenarios op voor follow, flee, etc
-    // TODO: wat is de betekenis nog van begin end, en drawn path? (aparte demos maken?)
-
+        // TODO: probeer paden te hergebruiken, zet scenarios op voor follow, flee, etc
+        // TODO: laat bv toe met shift+click destination te veranderen zonder recalc
+    // http://digestingduck.blogspot.com/2010/10/following-moving-target.html
+    // http://digestingduck.blogspot.com/2011/01/detourcrowd.html
 
     // TODO: Voeg steering toe (possibilities: Millington, Buckland, opensteer)
-    // TODO: Agents plaatsen
-    // TODO: voeg meerdere paden toe
+        // http://www.red3d.com/cwr/steer/
+    // TODO: voeg meerdere paden toe (meer dan alleen wander? random voor alle individuele agents of group behaviour)
 
     // TODO: klassen maken voor DetourPath etc, ipv gedoe met path slot
     // TODO: getters definieren op eigen klassen
-    // TODO: path planning etc in aparte thread
+    // TODO: betere wrapper voor detourCrowd, bv van entities ofzo ipv die max agents met active nest
     // TODO: const en inline in method headings zetten waar mogelijk
+    // TODO: path planning etc in aparte thread
 }
 
 
@@ -245,11 +243,11 @@ bool OgreRecastApplication::mousePressed( const OIS::MouseEvent &arg, OIS::Mouse
     if (rayQueryPointInScene(mouseRay, NAVMESH_MASK, rayHitPoint, *rayHitObject)) {
         Ogre::SceneNode *markerNode = NULL;
 
-        if(id == OIS::MB_Left) {
+        if(id == OIS::MB_Right) {
             markerNode = getOrCreateMarker("BeginPos", "Cylinder/Wires/DarkGreen");
         }
 
-        if(id == OIS::MB_Right) {
+        if(id == OIS::MB_Left) {
             markerNode = getOrCreateMarker("EndPos", "Cylinder/Wires/Brown");
         }
 
