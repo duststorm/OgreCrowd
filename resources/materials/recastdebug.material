@@ -140,6 +140,21 @@ material Cylinder/Blue : Cylinder
 	}
 }
 
+material Cylinder/Yellow : Cylinder
+{
+	technique Default
+	{
+		pass Default
+		{
+			texture_unit ColorMap
+			{
+				colour_op_ex modulate src_texture src_manual 0 0.8 1
+			}
+		}
+	}
+}
+
+
 material Cylinder/Wires/Red : Cylinder/Wires
 {
 	technique Default

@@ -99,8 +99,12 @@ void OgreRecastApplication::createScene(void)
     mDetourCrowd = new OgreDetourCrowd(mRecastDemo);
     mDetourCrowd->addAgent(beginPos);
     mDetourCrowd->setMoveTarget(endPos,false);
+    // Create a first agent that always starts at begin position
+    Ogre::SceneNode *marker = getOrCreateMarker("Agent0", "Cylinder/Yellow");
+    marker->setPosition(beginPos);
     // TODO: werk met meerdere agents
     // TODO: probeer paden te hergebruiken, zet scenarios op voor follow, flee, etc
+    // TODO: wat is de betekenis nog van begin end, en drawn path? (aparte demos maken?)
 
 
     // TODO: Voeg steering toe (possibilities: Millington, Buckland, opensteer)
@@ -303,14 +307,36 @@ void OgreRecastApplication::drawPathBetweenMarkers(int pathNb, int targetId)
 bool OgreRecastApplication::frameRenderingQueued(const Ogre::FrameEvent& evt)
 {
     mDetourCrowd->updateTick(evt.timeSinceLastFrame);
-    if(mDetourCrowd->m_crowd->getAgentCount() > 0) {
-        const float *pos = mDetourCrowd->m_crowd->getAgent(0)->npos;
-        Ogre::Vector3 agentPos;
+
+    Ogre::Vector3 agentPos;
+    int count = mDetourCrowd->getNbAgents();
+    for(int i=0; i < mDetourCrowd->getNbAgents(); i++) {
+        const float *pos = mDetourCrowd->m_crowd->getAgent(i)->npos;
         mRecastDemo->FloatAToOgreVect3(pos,agentPos);
-        ((Ogre::SceneNode*)(mSceneMgr->getRootSceneNode()->getChild("BeginPosNode")))->setPosition(agentPos);
+        agentPos.y = agentPos.y+mRecastDemo->m_navMeshOffsetFromGround; // Compensate for distance of navmesh above ground
+        ((Ogre::SceneNode*)(mSceneMgr->getRootSceneNode()->getChild("Agent"+Ogre::StringConverter::toString(i)+"Node")))->setPosition(agentPos);
     }
 
     BaseApplication::frameRenderingQueued(evt);
+}
+
+bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
+{
+    if(arg.key == OIS::KC_SPACE
+        && mDetourCrowd->getNbAgents() < mDetourCrowd->getMaxNbAgents()) {
+        // Find position on navmesh pointed to by cursor in the middle of the screen
+        Ogre::Ray cursorRay = mCamera->getCameraToViewportRay(0.5, 0.5);
+        Ogre::Vector3 rayHitPoint;
+        Ogre::MovableObject *rayHitObject;
+        if (rayQueryPointInScene(cursorRay, NAVMESH_MASK, rayHitPoint, *rayHitObject)) {
+            Ogre::SceneNode *marker = getOrCreateMarker("Agent"+Ogre::StringConverter::toString(mDetourCrowd->getNbAgents()), "Cylinder/Blue");
+            marker->setPosition(rayHitPoint);
+
+            mDetourCrowd->addAgent(rayHitPoint);
+        }
+    }
+
+    BaseApplication::keyPressed(arg);
 }
 
 

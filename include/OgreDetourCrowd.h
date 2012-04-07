@@ -18,6 +18,9 @@ public:
     void setMoveTarget(Ogre::Vector3 position, bool adjust);
     void updateTick(const float dt);
 
+    int getNbAgents(void);
+    int getMaxNbAgents(void);
+
     dtCrowd* m_crowd;
     OgreRecastDemo *m_recastDemo;
 
@@ -48,6 +51,10 @@ public:
 
     float m_obstacleAvoidanceType;
     float m_separationWeight;
+
+
+private:
+    int m_activeAgents;
 };
 
 #endif // OGREDETOURCROWD_H

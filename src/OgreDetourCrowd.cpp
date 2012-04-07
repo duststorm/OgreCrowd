@@ -9,7 +9,8 @@ OgreDetourCrowd::OgreDetourCrowd(OgreRecastDemo *recastDemo)
     : m_crowd(0),
     m_highlightedAgent(0),
     m_recastDemo(recastDemo),
-    m_targetRef(0)
+    m_targetRef(0),
+    m_activeAgents(0)
 {
     m_crowd = dtAllocCrowd();
     if(!m_crowd)
@@ -165,6 +166,18 @@ void OgreDetourCrowd::addAgent(const Ogre::Vector3 position)
                         dtVcopy(&trail->trail[i*3], p);
                 trail->htrail = 0;
         }
+
+        m_activeAgents++;
+}
+
+int OgreDetourCrowd::getNbAgents()
+{
+    return m_activeAgents;
+}
+
+int OgreDetourCrowd::getMaxNbAgents()
+{
+    return m_crowd->getAgentCount();
 }
 
 
@@ -175,6 +188,8 @@ void OgreDetourCrowd::removeAgent(const int idx)
         // TODO
 //        if (m_highlightedAgent == m_agentDebug.idx)
 //                m_agentDebug.idx = -1;
+
+        m_activeAgents--;
 }
 
 
