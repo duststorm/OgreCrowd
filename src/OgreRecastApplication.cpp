@@ -262,7 +262,7 @@ bool OgreRecastApplication::mousePressed( const OIS::MouseEvent &arg, OIS::Mouse
         drawPathBetweenMarkers(1,1);
     }
 
-    BaseApplication::mousePressed(arg, id);
+    return BaseApplication::mousePressed(arg, id);
 }
 
 Ogre::SceneNode* OgreRecastApplication::getOrCreateMarker(Ogre::String name, Ogre::String materialName)
@@ -319,7 +319,7 @@ bool OgreRecastApplication::frameRenderingQueued(const Ogre::FrameEvent& evt)
         ((Ogre::SceneNode*)(mSceneMgr->getRootSceneNode()->getChild("Agent"+Ogre::StringConverter::toString(i)+"Node")))->setPosition(agentPos);
     }
 
-    BaseApplication::frameRenderingQueued(evt);
+    return BaseApplication::frameRenderingQueued(evt);
 }
 
 bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
@@ -338,7 +338,7 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
         }
     }
 
-    BaseApplication::keyPressed(arg);
+    return BaseApplication::keyPressed(arg);
 }
 
 
