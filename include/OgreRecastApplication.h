@@ -46,6 +46,7 @@ protected:
     virtual bool keyPressed( const OIS::KeyEvent &arg );
     virtual bool frameRenderingQueued(const Ogre::FrameEvent& evt);
     void drawPathBetweenMarkers(int pathNb, int targetId);
+    void setPathAndBeginMarkerVisibility(bool visibility);
     void setRandomTargetsForCrowd(void);
     void setFollowTargetForCrowd(Ogre::Vector3 targetDestination);
 

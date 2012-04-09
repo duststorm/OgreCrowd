@@ -272,19 +272,24 @@ bool OgreRecastApplication::mousePressed( const OIS::MouseEvent &arg, OIS::Mouse
     if (rayQueryPointInScene(mouseRay, NAVMESH_MASK, rayHitPoint, *rayHitObject)) {
         Ogre::SceneNode *markerNode = NULL;
 
-        if(id == OIS::MB_Right) {
-            markerNode = getOrCreateMarker("BeginPos", "Cylinder/Wires/DarkGreen");
-        }
 
         if(id == OIS::MB_Left) {
             markerNode = getOrCreateMarker("EndPos", "Cylinder/Wires/Brown");
+
+            if(mApplicationState != SIMPLE_PATHFIND)
+                mDetourCrowd->setMoveTarget(0, rayHitPoint, false); // Update destination of first agent only
+        }
+
+        if(id == OIS::MB_Right && mApplicationState == SIMPLE_PATHFIND) {
+            markerNode = getOrCreateMarker("BeginPos", "Cylinder/Wires/DarkGreen");
         }
 
         if(markerNode != NULL) {
             markerNode->setPosition(rayHitPoint);
         }
 
-        drawPathBetweenMarkers(1,1);
+        if(mApplicationState == SIMPLE_PATHFIND)
+            drawPathBetweenMarkers(1,1);    // Draw navigation path and steer all agents to set destination
     }
 
     BaseApplication::mousePressed(arg, id);
@@ -321,17 +326,30 @@ void OgreRecastApplication::drawPathBetweenMarkers(int pathNb, int targetId)
         else
             Ogre::LogManager::getSingletonPtr()->logMessage("ERROR: could not find a path. ("+mRecastDemo->getPathFindErrorMsg(ret)+")");
 
+        setPathAndBeginMarkerVisibility(true);
+
+        // Move first agent to begin position again
         mDetourCrowd->removeAgent(0);
         mDetourCrowd->addAgent(beginPos);
-        if(mApplicationState == SIMPLE_PATHFIND)
-            mDetourCrowd->setMoveTarget(endPos, false);  // Set move target for entire crowd
-        else
-            mDetourCrowd->setMoveTarget(0, endPos, false);  // Only update destination of first agent
+
+        // Set move target for entire crowd
+        mDetourCrowd->setMoveTarget(endPos, false);
+            // TODO: there is a bug here that only the first agent will receive this target update
     } catch(Ogre::Exception ex) {
         // Either begin or end marker have not yet been placed
         return;
     }
 
+}
+
+void OgreRecastApplication::setPathAndBeginMarkerVisibility(bool visibility)
+{
+    // Hide begin marker
+    ((Ogre::SceneNode*)(mSceneMgr->getRootSceneNode()->getChild("BeginPosNode")))->setVisible(visibility);
+
+    // Hide path line
+    if(mRecastDemo->m_pRecastMOPath)
+        mRecastDemo->m_pRecastMOPath->setVisible(visibility);
 }
 
 bool OgreRecastApplication::frameRenderingQueued(const Ogre::FrameEvent& evt)
@@ -411,21 +429,22 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
 
     // ENTER switches to different demo mode
     if(arg.key == OIS::KC_RETURN) {
-        drawPathBetweenMarkers(1, 1);   // Start Moving main agent between begin and endpoints again (assigns same endposition to all agents in crowd)
-
         // Change demo mode
         switch (mApplicationState) {
             case SIMPLE_PATHFIND:   // Simple -> wander
                 mApplicationState = CROWD_WANDER;
                 setRandomTargetsForCrowd();
+                setPathAndBeginMarkerVisibility(false);
                 break;
             case CROWD_WANDER:      // Wander -> chase
                 mApplicationState = FOLLOW_TARGET;
                 setFollowTargetForCrowd(getFirstAgentPosition());
+                setPathAndBeginMarkerVisibility(false);
                 break;
             case FOLLOW_TARGET:     // Chase -> simple
                 mApplicationState = SIMPLE_PATHFIND;
-                drawPathBetweenMarkers(1,1);    // Reinitialize path that all agents follow
+                drawPathBetweenMarkers(1,1);    // Reinitialize path that all agents follow and draw
+                break;
             default:
                 mApplicationState = SIMPLE_PATHFIND;
                 drawPathBetweenMarkers(1,1);
