@@ -140,7 +140,7 @@ material Cylinder/Blue : Cylinder
 	}
 }
 
-material Cylinder/Yellow : Cylinder
+material Cylinder/LightBlue : Cylinder
 {
 	technique Default
 	{
@@ -149,6 +149,20 @@ material Cylinder/Yellow : Cylinder
 			texture_unit ColorMap
 			{
 				colour_op_ex modulate src_texture src_manual 0 0.8 1
+			}
+		}
+	}
+}
+
+material Cylinder/Yellow : Cylinder
+{
+	technique Default
+	{
+		pass Default
+		{
+			texture_unit ColorMap
+			{
+				colour_op_ex modulate src_texture src_manual 0 1 1
 			}
 		}
 	}

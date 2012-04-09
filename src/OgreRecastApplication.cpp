@@ -91,6 +91,10 @@ void OgreRecastApplication::createScene(void)
     mapE->setQueryFlags(DEFAULT_MASK);
 
 
+    // CREATE CURSOR OVERLAY
+    Ogre::Overlay *mCrosshair = Ogre::OverlayManager::getSingletonPtr()->getByName("GUI/Crosshair");
+    mCrosshair->show();
+
 
     // DETOUR CROWD
     mDetourCrowd = new OgreDetourCrowd(mRecastDemo);
