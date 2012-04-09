@@ -4,12 +4,12 @@ Filename:    OgreRecastApplication.h
 -----------------------------------------------------------------------------
 
 This source file is part of the
-   ___                 __    __ _ _    _ 
+   ___                 __    __ _ _    _
   /___\__ _ _ __ ___  / / /\ \ (_) | _(_)
  //  // _` | '__/ _ \ \ \/  \/ / | |/ / |
 / \_// (_| | | |  __/  \  /\  /| |   <| |
 \___/ \__, |_|  \___|   \/  \/ |_|_|\_\_|
-      |___/                              
+      |___/
       Tutorial Framework
       http://www.ogre3d.org/tikiwiki/
 -----------------------------------------------------------------------------
@@ -39,12 +39,28 @@ public:
        NAVMESH_MASK = 5u,
     };
 
+
 protected:
     virtual void createScene(void);
     virtual bool mousePressed( const OIS::MouseEvent &arg, OIS::MouseButtonID id );
     virtual bool keyPressed( const OIS::KeyEvent &arg );
     virtual bool frameRenderingQueued(const Ogre::FrameEvent& evt);
     void drawPathBetweenMarkers(int pathNb, int targetId);
+    void setRandomTargetsForCrowd(void);
+    void setFollowTargetForCrowd(Ogre::Vector3 targetDestination);
+
+    Ogre::Vector3 getFirstAgentPosition(void);
+
+    enum ApplicationState
+    {
+       SIMPLE_PATHFIND,
+       CROWD_WANDER,
+       FOLLOW_TARGET
+    } mApplicationState;
+
+    float mMinSquaredDistanceToGoal;
+
+    Ogre::Vector3 mDestinations[OgreDetourCrowd::MAX_AGENTS];
 
 private:
         OgreRecastDemo* mRecastDemo;
