@@ -42,6 +42,7 @@ public:
 
 protected:
     virtual void createScene(void);
+    virtual void createFrameListener(void);
     virtual bool mousePressed( const OIS::MouseEvent &arg, OIS::MouseButtonID id );
     virtual bool keyPressed( const OIS::KeyEvent &arg );
     virtual bool frameRenderingQueued(const Ogre::FrameEvent& evt);
@@ -68,6 +69,7 @@ private:
         Ogre::RaySceneQuery* mRayScnQuery;
 
         OgreDetourCrowd *mDetourCrowd;
+        OgreBites::Label *mLabelOverlay;
 };
 
 

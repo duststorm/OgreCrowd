@@ -22,6 +22,7 @@ OgreRecastApplication::OgreRecastApplication(void)
         mRayScnQuery(0),
         mDetourCrowd(0),
         mApplicationState(SIMPLE_PATHFIND),
+        mLabelOverlay(0),
         mMinSquaredDistanceToGoal(0.1)
 {
 }
@@ -108,21 +109,17 @@ void OgreRecastApplication::createScene(void)
 
     mMinSquaredDistanceToGoal = mRecastDemo->m_agentRadius*mRecastDemo->m_agentRadius;
 
-    // TODO: bij zetten van destination moet je enkel destination voor allemaal zetten in simple mode
-    // TODO: framerenderingqueued methode voor detectie goal reached wordt nooit uitgevoerd
+    // TODO: F1 help panel
 
-    // TODO: add chase mode
-
-    // TODO: initial agent beginpos enkel aanpassen in simpel mode? missch zelfs begin marker hiden in andere modes?
 
     // TODO: add anti-lockup fix in wander mode, especially on stairs agents sometimes stop
 
     // TODO: is destination changing in drawPath wel goed idee?
 
         // TODO: probeer paden te hergebruiken, zet scenarios op voor follow, flee, etc
-        // TODO: laat bv toe met shift+click destination te veranderen zonder recalc
-    // http://digestingduck.blogspot.com/2010/10/following-moving-target.html
-    // http://digestingduck.blogspot.com/2011/01/detourcrowd.html
+        // TODO: laat bv toe met shift+click destination te veranderen zonder recalc?
+            // http://digestingduck.blogspot.com/2010/10/following-moving-target.html
+            // http://digestingduck.blogspot.com/2011/01/detourcrowd.html
 
     // TODO: Voeg steering toe (possibilities: Millington, Buckland, opensteer)
         // http://www.red3d.com/cwr/steer/
@@ -142,6 +139,18 @@ void OgreRecastApplication::createScene(void)
     // TODO: tweak things like MAX_ITERS_PER_UPDATE
 
     // TODO: create separate methods for eg. addAgent in this class (instead of inlining it all in the input handlers)
+}
+
+void OgreRecastApplication::createFrameListener()
+{
+    BaseApplication::createFrameListener();
+
+    // CREATE INFO LABEL
+    Ogre::FontManager::getSingleton().getByName("SdkTrays/Caption")->load();    // Fixes a bug with SDK Trays
+    mLabelOverlay = mTrayMgr->createLabel(OgreBites::TL_TOPLEFT, "infoLabel", "Simple navigation", 220);
+    mLabelOverlay->show();
+    OgreBites::Label *label = mTrayMgr->createLabel(OgreBites::TL_TOPRIGHT, "titleLabel", "Recast & Detour Demo", 250);
+    label->show();
 }
 
 
@@ -435,19 +444,23 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
                 mApplicationState = CROWD_WANDER;
                 setRandomTargetsForCrowd();
                 setPathAndBeginMarkerVisibility(false);
+                mLabelOverlay->setCaption("Random crowd wander");
                 break;
             case CROWD_WANDER:      // Wander -> chase
                 mApplicationState = FOLLOW_TARGET;
                 setFollowTargetForCrowd(getFirstAgentPosition());
                 setPathAndBeginMarkerVisibility(false);
+                mLabelOverlay->setCaption("Chase");
                 break;
             case FOLLOW_TARGET:     // Chase -> simple
                 mApplicationState = SIMPLE_PATHFIND;
                 drawPathBetweenMarkers(1,1);    // Reinitialize path that all agents follow and draw
+                mLabelOverlay->setCaption("Simple navigation");
                 break;
             default:
                 mApplicationState = SIMPLE_PATHFIND;
                 drawPathBetweenMarkers(1,1);
+                mLabelOverlay->setCaption("Simple navigation");
         }
 
     }
