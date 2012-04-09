@@ -124,7 +124,7 @@ void OgreDetourCrowd::updateTick(const float dt)
 }
 
 
-void OgreDetourCrowd::addAgent(const Ogre::Vector3 position)
+int OgreDetourCrowd::addAgent(const Ogre::Vector3 position)
 {
         // Define parameters for agent in crowd
         dtCrowdAgentParams ap;
@@ -168,6 +168,8 @@ void OgreDetourCrowd::addAgent(const Ogre::Vector3 position)
         }
 
         m_activeAgents++;
+
+        return idx;
 }
 
 int OgreDetourCrowd::getNbAgents()
@@ -178,6 +180,30 @@ int OgreDetourCrowd::getNbAgents()
 int OgreDetourCrowd::getMaxNbAgents()
 {
     return m_crowd->getAgentCount();
+}
+
+std::vector<dtCrowdAgent*> OgreDetourCrowd::getActiveAgents()
+{
+    dtCrowdAgent* resultEntries[getMaxNbAgents()];
+    int size = m_crowd->getActiveAgents(resultEntries,getMaxNbAgents());
+
+    std::vector<dtCrowdAgent*> result(resultEntries, resultEntries + size);
+    return result;
+}
+
+std::vector<int> OgreDetourCrowd::getActiveAgentIds(void)
+{
+    std::vector<int> result = std::vector<int>();
+    //result.reserve(getNbAgents());
+
+    dtCrowdAgent* agent = NULL;
+    for(int i=0; i<getMaxNbAgents(); i++) {
+        agent = &(m_crowd->m_agents[i]);
+        if(agent->active)
+            result.push_back(i);
+    }
+
+    return result;
 }
 
 
@@ -260,4 +286,24 @@ void OgreDetourCrowd::setMoveTarget(Ogre::Vector3 position, bool adjust)
         }
 }
 
+void OgreDetourCrowd::setMoveTarget(int agentId, Ogre::Vector3 position, bool adjust)
+{
+    // TODO put in separate method
+    // Find nearest point on navmesh and set move request to that location.
+    dtNavMeshQuery* navquery = m_recastDemo->m_navQuery;
+    dtCrowd* crowd = m_crowd;
+    const dtQueryFilter* filter = crowd->getFilter();
+    const float* ext = crowd->getQueryExtents();
+    float p[3];
+    m_recastDemo->OgreVect3ToFloatA(position, p);
+
+    navquery->findNearestPoly(p, ext, filter, &m_targetRef, m_targetPos);
+    // ----
+
+    if (adjust) {
+        m_crowd->adjustMoveTarget(agentId, m_targetRef, m_targetPos);
+    } else {
+        m_crowd->requestMoveTarget(agentId, m_targetRef, m_targetPos);
+    }
+}
 

@@ -4,6 +4,7 @@
 #include "DetourCrowd/DetourCrowd.h"
 #include "OgreRecast.h"
 #include "OgreRecastDemo.h"
+#include <vector>
 
 
 class OgreDetourCrowd
@@ -12,14 +13,22 @@ public:
     OgreDetourCrowd(OgreRecastDemo *recastDemo);
     ~OgreDetourCrowd(void);
 
-    void addAgent(const Ogre::Vector3 position);
+    /**
+      * Add an agent to the crowd
+      * Returns ID of created agent (-1 if maximum agents is already created)
+      **/
+    int addAgent(const Ogre::Vector3 position);
     void removeAgent(const int idx);
     void hilightAgent(Ogre::Entity* agent);
     void setMoveTarget(Ogre::Vector3 position, bool adjust);
+    void setMoveTarget(int agentId, Ogre::Vector3 position, bool adjust);
     void updateTick(const float dt);
 
     int getNbAgents(void);
     int getMaxNbAgents(void);
+
+    std::vector<dtCrowdAgent*> getActiveAgents(void);
+    std::vector<int> getActiveAgentIds(void);
 
     dtCrowd* m_crowd;
     OgreRecastDemo *m_recastDemo;
