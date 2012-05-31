@@ -3,8 +3,6 @@
 #include "Detour/DetourCommon.h"
 
 
-// TODO voor highlighten toch m_agentDebug gebruiken?
-
 OgreDetourCrowd::OgreDetourCrowd(OgreRecastDemo *recastDemo)
     : m_crowd(0),
     m_highlightedAgent(0),
@@ -221,7 +219,6 @@ void OgreDetourCrowd::removeAgent(const int idx)
 {
         m_crowd->removeAgent(idx);
 
-        // TODO
 //        if (m_highlightedAgent == m_agentDebug.idx)
 //                m_agentDebug.idx = -1;
 
@@ -260,7 +257,6 @@ void OgreDetourCrowd::setMoveTarget(Ogre::Vector3 position, bool adjust)
         if (adjust)
         {
             // if agent selected, only apply new target to that agent
-            // TODO
 /*                if (m_agentDebug.idx != -1)
                 {
                         const dtCrowdAgent* ag = crowd->getAgent(m_agentDebug.idx);
@@ -281,7 +277,6 @@ void OgreDetourCrowd::setMoveTarget(Ogre::Vector3 position, bool adjust)
         else
         {
                 // Move target using path finder (recalculate a full new path)
-            // TODO
               /*if (m_agentDebug.idx != -1)
                 {
                         const dtCrowdAgent* ag = crowd->getAgent(m_agentDebug.idx);
@@ -303,7 +298,7 @@ void OgreDetourCrowd::setMoveTarget(Ogre::Vector3 position, bool adjust)
 
 void OgreDetourCrowd::setMoveTarget(int agentId, Ogre::Vector3 position, bool adjust)
 {
-    // TODO put in separate method
+    // TODO extract common method
     // Find nearest point on navmesh and set move request to that location.
     dtNavMeshQuery* navquery = m_recastDemo->m_navQuery;
     dtCrowd* crowd = m_crowd;
