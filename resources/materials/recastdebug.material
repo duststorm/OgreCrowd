@@ -239,3 +239,17 @@ material Cylinder/Wires/DarkGreen : Cylinder/Wires
 	}
 }
 
+material Cylinder/Wires/LightBlue : Cylinder/Wires
+{
+	technique Default
+	{
+		pass Default
+		{
+			texture_unit ColorMap
+			{
+				colour_op_ex modulate src_texture src_manual 0 0.8 1
+			}
+		}
+	}
+}
+

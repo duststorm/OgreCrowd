@@ -14,31 +14,46 @@ This source file is part of the
       http://www.ogre3d.org/tikiwiki/
 -----------------------------------------------------------------------------
 */
+
 #include "OgreRecastApplication.h"
+#include "TestCharacter.h"
+#include "AnimateableCharacter.h"
+
+
+//--- SETTINGS ------------------------------------------------------------------------
+
+// Set to true to draw debug objects
+const bool OgreRecastApplication::DEBUG_DRAW = false;
+
+// Set to true to show agents as animated human characters instead of cylinders
+const bool OgreRecastApplication::HUMAN_CHARACTERS = true;
 
 //-------------------------------------------------------------------------------------
+
+
 OgreRecastApplication::OgreRecastApplication(void)
         : mRecastDemo(0),
         mRayScnQuery(0),
         mDetourCrowd(0),
         mApplicationState(SIMPLE_PATHFIND),
         mLabelOverlay(0),
-        mMinSquaredDistanceToGoal(0.1)
+        mLastSetDestination(Ogre::Vector3::ZERO),
+        mCharacters()
 {
 }
-//-------------------------------------------------------------------------------------
+
 OgreRecastApplication::~OgreRecastApplication(void)
 {
 }
 
-//-------------------------------------------------------------------------------------
 void OgreRecastApplication::createScene(void)
 {
-    // Create navigateable dungeon
+    // Basic scene setup
     mSceneMgr->setAmbientLight(Ogre::ColourValue(0.5f, 0.5f, 0.5f));
     Ogre::Light* light = mSceneMgr->createLight( "MainLight" );
     light->setPosition(20, 80, 50);
 
+    // Create navigateable dungeon
     Ogre::Entity* mapE = mSceneMgr->createEntity("Map", "dungeon.mesh");
     mapE->setMaterialName("dungeon");
     Ogre::SceneNode* mapNode = mSceneMgr->getRootSceneNode()->createChildSceneNode("MapNode");
@@ -58,16 +73,24 @@ void OgreRecastApplication::createScene(void)
 
     // DETOUR (pathfinding)
     // Do a pathing between two random points on the navmesh and draw the path
+    // Note that because we are using DetourCrowd we will not be doing pathfinds directly, DetourCrowd
+    // will do this for us.
     int pathNb = 0;     // The index number for the slot in which the found path is to be stored
     int targetId = 0;   // Number identifying the target the path leads to
     Ogre::Vector3 beginPos = mRecastDemo->getRandomNavMeshPoint();
     Ogre::Vector3 endPos = mRecastDemo->getRandomNavMeshPoint();
+    if(OgreRecastApplication::DEBUG_DRAW)
+        calculateAndDrawPath(beginPos, endPos, pathNb, targetId);
 
-    int ret = mRecastDemo->FindPath(beginPos, endPos, pathNb, targetId) ;
-    if( ret >= 0)
-        mRecastDemo->CreateRecastPathLine(pathNb) ; // Draw a line showing path at specified slot
-    else
-        Ogre::LogManager::getSingletonPtr()->logMessage("ERROR: could not find a path. ("+mRecastDemo->getPathFindErrorMsg(ret)+")");
+
+    // DETOUR CROWD (local steering for independent agents)
+    // Create a first agent that always starts at begin position
+    mDetourCrowd = new OgreDetourCrowd(mRecastDemo);
+    Character *character = createCharacter("Agent0", beginPos);    // create initial agent at start marker
+    if(!HUMAN_CHARACTERS)
+        character->getEntity()->setMaterialName("Cylinder/LightBlue");  // Give the first agent a different color
+    setDestinationForAllAgents(endPos, false);  // Move all agents in crowd to destination
+
 
 
     //-------------------------------------------------
@@ -85,7 +108,8 @@ void OgreRecastApplication::createScene(void)
 
 
     // SETUP RAY SCENE QUERYING
-    // Add navmesh to separate querying group
+    // Used for mouse picking begin and end markers and determining the position to add new agents
+    // Add navmesh to separate querying group that we will use
     Ogre::SceneNode *navMeshNode = (Ogre::SceneNode*)mSceneMgr->getRootSceneNode()->getChild("RecastSN");
     navMeshNode->getAttachedObject("RecastMOWalk")->setQueryFlags(NAVMESH_MASK);
     // Exclude other meshes from navmesh queries
@@ -93,52 +117,13 @@ void OgreRecastApplication::createScene(void)
     navMeshNode->getAttachedObject("RecastMOBoundary")->setQueryFlags(DEFAULT_MASK);
     mapE->setQueryFlags(DEFAULT_MASK);
 
+    if(!OgreRecastApplication::DEBUG_DRAW)
+        navMeshNode->setVisible(false); // Even though we make it invisible, we still keep the navmesh entity in the scene to do ray intersection tests
+
 
     // CREATE CURSOR OVERLAY
     Ogre::Overlay *mCrosshair = Ogre::OverlayManager::getSingletonPtr()->getByName("GUI/Crosshair");
-    mCrosshair->show();
-
-
-    // DETOUR CROWD (local steering for independent agents)
-    // Create a first agent that always starts at begin position
-    mDetourCrowd = new OgreDetourCrowd(mRecastDemo);
-    mDetourCrowd->addAgent(beginPos);   // create initial agent at start marker
-    mDetourCrowd->setMoveTarget(endPos,false);  // Move agent(s) in crowd to destination
-    Ogre::SceneNode *marker = getOrCreateMarker("Agent0", "Cylinder/LightBlue");
-    marker->setPosition(beginPos);
-
-    mMinSquaredDistanceToGoal = mRecastDemo->m_agentRadius*mRecastDemo->m_agentRadius;
-
-    // TODO: F1 help panel
-
-
-    // TODO: add anti-lockup fix in wander mode, especially on stairs agents sometimes stop
-
-    // TODO: is destination changing in drawPath wel goed idee?
-
-        // TODO: probeer paden te hergebruiken, zet scenarios op voor follow, flee, etc
-        // TODO: laat bv toe met shift+click destination te veranderen zonder recalc?
-            // http://digestingduck.blogspot.com/2010/10/following-moving-target.html
-            // http://digestingduck.blogspot.com/2011/01/detourcrowd.html
-
-    // TODO: Voeg steering toe (possibilities: Millington, Buckland, opensteer)
-        // http://www.red3d.com/cwr/steer/
-    // TODO: voeg meerdere paden toe (meer dan alleen wander? random voor alle individuele agents of group behaviour)
-
-    // TODO: klassen maken voor DetourPath etc, ipv gedoe met path slot
-    // TODO: getters definieren op eigen klassen
-    // TODO: betere wrapper voor detourCrowd, bv van entities ofzo ipv die max agents met active nest
-    // TODO: const en inline in method headings zetten waar mogelijk
-    // TODO: path planning etc in aparte thread
-    // TODO: serialize navmesh naar .obj
-
-    // TODO: splitting world and navmesh in separate tiles
-    // TODO: integrate pathing on Ogre::Terrain
-        // http://groups.google.com/group/recastnavigation/browse_thread/thread/14c338dd04285250#
-
-    // TODO: tweak things like MAX_ITERS_PER_UPDATE
-
-    // TODO: create separate methods for eg. addAgent in this class (instead of inlining it all in the input handlers)
+    mCrosshair->show(); // Show a cursor in the center of the screen
 }
 
 void OgreRecastApplication::createFrameListener()
@@ -151,123 +136,6 @@ void OgreRecastApplication::createFrameListener()
     mLabelOverlay->show();
     OgreBites::Label *label = mTrayMgr->createLabel(OgreBites::TL_TOPRIGHT, "titleLabel", "Recast & Detour Demo", 250);
     label->show();
-}
-
-
-bool OgreRecastApplication::rayQueryPointInScene(Ogre::Ray ray, unsigned long queryMask, Ogre::Vector3 &result, Ogre::MovableObject &foundMovable)
-{
-    //if(!mRayScnQuery)
-        mRayScnQuery = mSceneMgr->createRayQuery(Ogre::Ray(), queryMask);
-
-    mRayScnQuery->setRay(ray);
-    Ogre::RaySceneQueryResult& query_result = mRayScnQuery->execute();
-
-
-        // at this point we have raycast to a series of different objects bounding boxes.
-        // we need to test these different objects to see which is the first polygon hit.
-        // there are some minor optimizations (distance based) that mean we wont have to
-        // check all of the objects most of the time, but the worst case scenario is that
-        // we need to test every triangle of every object.
-        Ogre::Real closest_distance = -1.0f;
-        Ogre::Vector3 closest_result;
-        Ogre::MovableObject *closest_movable;
-        for (size_t qr_idx = 0; qr_idx < query_result.size(); qr_idx++)
-        {
-            // Debug:
-            //Ogre::LogManager::getSingletonPtr()->logMessage(query_result[qr_idx].movable->getName());
-            //Ogre::LogManager::getSingletonPtr()->logMessage(query_result[qr_idx].movable->getMovableType());
-
-
-            // stop checking if we have found a raycast hit that is closer
-            // than all remaining entities
-            if ((closest_distance >= 0.0f) &&
-                (closest_distance < query_result[qr_idx].distance))
-            {
-                 break;
-            }
-
-            // only check this result if its a hit against an entity
-            if ((query_result[qr_idx].movable != NULL) &&
-                ((query_result[qr_idx].movable->getMovableType().compare("Entity") == 0)
-                ||query_result[qr_idx].movable->getMovableType().compare("ManualObject") == 0))
-            {
-                // mesh data to retrieve
-                size_t vertex_count;
-                size_t index_count;
-                Ogre::Vector3 *vertices;
-                unsigned long *indices;
-
-                // get the mesh information
-                if(query_result[qr_idx].movable->getMovableType().compare("Entity") == 0) {
-                    // For entities
-                    // get the entity to check
-                    Ogre::Entity *pentity = static_cast<Ogre::Entity*>(query_result[qr_idx].movable);
-
-                    mRecastDemo->getMeshInformation(pentity->getMesh(), vertex_count, vertices, index_count, indices,
-                                  pentity->getParentNode()->_getDerivedPosition(),
-                                  pentity->getParentNode()->_getDerivedOrientation(),
-                                  pentity->getParentNode()->_getDerivedScale());
-                } else {
-                    // For manualObjects
-                    // get the entity to check
-                    Ogre::ManualObject *pmanual = static_cast<Ogre::ManualObject*>(query_result[qr_idx].movable);
-
-                    mRecastDemo->getManualMeshInformation(pmanual, vertex_count, vertices, index_count, indices,
-                                  pmanual->getParentNode()->_getDerivedPosition(),
-                                  pmanual->getParentNode()->_getDerivedOrientation(),
-                                  pmanual->getParentNode()->_getDerivedScale());
-                }
-
-                // test for hitting individual triangles on the mesh
-                bool new_closest_found = false;
-                for (int i = 0; i < static_cast<int>(index_count); i += 3)
-                {
-                    // check for a hit against this triangle
-                    std::pair<bool, Ogre::Real> hit = Ogre::Math::intersects(ray, vertices[indices[i]],
-                        vertices[indices[i+1]], vertices[indices[i+2]], true, false);
-
-                    // if it was a hit check if its the closest
-                    if (hit.first)
-                    {
-                        if ((closest_distance < 0.0f) ||
-                            (hit.second < closest_distance))
-                        {
-                            // this is the closest so far, save it off
-                            closest_distance = hit.second;
-                            new_closest_found = true;
-                        }
-                    }
-                }
-
-
-             // free the verticies and indicies memory
-                delete[] vertices;
-                delete[] indices;
-
-                // if we found a new closest raycast for this object, update the
-                // closest_result before moving on to the next object.
-                if (new_closest_found)
-                {
-                    closest_result = ray.getPoint(closest_distance);
-                    if(query_result[qr_idx].movable != NULL)
-                        closest_movable = query_result[qr_idx].movable;
-                }
-            }
-        }
-
-        // return the result
-        if (closest_distance >= 0.0f)
-        {
-            // raycast success
-            result = closest_result;
-            //foundMovable = *closest_movable;  // TODO fix this!
-            return (true);
-        }
-        else
-        {
-            // raycast failed
-            return (false);
-        }
 }
 
 bool OgreRecastApplication::mousePressed( const OIS::MouseEvent &arg, OIS::MouseButtonID id )
@@ -286,7 +154,7 @@ bool OgreRecastApplication::mousePressed( const OIS::MouseEvent &arg, OIS::Mouse
             markerNode = getOrCreateMarker("EndPos", "Cylinder/Wires/Brown");
 
             if(mApplicationState != SIMPLE_PATHFIND)
-                mDetourCrowd->setMoveTarget(0, rayHitPoint, false); // Update destination of first agent only
+                mCharacters[0]->updateDestination(rayHitPoint, false);  // Update destination of first agent only
         }
 
         if(id == OIS::MB_Right && mApplicationState == SIMPLE_PATHFIND) {
@@ -297,120 +165,13 @@ bool OgreRecastApplication::mousePressed( const OIS::MouseEvent &arg, OIS::Mouse
             markerNode->setPosition(rayHitPoint);
         }
 
-        if(mApplicationState == SIMPLE_PATHFIND)
-            drawPathBetweenMarkers(1,1);    // Draw navigation path and steer all agents to set destination
+        if(mApplicationState == SIMPLE_PATHFIND) {
+            drawPathBetweenMarkers(1,1);    // Draw navigation path (in DRAW_DEBUG) and begin marker
+            UpdateAllAgentDestinations();   //Steer all agents to set destination
+        }
     }
 
     BaseApplication::mousePressed(arg, id);
-}
-
-Ogre::SceneNode* OgreRecastApplication::getOrCreateMarker(Ogre::String name, Ogre::String materialName)
-{
-    Ogre::SceneNode *result  = NULL;
-    try {
-        result = (Ogre::SceneNode*)(mSceneMgr->getRootSceneNode()->getChild(name+"Node"));
-    } catch(Ogre::Exception ex) {
-        result = mSceneMgr->getRootSceneNode()->createChildSceneNode(name+"Node");
-        Ogre::Entity* ent = mSceneMgr->createEntity(name, "Cylinder.mesh");
-        if(materialName.compare("") != 0)
-            ent->setMaterialName(materialName);
-        result->attachObject(ent);
-        ent->setQueryFlags(DEFAULT_MASK);   // Exclude from ray queries
-        // Set marker scale to size of agent
-        result->setScale(mRecastDemo->m_agentRadius*2, mRecastDemo->m_agentHeight,mRecastDemo->m_agentRadius*2);
-    }
-
-    return result;
-}
-
-void OgreRecastApplication::drawPathBetweenMarkers(int pathNb, int targetId)
-{
-    try {
-        Ogre::Vector3 beginPos = ((Ogre::SceneNode*)(mSceneMgr->getRootSceneNode()->getChild("BeginPosNode")))->getPosition();
-        Ogre::Vector3 endPos = ((Ogre::SceneNode*)(mSceneMgr->getRootSceneNode()->getChild("EndPosNode")))->getPosition();
-
-        int ret = mRecastDemo->FindPath(beginPos, endPos, pathNb, targetId) ;
-        if( ret >= 0)
-            mRecastDemo->CreateRecastPathLine(pathNb) ; // Draw a line showing path at slot 0
-        else
-            Ogre::LogManager::getSingletonPtr()->logMessage("ERROR: could not find a path. ("+mRecastDemo->getPathFindErrorMsg(ret)+")");
-
-        setPathAndBeginMarkerVisibility(true);
-
-        // Move first agent to begin position again
-        mDetourCrowd->removeAgent(0);
-        mDetourCrowd->addAgent(beginPos);
-
-        // Set move target for entire crowd
-        mDetourCrowd->setMoveTarget(endPos, false);
-            // TODO: there is a bug here that only the first agent will receive this target update
-    } catch(Ogre::Exception ex) {
-        // Either begin or end marker have not yet been placed
-        return;
-    }
-
-}
-
-void OgreRecastApplication::setPathAndBeginMarkerVisibility(bool visibility)
-{
-    // Hide begin marker
-    ((Ogre::SceneNode*)(mSceneMgr->getRootSceneNode()->getChild("BeginPosNode")))->setVisible(visibility);
-
-    // Hide path line
-    if(mRecastDemo->m_pRecastMOPath)
-        mRecastDemo->m_pRecastMOPath->setVisible(visibility);
-}
-
-bool OgreRecastApplication::frameRenderingQueued(const Ogre::FrameEvent& evt)
-{
-    mDetourCrowd->updateTick(evt.timeSinceLastFrame);
-
-    Ogre::Vector3 firstAgentPos = getFirstAgentPosition();
-    Ogre::Vector3 agentPos;
-    std::vector<int> agentIDs = mDetourCrowd->getActiveAgentIds();
-    std::vector<int>::iterator iter;
-
-    for(iter=agentIDs.begin(); iter != agentIDs.end(); iter++) {
-        int agentID = *iter;
-        const dtCrowdAgent* agent = mDetourCrowd->m_crowd->getAgent(agentID);
-
-        const float *pos = agent->npos;
-        mRecastDemo->FloatAToOgreVect3(pos,agentPos);
-        agentPos.y = agentPos.y+mRecastDemo->m_navMeshOffsetFromGround; // Compensate for distance of navmesh above ground
-        ((Ogre::SceneNode*)(mSceneMgr->getRootSceneNode()->getChild("Agent"+Ogre::StringConverter::toString(agentID)+"Node")))->setPosition(agentPos);
-
-        // RANDOM WANDER BEHAVIOUR
-        if(mApplicationState == CROWD_WANDER &&
-           agentID != 0) // No random walking for first agent
-        {
-            // Check if destination has been reached
-//TODO: find out how to ask dtCrowd when an agent has reached its destination
-            //const dtCrowd::MoveRequest *m= mDetourCrowd->m_crowd->getActiveMoveTarget( agentID );
-            //if(m != NULL && m->pos != NULL) {
-            //    Ogre::LogManager::getSingletonPtr()->logMessage("destination reached "+Ogre::StringConverter::toString(i));
-            //    mRecastDemo->FloatAToOgreVect3(m->pos, agentDestination);
-
-            // Correct position again (remove offset again)
-            agentPos.y = agentPos.y - mRecastDemo->m_navMeshOffsetFromGround;
-
-            // If destination reached: Set new random destination
-            if (agentPos.squaredDistance(mDestinations[agentID]) < mMinSquaredDistanceToGoal) {
-                mDestinations[agentID] = mRecastDemo->getRandomNavMeshPoint();
-                mDetourCrowd->setMoveTarget(agentID, mDestinations[agentID], false);
-            }
-        }
-
-
-        // CHASE BEHAVIOUR
-        if(mApplicationState == FOLLOW_TARGET &&
-           agentID != 0) // First agent doesn't chase itself
-        {
-            // Only ADJUST path to follow target (no full recalculation of the corridor to follow)
-            mDetourCrowd->setMoveTarget(agentID, firstAgentPos, true);
-        }
-    }
-
-    return BaseApplication::frameRenderingQueued(evt);
 }
 
 bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
@@ -423,16 +184,12 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
         Ogre::Vector3 rayHitPoint;
         Ogre::MovableObject *rayHitObject;
         if (rayQueryPointInScene(cursorRay, NAVMESH_MASK, rayHitPoint, *rayHitObject)) {
-            int agentID = mDetourCrowd->addAgent(rayHitPoint);
+            Character *character = createCharacter("Agent"+Ogre::StringConverter::toString(mCharacters.size()), rayHitPoint);
 
-            // If in wander mode, give a random destination to agent (otherwise it will take the destination of the previous one automatically)
+            // If in wander mode, give a random destination to agent (otherwise it will take the destination of the previous agent automatically)
             if(mApplicationState == CROWD_WANDER) {
-                mDestinations[agentID] = mRecastDemo->getRandomNavMeshPoint();
-                mDetourCrowd->setMoveTarget(agentID, mDestinations[agentID], false);
+                character->updateDestination(mRecastDemo->getRandomNavMeshPoint(), false);
             }
-
-            Ogre::SceneNode *marker = getOrCreateMarker("Agent"+Ogre::StringConverter::toString(agentID), "Cylinder/Blue");
-            marker->setPosition(rayHitPoint);
         }
     }
 
@@ -448,53 +205,318 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
                 break;
             case CROWD_WANDER:      // Wander -> chase
                 mApplicationState = FOLLOW_TARGET;
-                setFollowTargetForCrowd(getFirstAgentPosition());
+                setFollowTargetForCrowd(mCharacters[0]->getPosition());
                 setPathAndBeginMarkerVisibility(false);
                 mLabelOverlay->setCaption("Chase");
                 break;
             case FOLLOW_TARGET:     // Chase -> simple
                 mApplicationState = SIMPLE_PATHFIND;
-                drawPathBetweenMarkers(1,1);    // Reinitialize path that all agents follow and draw
+                drawPathBetweenMarkers(1,1);    // Draw navigation path (in DRAW_DEBUG) and begin marker
+                UpdateAllAgentDestinations();   // Reinitialize path that all agents follow and steer them towards end marker
                 mLabelOverlay->setCaption("Simple navigation");
                 break;
             default:
                 mApplicationState = SIMPLE_PATHFIND;
                 drawPathBetweenMarkers(1,1);
+                UpdateAllAgentDestinations();
                 mLabelOverlay->setCaption("Simple navigation");
         }
-
     }
 
     return BaseApplication::keyPressed(arg);
 }
 
-void OgreRecastApplication::setRandomTargetsForCrowd()
+Ogre::SceneNode* OgreRecastApplication::getOrCreateMarker(Ogre::String name, Ogre::String materialName)
 {
-    std::vector<int> activeAgentIds = mDetourCrowd->getActiveAgentIds();
-    std::vector<int>::iterator iter;
-    for(iter = activeAgentIds.begin(); iter != activeAgentIds.end(); iter++) {
-        if(*iter != 0) {  // Don't randomize first agent's destination
-            mDestinations[*iter] = mRecastDemo->getRandomNavMeshPoint();
-            mDetourCrowd->setMoveTarget(*iter, mDestinations[*iter], false);
+    Ogre::SceneNode *result  = NULL;
+    try {
+        result = (Ogre::SceneNode*)(mSceneMgr->getRootSceneNode()->getChild(name+"Node"));
+    } catch(Ogre::Exception ex) {
+        result = mSceneMgr->getRootSceneNode()->createChildSceneNode(name+"Node");
+        Ogre::Entity* ent = mSceneMgr->createEntity(name, "Cylinder.mesh");
+        if(materialName.compare("") != 0)
+            ent->setMaterialName(materialName);
+        result->attachObject(ent);
+
+        // Set marker scale to size of agent
+        result->setScale(mRecastDemo->m_agentRadius*2, mRecastDemo->m_agentHeight,mRecastDemo->m_agentRadius*2);
+
+        ent->setQueryFlags(DEFAULT_MASK);   // Exclude from ray queries
+    }
+
+    return result;
+}
+
+Character* OgreRecastApplication::createCharacter(Ogre::String name, Ogre::Vector3 position)
+{
+    if(mDetourCrowd->getNbAgents() >= mDetourCrowd->getMaxNbAgents()) {
+        Ogre::LogManager::getSingletonPtr()->logMessage("Error: Cannot create crowd agent for new character. Limit of "+Ogre::StringConverter::toString(mDetourCrowd->getMaxNbAgents())+" reached", Ogre::LML_CRITICAL);
+        throw new Ogre::Exception(1, "Cannot create crowd agent for new character. Limit of "+Ogre::StringConverter::toString(mDetourCrowd->getMaxNbAgents())+" reached", "OgreRecastApplication::getOrCreateCharacter("+name+")");
+    }
+
+    if( HUMAN_CHARACTERS ) {
+        // Create human characters
+        Character *character = new AnimateableCharacter(name, mSceneMgr, mDetourCrowd, position);
+        mCharacters.push_back(character);
+        character->setDestination(mLastSetDestination); // A bit of a dirty hack, but there is no other way to figure this out
+        return character;
+    } else {
+        // Create simple characters (cylinders)
+        Character *character = new TestCharacter(name, mSceneMgr, mDetourCrowd, position);
+        mCharacters.push_back(character);
+        character->setDestination(mLastSetDestination);
+        return character;
+    }
+}
+
+void OgreRecastApplication::drawPathBetweenMarkers(int pathNb, int targetId)
+{
+    try {
+        Ogre::Vector3 beginPos = getOrCreateMarker("BeginPos")->getPosition();
+        Ogre::Vector3 endPos = getOrCreateMarker("EndPos")->getPosition();
+
+        // Draw path line if visual debugging is enabled
+        if(OgreRecastApplication::DEBUG_DRAW)
+            // Find new path from begin to end positions
+            calculateAndDrawPath(beginPos, endPos, pathNb, targetId);
+
+        // Show begin and end markers
+        setPathAndBeginMarkerVisibility(true);
+    } catch(Ogre::Exception ex) {
+        // Either begin or end marker have not yet been placed
+        return;
+    }
+}
+
+void OgreRecastApplication::calculateAndDrawPath(Ogre::Vector3 beginPos, Ogre::Vector3 endPos, int pathNb, int targetId)
+{
+    // Note that this calculated path is not actually used except for debug drawing.
+    // DetourCrowd will take care of calculating a separate path for each of its agents.
+    int ret = mRecastDemo->FindPath(beginPos, endPos, pathNb, targetId) ;
+    if( ret >= 0 )
+            mRecastDemo->CreateRecastPathLine(pathNb) ; // Draw a line showing path at specified slot
+    else
+        Ogre::LogManager::getSingletonPtr()->logMessage("ERROR: could not find a path. ("+mRecastDemo->getPathFindErrorMsg(ret)+")");
+}
+
+
+void OgreRecastApplication::UpdateAllAgentDestinations()
+{
+    try {
+        Ogre::Vector3 beginPos = getOrCreateMarker("BeginPos")->getPosition();
+        Ogre::Vector3 endPos = getOrCreateMarker("EndPos")->getPosition();
+
+        // Move first agent to begin position again
+        mCharacters[0]->setPosition(beginPos);
+
+        // Set move target for entire crowd
+        setDestinationForAllAgents(endPos, false);
+    } catch(Ogre::Exception ex) {
+        // Either begin or end marker have not yet been placed
+        return;
+    }
+}
+
+void OgreRecastApplication::setPathAndBeginMarkerVisibility(bool visibility)
+{
+    // Hide or show begin marker
+    getOrCreateMarker("BeginPos")->setVisible(visibility);
+
+    // Hide or show path line
+    if(mRecastDemo->m_pRecastMOPath)
+        mRecastDemo->m_pRecastMOPath->setVisible(visibility);
+}
+
+bool OgreRecastApplication::frameRenderingQueued(const Ogre::FrameEvent& evt)
+{
+    // First update the agents using the crowd in which they are controlled
+    mDetourCrowd->updateTick(evt.timeSinceLastFrame);
+
+    // Then update all characters controlled by the agents
+    Ogre::Vector3 firstAgentPos = Ogre::Vector3::ZERO;
+    for(std::vector<Character*>::iterator iter=mCharacters.begin(); iter != mCharacters.end(); iter++) {
+        Character *character = *iter;
+
+        // Update character (position, animations, state)
+        character->update(evt.timeSinceLastFrame);
+
+
+        // Set new destinations depending on current demo mode
+
+        // RANDOM WANDER BEHAVIOUR
+        if(mApplicationState == CROWD_WANDER &&
+           character->getAgentID() != 0) // No random walking for first agent
+        {
+            // If destination reached: Set new random destination
+            if ( character->destinationReached() ) {
+                character->updateDestination( mRecastDemo->getRandomNavMeshPoint() );
+            }
+        }
+
+        // CHASE BEHAVIOUR
+        if(mApplicationState == FOLLOW_TARGET) {
+            // We specifically need the position of the first agent for the others to chase
+            if(character->getAgentID() == 0)
+                firstAgentPos = character->getPosition();
+            else
+                // Only ADJUST path to follow target (no full recalculation of the corridor to follow)
+                character->updateDestination(firstAgentPos, true);
         }
     }
+
+    return BaseApplication::frameRenderingQueued(evt);
+}
+
+void OgreRecastApplication::setRandomTargetsForCrowd()
+{
+    for(std::vector<Character*>::iterator iter=mCharacters.begin(); iter != mCharacters.end(); iter++) {
+        Character *character = *iter;
+
+        if(character->getAgentID() != 0) {  // Don't randomize first agent's destination
+            character->updateDestination( mRecastDemo->getRandomNavMeshPoint() );
+        }
+    }
+
 }
 
 void OgreRecastApplication::setFollowTargetForCrowd(Ogre::Vector3 targetDestination)
 {
-    std::vector<int> activeAgentIds = mDetourCrowd->getActiveAgentIds();
-    std::vector<int>::iterator iter;
-    for(iter = activeAgentIds.begin(); iter != activeAgentIds.end(); iter++) {
-        if(*iter != 0) {  // Don't move first agent
+    for(std::vector<Character*>::iterator iter=mCharacters.begin(); iter != mCharacters.end(); iter++) {
+        Character *character = *iter;
+
+        if(character->getAgentID() != 0) {  // Don't move first agent
             // Recalculate a full new path to the target
-            mDetourCrowd->setMoveTarget(*iter, targetDestination, false);
+            character->updateDestination( targetDestination, false );
         }
     }
 }
 
-Ogre::Vector3 OgreRecastApplication::getFirstAgentPosition()
+void OgreRecastApplication::setDestinationForAllAgents(Ogre::Vector3 destination, bool adjustExistingPath)
 {
-    return ((Ogre::SceneNode*)(mSceneMgr->getRootSceneNode()->getChild("Agent0Node")))->getPosition();
+    // update the last set destination so we can correctly set the destination variable of newly created agents (it's hard to get this out of dtCrowd)
+    mLastSetDestination = destination;
+    mDetourCrowd->setMoveTarget(destination, adjustExistingPath);
+        // TODO: there is a bug here that sometimes only the first agent will receive this target update
+
+    // Update the destination variable of each character (uses friend relationship with Character)
+    for(std::vector<Character*>::iterator iter = mCharacters.begin(); iter != mCharacters.end(); iter++) {
+        (*iter)->setDestination(destination);
+    }
+}
+
+bool OgreRecastApplication::rayQueryPointInScene(Ogre::Ray ray, unsigned long queryMask, Ogre::Vector3 &result, Ogre::MovableObject &foundMovable)
+{
+    mRayScnQuery = mSceneMgr->createRayQuery(Ogre::Ray(), queryMask);
+
+    mRayScnQuery->setRay(ray);
+    Ogre::RaySceneQueryResult& query_result = mRayScnQuery->execute();
+
+    // at this point we have raycast to a series of different objects bounding boxes.
+    // we need to test these different objects to see which is the first polygon hit.
+    // there are some minor optimizations (distance based) that mean we wont have to
+    // check all of the objects most of the time, but the worst case scenario is that
+    // we need to test every triangle of every object.
+    Ogre::Real closest_distance = -1.0f;
+    Ogre::Vector3 closest_result;
+    Ogre::MovableObject *closest_movable;
+    for (size_t qr_idx = 0; qr_idx < query_result.size(); qr_idx++)
+    {
+        // Debug:
+        //Ogre::LogManager::getSingletonPtr()->logMessage(query_result[qr_idx].movable->getName());
+        //Ogre::LogManager::getSingletonPtr()->logMessage(query_result[qr_idx].movable->getMovableType());
+
+
+        // stop checking if we have found a raycast hit that is closer
+        // than all remaining entities
+        if ((closest_distance >= 0.0f) &&
+            (closest_distance < query_result[qr_idx].distance))
+        {
+             break;
+        }
+
+        // only check this result if its a hit against an entity
+        if ((query_result[qr_idx].movable != NULL) &&
+            ((query_result[qr_idx].movable->getMovableType().compare("Entity") == 0)
+            ||query_result[qr_idx].movable->getMovableType().compare("ManualObject") == 0))
+        {
+            // mesh data to retrieve
+            size_t vertex_count;
+            size_t index_count;
+            Ogre::Vector3 *vertices;
+            unsigned long *indices;
+
+            // get the mesh information
+            if(query_result[qr_idx].movable->getMovableType().compare("Entity") == 0) {
+                // For entities
+                // get the entity to check
+                Ogre::Entity *pentity = static_cast<Ogre::Entity*>(query_result[qr_idx].movable);
+
+                mRecastDemo->getMeshInformation(pentity->getMesh(), vertex_count, vertices, index_count, indices,
+                              pentity->getParentNode()->_getDerivedPosition(),
+                              pentity->getParentNode()->_getDerivedOrientation(),
+                              pentity->getParentNode()->_getDerivedScale());
+            } else {
+                // For manualObjects
+                // get the entity to check
+                Ogre::ManualObject *pmanual = static_cast<Ogre::ManualObject*>(query_result[qr_idx].movable);
+
+                mRecastDemo->getManualMeshInformation(pmanual, vertex_count, vertices, index_count, indices,
+                              pmanual->getParentNode()->_getDerivedPosition(),
+                              pmanual->getParentNode()->_getDerivedOrientation(),
+                              pmanual->getParentNode()->_getDerivedScale());
+            }
+
+            // test for hitting individual triangles on the mesh
+            bool new_closest_found = false;
+            for (int i = 0; i < static_cast<int>(index_count); i += 3)
+            {
+                // check for a hit against this triangle
+                std::pair<bool, Ogre::Real> hit = Ogre::Math::intersects(ray, vertices[indices[i]],
+                    vertices[indices[i+1]], vertices[indices[i+2]], true, false);
+
+                // if it was a hit check if its the closest
+                if (hit.first)
+                {
+                    if ((closest_distance < 0.0f) ||
+                        (hit.second < closest_distance))
+                    {
+                        // this is the closest so far, save it off
+                        closest_distance = hit.second;
+                        new_closest_found = true;
+                    }
+                }
+            }
+
+
+         // free the verticies and indicies memory
+            delete[] vertices;
+            delete[] indices;
+
+            // if we found a new closest raycast for this object, update the
+            // closest_result before moving on to the next object.
+            if (new_closest_found)
+            {
+                closest_result = ray.getPoint(closest_distance);
+                if(query_result[qr_idx].movable != NULL)
+                    closest_movable = query_result[qr_idx].movable;
+            }
+        }
+    }
+
+    // return the result
+    if (closest_distance >= 0.0f)
+    {
+        // raycast success
+        result = closest_result;
+        //foundMovable = *closest_movable;  // TODO fix this!
+        return (true);
+    }
+    else
+    {
+        // raycast failed
+        return (false);
+    }
+
 }
 
 

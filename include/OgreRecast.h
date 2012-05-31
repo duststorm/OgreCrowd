@@ -1,6 +1,12 @@
 #ifndef __OgreRecast_h_
 #define __OgreRecast_h_
 
+
+
+/**
+  * This file sets up all definitions needed by Recast/Detour
+  **/
+
 // recast/detour stuff
 #include "Recast/Recast.h"
 #include "Detour/DetourNavMesh.h"

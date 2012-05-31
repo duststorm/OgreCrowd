@@ -114,7 +114,10 @@ SOURCES += src/BaseApplication.cpp \
     src/Recast/RecastContour.cpp \
     src/Recast/RecastArea.cpp \
     src/Recast/RecastRegion.cpp \
-    src/OgreDetourCrowd.cpp
+    src/OgreDetourCrowd.cpp \
+    src/Character.cpp \
+    src/TestCharacter.cpp \
+    src/AnimateableCharacter.cpp
 HEADERS += include/BaseApplication.h \
     include/OgreRecastApplication.h \
     include/OgreRecastDemo.h \
@@ -137,4 +140,7 @@ HEADERS += include/BaseApplication.h \
     include/DetourCrowd/DetourObstacleAvoidance.h \
     include/DetourCrowd/DetourLocalBoundary.h \
     include/DetourCrowd/DetourProximityGrid.h \
-    include/OgreDetourCrowd.h
+    include/OgreDetourCrowd.h \
+    include/Character.h \
+    include/TestCharacter.h \
+    include/AnimateableCharacter.h

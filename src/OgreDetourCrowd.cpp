@@ -93,6 +93,16 @@ OgreDetourCrowd::~OgreDetourCrowd()
 }
 
 
+Ogre::Real OgreDetourCrowd::getAgentHeight()
+{
+    return m_recastDemo->m_agentHeight;
+}
+
+Ogre::Real OgreDetourCrowd::getAgentRadius()
+{
+    return m_recastDemo->m_agentRadius;
+}
+
 void OgreDetourCrowd::updateTick(const float dt)
 {
         dtNavMesh* nav = m_recastDemo->m_navMesh;
@@ -129,10 +139,10 @@ int OgreDetourCrowd::addAgent(const Ogre::Vector3 position)
         // Define parameters for agent in crowd
         dtCrowdAgentParams ap;
         memset(&ap, 0, sizeof(ap));
-        ap.radius = m_recastDemo->m_agentRadius;    // TODO define getters for this
-        ap.height = m_recastDemo->m_agentHeight;
+        ap.radius = getAgentRadius();
+        ap.height = getAgentHeight();
         ap.maxAcceleration = 8.0f;
-        ap.maxSpeed = 3.5f;
+        ap.maxSpeed = (ap.height/2)*1.5f;//3.5
         ap.collisionQueryRange = ap.radius * 12.0f;
         ap.pathOptimizationRange = ap.radius * 30.0f;
 
@@ -216,6 +226,11 @@ void OgreDetourCrowd::removeAgent(const int idx)
 //                m_agentDebug.idx = -1;
 
         m_activeAgents--;
+}
+
+const dtCrowdAgent* OgreDetourCrowd::getAgent(int id)
+{
+    return m_crowd->getAgent(id);
 }
 
 

@@ -1,6 +1,5 @@
 #include "OgreRecastDemo.h"
 
-// TODO: integrate detourCrowd
 
 OgreRecastDemo::OgreRecastDemo(Ogre::SceneManager* sceneMgr)
     : m_pSceneMgr(sceneMgr)
@@ -61,27 +60,6 @@ void OgreRecastDemo::RecastCleanup()
 
 
 
-/**
- * To use the pathfinding code, set the start and end points as two float[3] arrays, and call like so:
-**/
-void OgreRecastDemo::testPathFind()
-{
-    // 0 for the slot to save the path too, and 0 as the "target", to remember what the path was for.
-    // will return a negative number if the search for a path failed.
-    int ret = FindPath(m_flTestStart, m_flTestEnd, 0, 0) ; 
-    if( ret >= 0)
-        CreateRecastPathLine(0) ; // create a line that shows path 0, if we want to debug.
-}
-
-
-
-
-
-
-
-
-
-// TODO: this will need custom code, as this example is made for use with mkultra's BZN BSP map structures, we will create a method for sending Ogre Meshes to recast as obstacles
 /**
  * Now for the navmesh creation function. 
  * I've mostly taken this from the demo, apart from the top part where I create the triangles. Recast needs a bunch of input vertices and triangles from your map to build the navigation mesh. Where you get those verts amd triangles is up to you, my map loader was already outputing verts and triangle so it was easy to use those. Make sure the triangles wind the correct way or Recast will try to build the navmesh on the outside of your map.
@@ -146,7 +124,7 @@ bool OgreRecastDemo::NavMeshBuild(Ogre::Entity* srcMesh)
    m_cellSize = /*9.0 ;//*/0.3;         //*
    m_cellHeight = /*6.0 ;//*/0.2;       //*
    m_agentMaxSlope = /*45*/20;          //*
-   m_agentHeight = /*64.0;*/1;        //*
+   m_agentHeight = 2.5/*64.0;  1*/;        //*
    m_agentMaxClimb = 16;                //*
    m_agentRadius = /*16;*/0.5;          //*
    m_edgeMaxLen = 12/*512*/;
