@@ -5,7 +5,6 @@
 
 OgreDetourCrowd::OgreDetourCrowd(OgreRecastDemo *recastDemo)
     : m_crowd(0),
-    m_highlightedAgent(0),
     m_recastDemo(recastDemo),
     m_targetRef(0),
     m_activeAgents(0)
@@ -202,7 +201,6 @@ std::vector<dtCrowdAgent*> OgreDetourCrowd::getActiveAgents()
 std::vector<int> OgreDetourCrowd::getActiveAgentIds(void)
 {
     std::vector<int> result = std::vector<int>();
-    //result.reserve(getNbAgents());
 
     const dtCrowdAgent* agent = NULL;
     for(int i=0; i<getMaxNbAgents(); i++) {
@@ -219,25 +217,12 @@ void OgreDetourCrowd::removeAgent(const int idx)
 {
         m_crowd->removeAgent(idx);
 
-//        if (m_highlightedAgent == m_agentDebug.idx)
-//                m_agentDebug.idx = -1;
-
         m_activeAgents--;
 }
 
 const dtCrowdAgent* OgreDetourCrowd::getAgent(int id)
 {
     return m_crowd->getAgent(id);
-}
-
-
-void OgreDetourCrowd::hilightAgent(Ogre::Entity* agent)
-{
-    if(m_highlightedAgent != NULL) {
-        m_highlightedAgent->setMaterialName("Agent");
-    }
-
-    agent->setMaterialName("AgentHilight");
 }
 
 
@@ -283,16 +268,6 @@ void OgreDetourCrowd::setMoveTarget(Ogre::Vector3 position, bool adjust)
         // Adjust target using tiny local search. (instead of recalculating full path)
         if (adjust)
         {
-            // if agent selected, only apply new target to that agent
-/*                if (m_agentDebug.idx != -1)
-                {
-                        const dtCrowdAgent* ag = crowd->getAgent(m_agentDebug.idx);
-                        if (ag && ag->active)
-                                crowd->adjustMoveTarget(m_agentDebug.idx, m_targetRef, m_targetPos);
-                }
-                else    // apply to all agents
-                {
-                */
                         for (int i = 0; i < crowd->getAgentCount(); ++i)
                         {
                                 const dtCrowdAgent* ag = crowd->getAgent(i);
@@ -301,27 +276,16 @@ void OgreDetourCrowd::setMoveTarget(Ogre::Vector3 position, bool adjust)
                                 calcVel(vel, ag->npos, p, ag->params.maxSpeed);
                                 crowd->requestMoveVelocity(i, vel);
                         }
-                //}
         }
         else
         {
                 // Move target using path finder (recalculate a full new path)
-              /*if (m_agentDebug.idx != -1)
-                {
-                        const dtCrowdAgent* ag = crowd->getAgent(m_agentDebug.idx);
-                        if (ag && ag->active)
-                                crowd->requestMoveTarget(m_agentDebug.idx, m_targetRef, m_targetPos);
-                }
-                else
-                {
-            */
                         for (int i = 0; i < crowd->getAgentCount(); ++i)
                         {
                                 const dtCrowdAgent* ag = crowd->getAgent(i);
                                 if (!ag->active) continue;
                                 crowd->requestMoveTarget(i, m_targetRef, m_targetPos);
                         }
-            //    }
         }
 }
 
@@ -347,5 +311,12 @@ void OgreDetourCrowd::setMoveTarget(int agentId, Ogre::Vector3 position, bool ad
     } else {
         m_crowd->requestMoveTarget(agentId, m_targetRef, m_targetPos);
     }
+}
+
+Ogre::Vector3 OgreDetourCrowd::getLastDestination()
+{
+    Ogre::Vector3 result;
+    OgreRecastDemo::FloatAToOgreVect3(m_targetPos, result);
+    return result;
 }
 

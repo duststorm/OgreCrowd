@@ -11,6 +11,9 @@
   * Ogre wrapper around DetourCrowd.
   * Controls a crowd of agents that can steer to avoid each other and follow
   * individual paths.
+  *
+  * This class is largely based on the CrowdTool used in the original recastnavigation
+  * demo.
   **/
 class OgreDetourCrowd
 {
@@ -33,12 +36,6 @@ public:
       * Remove agent with specified ID from the crowd.
       **/
     void removeAgent(const int idx);
-
-    /**
-      * Mark agent as highlighted. Was used in the original recast/detour demo,
-      * not actually used in this application.
-      **/
-    void hilightAgent(Ogre::Entity* agent);
 
     /**
       * Set global destination or target for all agents in the crowd.
@@ -118,6 +115,12 @@ public:
     std::vector<int> getActiveAgentIds(void);
 
     /**
+      * The last set destination for the crowd. This is the destination
+      * that will be assigned to newly added agents.
+      **/
+    Ogre::Vector3 getLastDestination(void);
+
+    /**
       * Reference to the DetourCrowd object that is wrapped.
       **/
     dtCrowd* m_crowd;
@@ -126,12 +129,6 @@ public:
       * Reference to the Recast/Detour wrapper object for Ogre.
       **/
     OgreRecastDemo *m_recastDemo;
-
-    /**
-      * The currently highlighted agent.
-      * Part of the original demo and not used in this demo application.
-      **/
-    Ogre::Entity *m_highlightedAgent;
 
     /**
       * The latest set target or destination section in the recast navmesh.

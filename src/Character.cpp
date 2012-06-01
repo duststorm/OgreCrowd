@@ -14,7 +14,7 @@ Character::Character(Ogre::String name, Ogre::SceneManager *sceneMgr, OgreDetour
     mNode(NULL),
     mAgent(NULL),
     mAgentID(-1),
-    mDestination(position)
+    mDestination(detourCrowd->getLastDestination())
 {
     mAgentID = mDetourCrowd->addAgent(position);
     mAgent = mDetourCrowd->getAgent(mAgentID);
@@ -56,7 +56,6 @@ void Character::setPosition(Ogre::Vector3 position)
 
 void Character::updateDestination(Ogre::Vector3 destination, bool updatePreviousPath)
 {
-    // TODO updating individual also affects latest set destination in OgreDetourCrowd. Fix this there instead of hacking it in the application class.
     mDetourCrowd->setMoveTarget(mAgentID, destination, updatePreviousPath);
     mDestination = destination;
 }

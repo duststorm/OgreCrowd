@@ -172,13 +172,6 @@ private:
       **/
     std::vector<Character*> mCharacters;
 
-    /**
-      * The destination for all agents that was last issued to DetourCrowd.
-      * This is the destination that is implicitly given to all newly added agents
-      * by detourCrowd. This value needs to be stored as it's hard to query this back
-      * from detourCrowd or its agents.
-      **/
-    Ogre::Vector3 mLastSetDestination;
 };
 
 

@@ -37,7 +37,6 @@ OgreRecastApplication::OgreRecastApplication(void)
         mDetourCrowd(0),
         mApplicationState(SIMPLE_PATHFIND),
         mLabelOverlay(0),
-        mLastSetDestination(Ogre::Vector3::ZERO),
         mCharacters()
 {
 }
@@ -258,13 +257,11 @@ Character* OgreRecastApplication::createCharacter(Ogre::String name, Ogre::Vecto
         // Create human characters
         Character *character = new AnimateableCharacter(name, mSceneMgr, mDetourCrowd, position);
         mCharacters.push_back(character);
-        character->setDestination(mLastSetDestination); // A bit of a dirty hack, but there is no other way to figure this out
         return character;
     } else {
         // Create simple characters (cylinders)
         Character *character = new TestCharacter(name, mSceneMgr, mDetourCrowd, position);
         mCharacters.push_back(character);
-        character->setDestination(mLastSetDestination);
         return character;
     }
 }
@@ -393,14 +390,12 @@ void OgreRecastApplication::setFollowTargetForCrowd(Ogre::Vector3 targetDestinat
 
 void OgreRecastApplication::setDestinationForAllAgents(Ogre::Vector3 destination, bool adjustExistingPath)
 {
-    // update the last set destination so we can correctly set the destination variable of newly created agents (it's hard to get this out of dtCrowd)
-    mLastSetDestination = destination;
     mDetourCrowd->setMoveTarget(destination, adjustExistingPath);
         // TODO: there is a bug here that sometimes only the first agent will receive this target update
 
     // Update the destination variable of each character (uses friend relationship with Character)
     for(std::vector<Character*>::iterator iter = mCharacters.begin(); iter != mCharacters.end(); iter++) {
-        (*iter)->setDestination(destination);
+        (*iter)->setDestination(destination);   // This happens here because DetourCrowd does not manage Characters, only agents.
     }
 }
 
