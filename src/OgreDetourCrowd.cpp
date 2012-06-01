@@ -204,9 +204,9 @@ std::vector<int> OgreDetourCrowd::getActiveAgentIds(void)
     std::vector<int> result = std::vector<int>();
     //result.reserve(getNbAgents());
 
-    dtCrowdAgent* agent = NULL;
+    const dtCrowdAgent* agent = NULL;
     for(int i=0; i<getMaxNbAgents(); i++) {
-        agent = &(m_crowd->m_agents[i]);
+        agent = m_crowd->getAgent(i);
         if(agent->active)
             result.push_back(i);
     }

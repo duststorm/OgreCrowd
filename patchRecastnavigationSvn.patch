@@ -1,0 +1,437 @@
+diff -uN recastnavigation/DetourCrowd/Source/DetourCrowd.cpp ogreRecast/src/DetourCrowd/DetourCrowd.cpp
+--- recastnavigation/DetourCrowd/Source/DetourCrowd.cpp	2012-03-19 22:16:32.786845986 +0100
++++ ogreRecast/src/DetourCrowd/DetourCrowd.cpp	2012-03-29 01:50:40.390507117 +0200
+@@ -22,13 +22,13 @@
+ #include <float.h>
+ #include <stdlib.h>
+ #include <new>
+-#include "DetourCrowd.h"
+-#include "DetourNavMesh.h"
+-#include "DetourNavMeshQuery.h"
+-#include "DetourObstacleAvoidance.h"
+-#include "DetourCommon.h"
+-#include "DetourAssert.h"
+-#include "DetourAlloc.h"
++#include "DetourCrowd/DetourCrowd.h"
++#include "Detour/DetourNavMesh.h"
++#include "Detour/DetourNavMeshQuery.h"
++#include "DetourCrowd/DetourObstacleAvoidance.h"
++#include "Detour/DetourCommon.h"
++#include "Detour/DetourAssert.h"
++#include "Detour/DetourAlloc.h"
+ 
+ 
+ dtCrowd* dtAllocCrowd()
+diff -uN recastnavigation/DetourCrowd/Source/DetourLocalBoundary.cpp ogreRecast/src/DetourCrowd/DetourLocalBoundary.cpp
+--- recastnavigation/DetourCrowd/Source/DetourLocalBoundary.cpp	2012-03-19 22:16:32.786845986 +0100
++++ ogreRecast/src/DetourCrowd/DetourLocalBoundary.cpp	2012-03-29 01:50:23.772492960 +0200
+@@ -18,10 +18,10 @@
+ 
+ #include <float.h>
+ #include <string.h>
+-#include "DetourLocalBoundary.h"
+-#include "DetourNavMeshQuery.h"
+-#include "DetourCommon.h"
+-#include "DetourAssert.h"
++#include "DetourCrowd/DetourLocalBoundary.h"
++#include "Detour/DetourNavMeshQuery.h"
++#include "Detour/DetourCommon.h"
++#include "Detour/DetourAssert.h"
+ 
+ 
+ dtLocalBoundary::dtLocalBoundary() :
+diff -uN recastnavigation/DetourCrowd/Source/DetourObstacleAvoidance.cpp ogreRecast/src/DetourCrowd/DetourObstacleAvoidance.cpp
+--- recastnavigation/DetourCrowd/Source/DetourObstacleAvoidance.cpp	2012-03-19 22:16:32.786845986 +0100
++++ ogreRecast/src/DetourCrowd/DetourObstacleAvoidance.cpp	2012-03-29 01:50:49.742757164 +0200
+@@ -16,10 +16,10 @@
+ // 3. This notice may not be removed or altered from any source distribution.
+ //
+ 
+-#include "DetourObstacleAvoidance.h"
+-#include "DetourCommon.h"
+-#include "DetourAlloc.h"
+-#include "DetourAssert.h"
++#include "DetourCrowd/DetourObstacleAvoidance.h"
++#include "Detour/DetourCommon.h"
++#include "Detour/DetourAlloc.h"
++#include "Detour/DetourAssert.h"
+ #include <string.h>
+ #include <math.h>
+ #include <float.h>
+diff -uN recastnavigation/DetourCrowd/Source/DetourPathCorridor.cpp ogreRecast/src/DetourCrowd/DetourPathCorridor.cpp
+--- recastnavigation/DetourCrowd/Source/DetourPathCorridor.cpp	2012-03-19 22:16:32.786845986 +0100
++++ ogreRecast/src/DetourCrowd/DetourPathCorridor.cpp	2012-03-29 01:50:54.438065197 +0200
+@@ -17,11 +17,11 @@
+ //
+ 
+ #include <string.h>
+-#include "DetourPathCorridor.h"
+-#include "DetourNavMeshQuery.h"
+-#include "DetourCommon.h"
+-#include "DetourAssert.h"
+-#include "DetourAlloc.h"
++#include "DetourCrowd/DetourPathCorridor.h"
++#include "Detour/DetourNavMeshQuery.h"
++#include "Detour/DetourCommon.h"
++#include "Detour/DetourAssert.h"
++#include "Detour/DetourAlloc.h"
+ 
+ 
+ int dtMergeCorridorStartMoved(dtPolyRef* path, const int npath, const int maxPath,
+diff -uN recastnavigation/DetourCrowd/Source/DetourPathQueue.cpp ogreRecast/src/DetourCrowd/DetourPathQueue.cpp
+--- recastnavigation/DetourCrowd/Source/DetourPathQueue.cpp	2012-03-19 22:16:32.786845986 +0100
++++ ogreRecast/src/DetourCrowd/DetourPathQueue.cpp	2012-03-29 01:50:58.398007286 +0200
+@@ -17,11 +17,11 @@
+ //
+ 
+ #include <string.h>
+-#include "DetourPathQueue.h"
+-#include "DetourNavMesh.h"
+-#include "DetourNavMeshQuery.h"
+-#include "DetourAlloc.h"
+-#include "DetourCommon.h"
++#include "DetourCrowd/DetourPathQueue.h"
++#include "Detour/DetourNavMesh.h"
++#include "Detour/DetourNavMeshQuery.h"
++#include "Detour/DetourAlloc.h"
++#include "Detour/DetourCommon.h"
+ 
+ 
+ dtPathQueue::dtPathQueue() :
+diff -uN recastnavigation/DetourCrowd/Source/DetourProximityGrid.cpp ogreRecast/src/DetourCrowd/DetourProximityGrid.cpp
+--- recastnavigation/DetourCrowd/Source/DetourProximityGrid.cpp	2012-03-19 22:16:32.786845986 +0100
++++ ogreRecast/src/DetourCrowd/DetourProximityGrid.cpp	2012-03-29 01:51:01.970507252 +0200
+@@ -19,10 +19,10 @@
+ #include <math.h>
+ #include <string.h>
+ #include <new>
+-#include "DetourProximityGrid.h"
+-#include "DetourCommon.h"
+-#include "DetourAlloc.h"
+-#include "DetourAssert.h"
++#include "DetourCrowd/DetourProximityGrid.h"
++#include "Detour/DetourCommon.h"
++#include "Detour/DetourAlloc.h"
++#include "Detour/DetourAssert.h"
+ 
+ 
+ dtProximityGrid* dtAllocProximityGrid()
+diff -uN recastnavigation/Detour/Source/DetourAlloc.cpp ogreRecast/src/Detour/DetourAlloc.cpp
+--- recastnavigation/Detour/Source/DetourAlloc.cpp	2012-03-19 22:16:32.942849042 +0100
++++ ogreRecast/src/Detour/DetourAlloc.cpp	2012-03-29 01:51:09.254757500 +0200
+@@ -17,7 +17,7 @@
+ //
+ 
+ #include <stdlib.h>
+-#include "DetourAlloc.h"
++#include "Detour/DetourAlloc.h"
+ 
+ static void *dtAllocDefault(int size, dtAllocHint)
+ {
+diff -uN recastnavigation/Detour/Source/DetourCommon.cpp ogreRecast/src/Detour/DetourCommon.cpp
+--- recastnavigation/Detour/Source/DetourCommon.cpp	2012-03-19 22:16:32.942849042 +0100
++++ ogreRecast/src/Detour/DetourCommon.cpp	2012-03-29 01:51:09.254757500 +0200
+@@ -17,7 +17,7 @@
+ //
+ 
+ #include <math.h>
+-#include "DetourCommon.h"
++#include "Detour/DetourCommon.h"
+ 
+ //////////////////////////////////////////////////////////////////////////////////////////
+ 
+diff -uN recastnavigation/Detour/Source/DetourNavMeshBuilder.cpp ogreRecast/src/Detour/DetourNavMeshBuilder.cpp
+--- recastnavigation/Detour/Source/DetourNavMeshBuilder.cpp	2012-03-19 22:16:32.942849042 +0100
++++ ogreRecast/src/Detour/DetourNavMeshBuilder.cpp	2012-03-29 01:48:18.707962975 +0200
+@@ -20,11 +20,11 @@
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <string.h>
+-#include "DetourNavMesh.h"
+-#include "DetourCommon.h"
+-#include "DetourNavMeshBuilder.h"
+-#include "DetourAlloc.h"
+-#include "DetourAssert.h"
++#include "Detour/DetourNavMesh.h"
++#include "Detour/DetourCommon.h"
++#include "Detour/DetourNavMeshBuilder.h"
++#include "Detour/DetourAlloc.h"
++#include "Detour/DetourAssert.h"
+ 
+ static unsigned short MESH_NULL_IDX = 0xffff;
+ 
+diff -uN recastnavigation/Detour/Source/DetourNavMesh.cpp ogreRecast/src/Detour/DetourNavMesh.cpp
+--- recastnavigation/Detour/Source/DetourNavMesh.cpp	2012-03-19 22:16:32.942849042 +0100
++++ ogreRecast/src/Detour/DetourNavMesh.cpp	2012-03-29 01:48:07.570582742 +0200
+@@ -20,11 +20,11 @@
+ #include <float.h>
+ #include <string.h>
+ #include <stdio.h>
+-#include "DetourNavMesh.h"
+-#include "DetourNode.h"
+-#include "DetourCommon.h"
+-#include "DetourAlloc.h"
+-#include "DetourAssert.h"
++#include "Detour/DetourNavMesh.h"
++#include "Detour/DetourNode.h"
++#include "Detour/DetourCommon.h"
++#include "Detour/DetourAlloc.h"
++#include "Detour/DetourAssert.h"
+ #include <new>
+ 
+ 
+diff -uN recastnavigation/Detour/Source/DetourNavMeshQuery.cpp ogreRecast/src/Detour/DetourNavMeshQuery.cpp
+--- recastnavigation/Detour/Source/DetourNavMeshQuery.cpp	2012-03-19 22:16:32.942849042 +0100
++++ ogreRecast/src/Detour/DetourNavMeshQuery.cpp	2012-03-29 01:48:29.130008913 +0200
+@@ -19,12 +19,12 @@
+ #include <math.h>
+ #include <float.h>
+ #include <string.h>
+-#include "DetourNavMeshQuery.h"
+-#include "DetourNavMesh.h"
+-#include "DetourNode.h"
+-#include "DetourCommon.h"
+-#include "DetourAlloc.h"
+-#include "DetourAssert.h"
++#include "Detour/DetourNavMeshQuery.h"
++#include "Detour/DetourNavMesh.h"
++#include "Detour/DetourNode.h"
++#include "Detour/DetourCommon.h"
++#include "Detour/DetourAlloc.h"
++#include "Detour/DetourAssert.h"
+ #include <new>
+ 
+ /// @class dtQueryFilter
+diff -uN recastnavigation/Detour/Source/DetourNode.cpp ogreRecast/src/Detour/DetourNode.cpp
+--- recastnavigation/Detour/Source/DetourNode.cpp	2012-03-19 22:16:32.942849042 +0100
++++ ogreRecast/src/Detour/DetourNode.cpp	2012-03-29 01:48:37.378500045 +0200
+@@ -16,10 +16,10 @@
+ // 3. This notice may not be removed or altered from any source distribution.
+ //
+ 
+-#include "DetourNode.h"
+-#include "DetourAlloc.h"
+-#include "DetourAssert.h"
+-#include "DetourCommon.h"
++#include "Detour/DetourNode.h"
++#include "Detour/DetourAlloc.h"
++#include "Detour/DetourAssert.h"
++#include "Detour/DetourCommon.h"
+ #include <string.h>
+ 
+ inline unsigned int dtHashRef(dtPolyRef a)
+diff -uN recastnavigation/Recast/Source/RecastAlloc.cpp ogreRecast/src/Recast/RecastAlloc.cpp
+--- recastnavigation/Recast/Source/RecastAlloc.cpp	2012-03-19 22:16:32.602349332 +0100
++++ ogreRecast/src/Recast/RecastAlloc.cpp	2012-03-29 00:45:24.962255385 +0200
+@@ -18,7 +18,7 @@
+ 
+ #include <stdlib.h>
+ #include <string.h>
+-#include "RecastAlloc.h"
++#include "Recast/RecastAlloc.h"
+ 
+ static void *rcAllocDefault(int size, rcAllocHint)
+ {
+diff -uN recastnavigation/Recast/Source/RecastArea.cpp ogreRecast/src/Recast/RecastArea.cpp
+--- recastnavigation/Recast/Source/RecastArea.cpp	2012-03-19 22:16:32.602349332 +0100
++++ ogreRecast/src/Recast/RecastArea.cpp	2012-03-29 00:44:28.882022219 +0200
+@@ -22,9 +22,9 @@
+ #include <string.h>
+ #include <stdlib.h>
+ #include <stdio.h>
+-#include "Recast.h"
+-#include "RecastAlloc.h"
+-#include "RecastAssert.h"
++#include "Recast/Recast.h"
++#include "Recast/RecastAlloc.h"
++#include "Recast/RecastAssert.h"
+ 
+ /// @par 
+ /// 
+diff -uN recastnavigation/Recast/Source/RecastContour.cpp ogreRecast/src/Recast/RecastContour.cpp
+--- recastnavigation/Recast/Source/RecastContour.cpp	2012-03-19 22:16:32.602349332 +0100
++++ ogreRecast/src/Recast/RecastContour.cpp	2012-03-29 00:44:35.438045056 +0200
+@@ -20,9 +20,9 @@
+ #include <math.h>
+ #include <string.h>
+ #include <stdio.h>
+-#include "Recast.h"
+-#include "RecastAlloc.h"
+-#include "RecastAssert.h"
++#include "Recast/Recast.h"
++#include "Recast/RecastAlloc.h"
++#include "Recast/RecastAssert.h"
+ 
+ 
+ static int getCornerHeight(int x, int y, int i, int dir,
+diff -uN recastnavigation/Recast/Source/Recast.cpp ogreRecast/src/Recast/Recast.cpp
+--- recastnavigation/Recast/Source/Recast.cpp	2012-03-19 22:16:32.598344881 +0100
++++ ogreRecast/src/Recast/Recast.cpp	2012-03-29 00:44:08.126005956 +0200
+@@ -23,9 +23,9 @@
+ #include <stdlib.h>
+ #include <stdio.h>
+ #include <stdarg.h>
+-#include "Recast.h"
+-#include "RecastAlloc.h"
+-#include "RecastAssert.h"
++#include "Recast/Recast.h"
++#include "Recast/RecastAlloc.h"
++#include "Recast/RecastAssert.h"
+ 
+ float rcSqrt(float x)
+ {
+diff -uN recastnavigation/Recast/Source/RecastFilter.cpp ogreRecast/src/Recast/RecastFilter.cpp
+--- recastnavigation/Recast/Source/RecastFilter.cpp	2012-03-19 22:16:32.598344881 +0100
++++ ogreRecast/src/Recast/RecastFilter.cpp	2012-03-29 00:44:42.474778450 +0200
+@@ -19,8 +19,8 @@
+ #define _USE_MATH_DEFINES
+ #include <math.h>
+ #include <stdio.h>
+-#include "Recast.h"
+-#include "RecastAssert.h"
++#include "Recast/Recast.h"
++#include "Recast/RecastAssert.h"
+ 
+ /// @par
+ ///
+diff -uN recastnavigation/Recast/Source/RecastLayers.cpp ogreRecast/src/Recast/RecastLayers.cpp
+--- recastnavigation/Recast/Source/RecastLayers.cpp	2012-03-19 22:16:32.598344881 +0100
++++ ogreRecast/src/Recast/RecastLayers.cpp	2012-03-29 00:44:48.470380452 +0200
+@@ -22,9 +22,9 @@
+ #include <string.h>
+ #include <stdlib.h>
+ #include <stdio.h>
+-#include "Recast.h"
+-#include "RecastAlloc.h"
+-#include "RecastAssert.h"
++#include "Recast/Recast.h"
++#include "Recast/RecastAlloc.h"
++#include "Recast/RecastAssert.h"
+ 
+ 
+ static const int RC_MAX_LAYERS = RC_NOT_CONNECTED;
+diff -uN recastnavigation/Recast/Source/RecastMesh.cpp ogreRecast/src/Recast/RecastMesh.cpp
+--- recastnavigation/Recast/Source/RecastMesh.cpp	2012-03-19 22:16:32.598344881 +0100
++++ ogreRecast/src/Recast/RecastMesh.cpp	2012-03-29 00:44:56.347304587 +0200
+@@ -20,9 +20,9 @@
+ #include <math.h>
+ #include <string.h>
+ #include <stdio.h>
+-#include "Recast.h"
+-#include "RecastAlloc.h"
+-#include "RecastAssert.h"
++#include "Recast/Recast.h"
++#include "Recast/RecastAlloc.h"
++#include "Recast/RecastAssert.h"
+ 
+ struct rcEdge
+ {
+diff -uN recastnavigation/Recast/Source/RecastMeshDetail.cpp ogreRecast/src/Recast/RecastMeshDetail.cpp
+--- recastnavigation/Recast/Source/RecastMeshDetail.cpp	2012-03-19 22:16:32.598344881 +0100
++++ ogreRecast/src/Recast/RecastMeshDetail.cpp	2012-03-29 00:45:02.374007005 +0200
+@@ -22,9 +22,9 @@
+ #include <string.h>
+ #include <stdlib.h>
+ #include <stdio.h>
+-#include "Recast.h"
+-#include "RecastAlloc.h"
+-#include "RecastAssert.h"
++#include "Recast/Recast.h"
++#include "Recast/RecastAlloc.h"
++#include "Recast/RecastAssert.h"
+ 
+ 
+ static const unsigned RC_UNSET_HEIGHT = 0xffff;
+diff -uN recastnavigation/Recast/Source/RecastRasterization.cpp ogreRecast/src/Recast/RecastRasterization.cpp
+--- recastnavigation/Recast/Source/RecastRasterization.cpp	2012-03-19 22:16:32.598344881 +0100
++++ ogreRecast/src/Recast/RecastRasterization.cpp	2012-03-29 00:45:09.440493457 +0200
+@@ -19,9 +19,9 @@
+ #define _USE_MATH_DEFINES
+ #include <math.h>
+ #include <stdio.h>
+-#include "Recast.h"
+-#include "RecastAlloc.h"
+-#include "RecastAssert.h"
++#include "Recast/Recast.h"
++#include "Recast/RecastAlloc.h"
++#include "Recast/RecastAssert.h"
+ 
+ inline bool overlapBounds(const float* amin, const float* amax, const float* bmin, const float* bmax)
+ {
+diff -uN recastnavigation/Recast/Source/RecastRegion.cpp ogreRecast/src/Recast/RecastRegion.cpp
+--- recastnavigation/Recast/Source/RecastRegion.cpp	2012-03-19 22:16:32.598344881 +0100
++++ ogreRecast/src/Recast/RecastRegion.cpp	2012-06-01 16:28:21.498631236 +0200
+@@ -22,9 +22,9 @@
+ #include <string.h>
+ #include <stdlib.h>
+ #include <stdio.h>
+-#include "Recast.h"
+-#include "RecastAlloc.h"
+-#include "RecastAssert.h"
++#include "Recast/Recast.h"
++#include "Recast/RecastAlloc.h"
++#include "Recast/RecastAssert.h"
+ #include <new>
+ 
+ 
+diff -uN recastnavigation/DetourCrowd/Include/DetourCrowd.h ogreRecast/include/DetourCrowd/DetourCrowd.h
+--- recastnavigation/DetourCrowd/Include/DetourCrowd.h	2012-03-19 22:16:32.838402934 +0100
++++ ogreRecast/include/DetourCrowd/DetourCrowd.h	2012-04-09 15:13:16.727284961 +0200
+@@ -19,12 +19,12 @@
+ #ifndef DETOURCROWD_H
+ #define DETOURCROWD_H
+ 
+-#include "DetourNavMeshQuery.h"
+-#include "DetourObstacleAvoidance.h"
+-#include "DetourLocalBoundary.h"
+-#include "DetourPathCorridor.h"
+-#include "DetourProximityGrid.h"
+-#include "DetourPathQueue.h"
++#include "Detour/DetourNavMeshQuery.h"
++#include "DetourCrowd/DetourObstacleAvoidance.h"
++#include "DetourCrowd/DetourLocalBoundary.h"
++#include "DetourCrowd/DetourPathCorridor.h"
++#include "DetourCrowd/DetourProximityGrid.h"
++#include "DetourCrowd/DetourPathQueue.h"
+ 
+ /// The maximum number of neighbors that a crowd agent can take into account
+ /// for steering decisions.
+diff -uN recastnavigation/DetourCrowd/Include/DetourLocalBoundary.h ogreRecast/include/DetourCrowd/DetourLocalBoundary.h
+--- recastnavigation/DetourCrowd/Include/DetourLocalBoundary.h	2012-03-19 22:16:32.838402934 +0100
++++ ogreRecast/include/DetourCrowd/DetourLocalBoundary.h	2012-03-29 01:51:50.165278681 +0200
+@@ -19,7 +19,7 @@
+ #ifndef DETOURLOCALBOUNDARY_H
+ #define DETOURLOCALBOUNDARY_H
+ 
+-#include "DetourNavMeshQuery.h"
++#include "Detour/DetourNavMeshQuery.h"
+ 
+ 
+ class dtLocalBoundary
+diff -uN recastnavigation/DetourCrowd/Include/DetourPathCorridor.h ogreRecast/include/DetourCrowd/DetourPathCorridor.h
+--- recastnavigation/DetourCrowd/Include/DetourPathCorridor.h	2012-03-19 22:16:32.838402934 +0100
++++ ogreRecast/include/DetourCrowd/DetourPathCorridor.h	2012-03-29 01:52:05.646251335 +0200
+@@ -19,7 +19,7 @@
+ #ifndef DETOUTPATHCORRIDOR_H
+ #define DETOUTPATHCORRIDOR_H
+ 
+-#include "DetourNavMeshQuery.h"
++#include "Detour/DetourNavMeshQuery.h"
+ 
+ /// Represents a dynamic polygon corridor used to plan agent movement.
+ /// @ingroup crowd, detour
+diff -uN recastnavigation/DetourCrowd/Include/DetourPathQueue.h ogreRecast/include/DetourCrowd/DetourPathQueue.h
+--- recastnavigation/DetourCrowd/Include/DetourPathQueue.h	2012-03-19 22:16:32.838402934 +0100
++++ ogreRecast/include/DetourCrowd/DetourPathQueue.h	2012-03-29 01:52:14.030814929 +0200
+@@ -19,8 +19,8 @@
+ #ifndef DETOURPATHQUEUE_H
+ #define DETOURPATHQUEUE_H
+ 
+-#include "DetourNavMesh.h"
+-#include "DetourNavMeshQuery.h"
++#include "Detour/DetourNavMesh.h"
++#include "Detour/DetourNavMeshQuery.h"
+ 
+ static const unsigned int DT_PATHQ_INVALID = 0;
+ 
+
