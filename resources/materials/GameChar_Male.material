@@ -1,0 +1,225 @@
+material GameChar_Male_Mat 
+{
+    receive_shadows on
+    technique
+    {
+        pass GameChar_Male_Mat
+        {
+            texture_unit 
+            {
+                texture gameTex_0.png
+            }
+        }
+    }
+}
+
+material GameChar_Male_Mat_0
+{
+    receive_shadows on
+    technique
+    {
+        pass GameChar_Male_Mat
+        {
+            texture_unit 
+            {
+                texture gameTex_0.png
+            }
+        }
+    }
+}
+
+material GameChar_Male_Mat_1
+{
+    receive_shadows on
+    technique
+    {
+        pass GameChar_Male_Mat
+        {
+            texture_unit 
+            {
+                texture gameTex_1.png
+            }
+        }
+    }
+}
+
+material GameChar_Male_Mat_2
+{
+    receive_shadows on
+    technique
+    {
+        pass GameChar_Male_Mat
+        {
+            texture_unit 
+            {
+                texture gameTex_2.png
+            }
+        }
+    }
+}
+
+material GameChar_Male_Mat_3
+{
+    receive_shadows on
+    technique
+    {
+        pass GameChar_Male_Mat
+        {
+            texture_unit 
+            {
+                texture gameTex_3.png
+            }
+        }
+    }
+}
+
+material GameChar_Male_Mat_4
+{
+    receive_shadows on
+    technique
+    {
+        pass GameChar_Male_Mat
+        {
+            texture_unit 
+            {
+                texture gameTex_4.png
+            }
+        }
+    }
+}
+
+material GameChar_Male_Mat_5
+{
+    receive_shadows on
+    technique
+    {
+        pass GameChar_Male_Mat
+        {
+            texture_unit 
+            {
+                texture gameTex_5.png
+            }
+        }
+    }
+}
+
+material GameChar_Male_Mat_6
+{
+    receive_shadows on
+    technique
+    {
+        pass GameChar_Male_Mat
+        {
+            texture_unit 
+            {
+                texture gameTex_6.png
+            }
+        }
+    }
+}
+
+material GameChar_Male_Mat_7
+{
+    receive_shadows on
+    technique
+    {
+        pass GameChar_Male_Mat
+        {
+            texture_unit 
+            {
+                texture gameTex_7.png
+            }
+        }
+    }
+}
+
+material GameChar_Male_Mat_8
+{
+    receive_shadows on
+    technique
+    {
+        pass GameChar_Male_Mat
+        {
+            texture_unit 
+            {
+                texture gameTex_8.png
+            }
+        }
+    }
+}
+
+material GameChar_Male_Mat_9
+{
+    receive_shadows on
+    technique
+    {
+        pass GameChar_Male_Mat
+        {
+            texture_unit 
+            {
+                texture gameTex_9.png
+            }
+        }
+    }
+}
+
+material GameChar_Male_Mat_10
+{
+    receive_shadows on
+    technique
+    {
+        pass GameChar_Male_Mat
+        {
+            texture_unit 
+            {
+                texture gameTex_10.png
+            }
+        }
+    }
+}
+
+material GameChar_Male_Mat_11
+{
+    receive_shadows on
+    technique
+    {
+        pass GameChar_Male_Mat
+        {
+            texture_unit 
+            {
+                texture gameTex_11.png
+            }
+        }
+    }
+}
+
+material GameChar_Male_Mat_12
+{
+    receive_shadows on
+    technique
+    {
+        pass GameChar_Male_Mat
+        {
+            texture_unit 
+            {
+                texture gameTex_12.png
+            }
+        }
+    }
+}
+
+material GameChar_Male_Mat_13
+{
+    receive_shadows on
+    technique
+    {
+        pass GameChar_Male_Mat
+        {
+            texture_unit 
+            {
+                texture gameTex_13.png
+            }
+        }
+    }
+}
+
