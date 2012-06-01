@@ -160,7 +160,7 @@ int OgreDetourCrowd::addAgent(const Ogre::Vector3 position)
         ap.separationWeight = m_separationWeight;
 
         float p[3];
-        m_recastDemo->OgreVect3ToFloatA(position, p);
+        OgreRecastDemo::OgreVect3ToFloatA(position, p);
         int idx = m_crowd->addAgent(p, &ap);
         if (idx != -1)
         {
@@ -241,6 +241,33 @@ void OgreDetourCrowd::hilightAgent(Ogre::Entity* agent)
 }
 
 
+Ogre::Vector3 OgreDetourCrowd::calcVel(Ogre::Vector3 position, Ogre::Vector3 target, Ogre::Real speed)
+{
+    float pos[3];
+    OgreRecastDemo::OgreVect3ToFloatA(position, pos);
+
+    float tgt[3];
+    OgreRecastDemo::OgreVect3ToFloatA(target, tgt);
+
+    float res[3];
+    calcVel(res, pos, tgt, speed);
+
+    Ogre::Vector3 result;
+    OgreRecastDemo::FloatAToOgreVect3(res, result);
+
+    return result;
+}
+
+
+void OgreDetourCrowd::calcVel(float* velocity, const float* position, const float* target, const float speed)
+{
+        dtVsub(velocity, target, position);
+        velocity[1] = 0.0;
+        dtVnormalize(velocity);
+        dtVscale(velocity, velocity, speed);
+}
+
+
 void OgreDetourCrowd::setMoveTarget(Ogre::Vector3 position, bool adjust)
 {
         // Find nearest point on navmesh and set move request to that location.
@@ -249,7 +276,7 @@ void OgreDetourCrowd::setMoveTarget(Ogre::Vector3 position, bool adjust)
         const dtQueryFilter* filter = crowd->getFilter();
         const float* ext = crowd->getQueryExtents();
         float p[3];
-        m_recastDemo->OgreVect3ToFloatA(position, p);
+        OgreRecastDemo::OgreVect3ToFloatA(position, p);
 
         navquery->findNearestPoly(p, ext, filter, &m_targetRef, m_targetPos);
 
@@ -270,7 +297,9 @@ void OgreDetourCrowd::setMoveTarget(Ogre::Vector3 position, bool adjust)
                         {
                                 const dtCrowdAgent* ag = crowd->getAgent(i);
                                 if (!ag->active) continue;
-                                crowd->adjustMoveTarget(i, m_targetRef, m_targetPos);
+                                float vel[3];
+                                calcVel(vel, ag->npos, p, ag->params.maxSpeed);
+                                crowd->requestMoveVelocity(i, vel);
                         }
                 //}
         }
@@ -305,13 +334,16 @@ void OgreDetourCrowd::setMoveTarget(int agentId, Ogre::Vector3 position, bool ad
     const dtQueryFilter* filter = crowd->getFilter();
     const float* ext = crowd->getQueryExtents();
     float p[3];
-    m_recastDemo->OgreVect3ToFloatA(position, p);
+    OgreRecastDemo::OgreVect3ToFloatA(position, p);
 
     navquery->findNearestPoly(p, ext, filter, &m_targetRef, m_targetPos);
     // ----
 
     if (adjust) {
-        m_crowd->adjustMoveTarget(agentId, m_targetRef, m_targetPos);
+        const dtCrowdAgent *ag = getAgent(agentId);
+        float vel[3];
+        calcVel(vel, ag->npos, p, ag->params.maxSpeed);
+        crowd->requestMoveVelocity(agentId, vel);
     } else {
         m_crowd->requestMoveTarget(agentId, m_targetRef, m_targetPos);
     }

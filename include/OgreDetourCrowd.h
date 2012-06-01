@@ -59,6 +59,19 @@ public:
     void setMoveTarget(int agentId, Ogre::Vector3 position, bool adjust);
 
     /**
+      * Helper that calculates the needed velocity to steer an agent to a target destination.
+      * Parameters:
+      *     position    is the current position of the agent
+      *     target      is the target destination to reach
+      *     speed       is the (max) speed the agent can travel at
+      * Returns the calculated velocity.
+      *
+      * This function can be used together with requestMoveVelocity to achieve the functionality
+      * of adjustMoveTarget function.
+      **/
+    static Ogre::Vector3 calcVel(Ogre::Vector3 position, Ogre::Vector3 target, Ogre::Real speed);
+
+    /**
       * Update method for the crowd manager. Will calculate new positions for moving agents.
       * Call this method in your frameloop every frame to make your agents move.
       *
@@ -171,6 +184,21 @@ public:
 
     float m_obstacleAvoidanceType;
     float m_separationWeight;
+
+
+protected:
+    /**
+      * Helper to calculate the needed velocity to steer an agent to a target destination.
+      * Parameters:
+      *     velocity    is the return parameter, the calculated velocity
+      *     position    is the current position of the agent
+      *     target      is the target destination to reach
+      *     speed       is the (max) speed the agent can travel at
+      *
+      * This function can be used together with requestMoveVelocity to achieve the functionality
+      * of the old adjustMoveTarget function.
+      **/
+    static void calcVel(float* velocity, const float* position, const float* target, const float speed);
 
 
 private:

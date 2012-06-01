@@ -101,13 +101,13 @@ public:
      * Convenience function for converting between Ogre::Vector3
      * and float* used by recast.
     **/
-   void OgreVect3ToFloatA(const Ogre::Vector3 vect, float* result);
+   static void OgreVect3ToFloatA(const Ogre::Vector3 vect, float* result);
 
    /**
      * Convenience function for converting between float* used by recast
      * and Ogre::Vector3.
     **/
-   void FloatAToOgreVect3(const float* vect, Ogre::Vector3 &result);
+   static void FloatAToOgreVect3(const float* vect, Ogre::Vector3 &result);
 
    /**
      * Translate error code of detour findPath into a readable explanation.
