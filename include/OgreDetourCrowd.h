@@ -1,9 +1,9 @@
 #ifndef OGREDETOURCROWD_H
 #define OGREDETOURCROWD_H
 
-#include "DetourCrowd/DetourCrowd.h"
+#include "OgreRecastDefinitions.h"
 #include "OgreRecast.h"
-#include "OgreRecastDemo.h"
+#include "DetourCrowd/DetourCrowd.h"
 #include <vector>
 
 
@@ -18,7 +18,7 @@
 class OgreDetourCrowd
 {
 public:
-    OgreDetourCrowd(OgreRecastDemo *recastDemo);
+    OgreDetourCrowd(OgreRecast *recast);
     ~OgreDetourCrowd(void);
 
     /**
@@ -128,7 +128,7 @@ public:
     /**
       * Reference to the Recast/Detour wrapper object for Ogre.
       **/
-    OgreRecastDemo *m_recastDemo;
+    OgreRecast *m_recast;
 
     /**
       * The latest set target or destination section in the recast navmesh.

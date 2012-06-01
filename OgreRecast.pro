@@ -91,7 +91,7 @@ CONFIG(release, debug|release):LIBS *= -lOgreMain
 message("--- Project Input Files ---")
 SOURCES += src/BaseApplication.cpp \
     src/OgreRecastApplication.cpp \
-    src/OgreRecastDemo.cpp \
+    src/OgreRecast.cpp \
     src/Detour/DetourAlloc.cpp \
     src/Detour/DetourNavMeshQuery.cpp \
     src/Detour/DetourNavMesh.cpp \
@@ -120,7 +120,7 @@ SOURCES += src/BaseApplication.cpp \
     src/AnimateableCharacter.cpp
 HEADERS += include/BaseApplication.h \
     include/OgreRecastApplication.h \
-    include/OgreRecastDemo.h \
+    include/OgreRecastDefinitions.h \
     include/OgreRecast.h \
     include/Detour/DetourCommon.h \
     include/Detour/DetourAlloc.h \

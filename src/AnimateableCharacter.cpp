@@ -57,7 +57,7 @@ void AnimateableCharacter::update(Ogre::Real timeSinceLastFrame)
     updatePosition();
 
     Ogre::Vector3 velocity; // Current velocity of agent
-    mDetourCrowd->m_recastDemo->FloatAToOgreVect3(mAgent->vel, velocity);
+    OgreRecast::FloatAToOgreVect3(mAgent->vel, velocity);
     Ogre::Real velocityLenght = velocity.length();
 
     if(velocityLenght > 0.15) {

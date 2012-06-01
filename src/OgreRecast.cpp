@@ -1,7 +1,7 @@
-#include "OgreRecastDemo.h"
+#include "OgreRecast.h"
 
 
-OgreRecastDemo::OgreRecastDemo(Ogre::SceneManager* sceneMgr)
+OgreRecast::OgreRecast(Ogre::SceneManager* sceneMgr)
     : m_pSceneMgr(sceneMgr)
 {
    // Init recast stuff in a safe state
@@ -30,7 +30,7 @@ OgreRecastDemo::OgreRecastDemo(Ogre::SceneManager* sceneMgr)
 /**
  * Cleanup recast stuff, not debug manualobjects.
 **/
-void OgreRecastDemo::RecastCleanup()
+void OgreRecast::RecastCleanup()
 {
    if(m_triareas) delete [] m_triareas;
    m_triareas = 0;
@@ -67,7 +67,7 @@ void OgreRecastDemo::RecastCleanup()
  *
  * Perhaps the most important part of the above is setting the agent size with m_agentHeight and m_agentRadius, and the voxel cell size used, m_cellSize and m_cellHeight. In my project 32.0 units is 1 meter, so I've set the agent to 48 units high, and the cell sizes are quite large. The original cell sizes in the Recast/Detour demo were down around 0.3.
 **/
-bool OgreRecastDemo::NavMeshBuild(Ogre::Entity* srcMesh)
+bool OgreRecast::NavMeshBuild(Ogre::Entity* srcMesh)
 {
     // TODO: clean up unused variables
 
@@ -616,7 +616,7 @@ bool OgreRecastDemo::NavMeshBuild(Ogre::Entity* srcMesh)
  *  -5  Couldn't create a straight path
  *  -6  Couldn't find a straight path
 **/
-int OgreRecastDemo::FindPath(float* pStartPos, float* pEndPos, int nPathSlot, int nTarget)
+int OgreRecast::FindPath(float* pStartPos, float* pEndPos, int nPathSlot, int nTarget)
 {
    dtStatus status ;
    float pExtents[3]={32.0f, 32.0f, 32.0f} ; // size of box around start/end points to look for nav polygons
@@ -670,7 +670,7 @@ int OgreRecastDemo::FindPath(float* pStartPos, float* pEndPos, int nPathSlot, in
 
 }
 
-int OgreRecastDemo::FindPath(Ogre::Vector3 startPos, Ogre::Vector3 endPos, int nPathSlot, int nTarget)
+int OgreRecast::FindPath(Ogre::Vector3 startPos, Ogre::Vector3 endPos, int nPathSlot, int nTarget)
 {
     float start[3];
     float end[3];
@@ -690,11 +690,11 @@ int OgreRecastDemo::FindPath(Ogre::Vector3 startPos, Ogre::Vector3 endPos, int n
  * Debug drawing functionality:
 **/
 
-void OgreRecastDemo::drawNavMesh() {
+void OgreRecast::drawNavMesh() {
     CreateRecastPolyMesh(*m_pmesh);
 }
 
-void OgreRecastDemo::CreateRecastPolyMesh(const struct rcPolyMesh& mesh, bool colorRegions)
+void OgreRecast::CreateRecastPolyMesh(const struct rcPolyMesh& mesh, bool colorRegions)
 {
    const int nvp = mesh.nvp; 
    const float cs = mesh.cs;
@@ -844,7 +844,7 @@ void OgreRecastDemo::CreateRecastPolyMesh(const struct rcPolyMesh& mesh, bool co
 
 }
 
-void OgreRecastDemo::CreateRecastPathLine(int nPathSlot)
+void OgreRecast::CreateRecastPathLine(int nPathSlot)
 {
    // Remove previously drawn line
    if(m_pRecastMOPath)
@@ -883,14 +883,14 @@ void OgreRecastDemo::CreateRecastPathLine(int nPathSlot)
   * Helpers
   **/
 
-void OgreRecastDemo::OgreVect3ToFloatA(const Ogre::Vector3 vect, float* result)
+void OgreRecast::OgreVect3ToFloatA(const Ogre::Vector3 vect, float* result)
 {
     result[0] = vect[0];
     result[1] = vect[1];
     result[2] = vect[2];
 };
 
-void OgreRecastDemo::FloatAToOgreVect3(const float* vect, Ogre::Vector3 &result)
+void OgreRecast::FloatAToOgreVect3(const float* vect, Ogre::Vector3 &result)
 {
     result.x = vect[0];
     result.y = vect[1];
@@ -898,7 +898,7 @@ void OgreRecastDemo::FloatAToOgreVect3(const float* vect, Ogre::Vector3 &result)
 }
 
 
-void OgreRecastDemo::getMeshInformation(const Ogre::MeshPtr mesh,
+void OgreRecast::getMeshInformation(const Ogre::MeshPtr mesh,
                         size_t &vertex_count,
                         Ogre::Vector3* &vertices,
                         size_t &index_count,
@@ -1018,7 +1018,7 @@ void OgreRecastDemo::getMeshInformation(const Ogre::MeshPtr mesh,
 
 
 
-void OgreRecastDemo::getManualMeshInformation(const Ogre::ManualObject *manual,
+void OgreRecast::getManualMeshInformation(const Ogre::ManualObject *manual,
                         size_t &vertex_count,
                         Ogre::Vector3* &vertices,
                         size_t &index_count,
@@ -1129,7 +1129,7 @@ static float frand()
         return (float)rand()/(float)RAND_MAX;
 }
 
-Ogre::Vector3 OgreRecastDemo::getRandomNavMeshPoint()
+Ogre::Vector3 OgreRecast::getRandomNavMeshPoint()
 {
     // setup the filter
     dtQueryFilter Filter;
@@ -1144,7 +1144,7 @@ Ogre::Vector3 OgreRecastDemo::getRandomNavMeshPoint()
     return Ogre::Vector3(resultPoint[0], resultPoint[1], resultPoint[2]);
 }
 
-Ogre::String OgreRecastDemo::getPathFindErrorMsg(int errorCode)
+Ogre::String OgreRecast::getPathFindErrorMsg(int errorCode)
 {
     Ogre::String code = Ogre::StringConverter::toString(errorCode);
     switch(errorCode) {

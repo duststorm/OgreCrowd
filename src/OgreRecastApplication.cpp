@@ -32,7 +32,7 @@ const bool OgreRecastApplication::HUMAN_CHARACTERS = true;
 
 
 OgreRecastApplication::OgreRecastApplication(void)
-        : mRecastDemo(0),
+        : mRecast(0),
         mRayScnQuery(0),
         mDetourCrowd(0),
         mApplicationState(SIMPLE_PATHFIND),
@@ -61,9 +61,9 @@ void OgreRecastApplication::createScene(void)
 
     // RECAST (navmesh creation)
     // Create the navmesh and show it
-    mRecastDemo = new OgreRecastDemo(mSceneMgr);
-    if(mRecastDemo->NavMeshBuild(mapE)) {
-        mRecastDemo->drawNavMesh();
+    mRecast = new OgreRecast(mSceneMgr);
+    if(mRecast->NavMeshBuild(mapE)) {
+        mRecast->drawNavMesh();
     } else {
         Ogre::LogManager::getSingletonPtr()->logMessage("ERROR: could not generate useable navmesh from mesh.");
         return;
@@ -76,15 +76,15 @@ void OgreRecastApplication::createScene(void)
     // will do this for us.
     int pathNb = 0;     // The index number for the slot in which the found path is to be stored
     int targetId = 0;   // Number identifying the target the path leads to
-    Ogre::Vector3 beginPos = mRecastDemo->getRandomNavMeshPoint();
-    Ogre::Vector3 endPos = mRecastDemo->getRandomNavMeshPoint();
+    Ogre::Vector3 beginPos = mRecast->getRandomNavMeshPoint();
+    Ogre::Vector3 endPos = mRecast->getRandomNavMeshPoint();
     if(OgreRecastApplication::DEBUG_DRAW)
         calculateAndDrawPath(beginPos, endPos, pathNb, targetId);
 
 
     // DETOUR CROWD (local steering for independent agents)
     // Create a first agent that always starts at begin position
-    mDetourCrowd = new OgreDetourCrowd(mRecastDemo);
+    mDetourCrowd = new OgreDetourCrowd(mRecast);
     Character *character = createCharacter("Agent0", beginPos);    // create initial agent at start marker
     if(!HUMAN_CHARACTERS)
         character->getEntity()->setMaterialName("Cylinder/LightBlue");  // Give the first agent a different color
@@ -96,8 +96,8 @@ void OgreRecastApplication::createScene(void)
     // The rest of this method is specific to the demo
 
     // PLACE PATH BEGIN AND END MARKERS
-    beginPos.y = beginPos.y + mRecastDemo->m_navMeshOffsetFromGround;
-    endPos.y = endPos.y + mRecastDemo->m_navMeshOffsetFromGround;
+    beginPos.y = beginPos.y + mRecast->m_navMeshOffsetFromGround;
+    endPos.y = endPos.y + mRecast->m_navMeshOffsetFromGround;
     getOrCreateMarker("BeginPos", "Cylinder/Wires/DarkGreen")->setPosition(beginPos);
     getOrCreateMarker("EndPos", "Cylinder/Wires/Brown")->setPosition(endPos);
 
@@ -187,7 +187,7 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
 
             // If in wander mode, give a random destination to agent (otherwise it will take the destination of the previous agent automatically)
             if(mApplicationState == CROWD_WANDER) {
-                character->updateDestination(mRecastDemo->getRandomNavMeshPoint(), false);
+                character->updateDestination(mRecast->getRandomNavMeshPoint(), false);
             }
         }
     }
@@ -238,7 +238,7 @@ Ogre::SceneNode* OgreRecastApplication::getOrCreateMarker(Ogre::String name, Ogr
         result->attachObject(ent);
 
         // Set marker scale to size of agent
-        result->setScale(mRecastDemo->m_agentRadius*2, mRecastDemo->m_agentHeight,mRecastDemo->m_agentRadius*2);
+        result->setScale(mRecast->m_agentRadius*2, mRecast->m_agentHeight,mRecast->m_agentRadius*2);
 
         ent->setQueryFlags(DEFAULT_MASK);   // Exclude from ray queries
     }
@@ -289,11 +289,11 @@ void OgreRecastApplication::calculateAndDrawPath(Ogre::Vector3 beginPos, Ogre::V
 {
     // Note that this calculated path is not actually used except for debug drawing.
     // DetourCrowd will take care of calculating a separate path for each of its agents.
-    int ret = mRecastDemo->FindPath(beginPos, endPos, pathNb, targetId) ;
+    int ret = mRecast->FindPath(beginPos, endPos, pathNb, targetId) ;
     if( ret >= 0 )
-            mRecastDemo->CreateRecastPathLine(pathNb) ; // Draw a line showing path at specified slot
+            mRecast->CreateRecastPathLine(pathNb) ; // Draw a line showing path at specified slot
     else
-        Ogre::LogManager::getSingletonPtr()->logMessage("ERROR: could not find a path. ("+mRecastDemo->getPathFindErrorMsg(ret)+")");
+        Ogre::LogManager::getSingletonPtr()->logMessage("ERROR: could not find a path. ("+mRecast->getPathFindErrorMsg(ret)+")");
 }
 
 
@@ -320,8 +320,8 @@ void OgreRecastApplication::setPathAndBeginMarkerVisibility(bool visibility)
     getOrCreateMarker("BeginPos")->setVisible(visibility);
 
     // Hide or show path line
-    if(mRecastDemo->m_pRecastMOPath)
-        mRecastDemo->m_pRecastMOPath->setVisible(visibility);
+    if(mRecast->m_pRecastMOPath)
+        mRecast->m_pRecastMOPath->setVisible(visibility);
 }
 
 bool OgreRecastApplication::frameRenderingQueued(const Ogre::FrameEvent& evt)
@@ -346,7 +346,7 @@ bool OgreRecastApplication::frameRenderingQueued(const Ogre::FrameEvent& evt)
         {
             // If destination reached: Set new random destination
             if ( character->destinationReached() ) {
-                character->updateDestination( mRecastDemo->getRandomNavMeshPoint() );
+                character->updateDestination( mRecast->getRandomNavMeshPoint() );
             }
         }
 
@@ -370,7 +370,7 @@ void OgreRecastApplication::setRandomTargetsForCrowd()
         Character *character = *iter;
 
         if(character->getAgentID() != 0) {  // Don't randomize first agent's destination
-            character->updateDestination( mRecastDemo->getRandomNavMeshPoint() );
+            character->updateDestination( mRecast->getRandomNavMeshPoint() );
         }
     }
 
@@ -446,7 +446,7 @@ bool OgreRecastApplication::rayQueryPointInScene(Ogre::Ray ray, unsigned long qu
                 // get the entity to check
                 Ogre::Entity *pentity = static_cast<Ogre::Entity*>(query_result[qr_idx].movable);
 
-                mRecastDemo->getMeshInformation(pentity->getMesh(), vertex_count, vertices, index_count, indices,
+                mRecast->getMeshInformation(pentity->getMesh(), vertex_count, vertices, index_count, indices,
                               pentity->getParentNode()->_getDerivedPosition(),
                               pentity->getParentNode()->_getDerivedOrientation(),
                               pentity->getParentNode()->_getDerivedScale());
@@ -455,7 +455,7 @@ bool OgreRecastApplication::rayQueryPointInScene(Ogre::Ray ray, unsigned long qu
                 // get the entity to check
                 Ogre::ManualObject *pmanual = static_cast<Ogre::ManualObject*>(query_result[qr_idx].movable);
 
-                mRecastDemo->getManualMeshInformation(pmanual, vertex_count, vertices, index_count, indices,
+                mRecast->getManualMeshInformation(pmanual, vertex_count, vertices, index_count, indices,
                               pmanual->getParentNode()->_getDerivedPosition(),
                               pmanual->getParentNode()->_getDerivedOrientation(),
                               pmanual->getParentNode()->_getDerivedScale());

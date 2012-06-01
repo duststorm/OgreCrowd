@@ -18,8 +18,8 @@ This source file is part of the
 #define __OgreRecastApplication_h_
 
 #include "BaseApplication.h"
+#include "OgreRecastDefinitions.h"
 #include "OgreRecast.h"
-#include "OgreRecastDemo.h"
 #include "OgreDetourCrowd.h"
 #include "Character.h"
 
@@ -150,7 +150,7 @@ private:
     /**
       * Ogre version of the code of the original Recast demo that comes with the recast distribution.
       **/
-    OgreRecastDemo* mRecastDemo;
+    OgreRecast* mRecast;
 
     /**
       * Ray scene intersection query object.

@@ -3,9 +3,9 @@
 #include "Detour/DetourCommon.h"
 
 
-OgreDetourCrowd::OgreDetourCrowd(OgreRecastDemo *recastDemo)
+OgreDetourCrowd::OgreDetourCrowd(OgreRecast *recastDemo)
     : m_crowd(0),
-    m_recastDemo(recastDemo),
+    m_recast(recastDemo),
     m_targetRef(0),
     m_activeAgents(0)
 {
@@ -40,7 +40,7 @@ OgreDetourCrowd::OgreDetourCrowd(OgreRecastDemo *recastDemo)
     dtCrowd* crowd = m_crowd;
             if (nav && crowd && crowd->getAgentCount() == 0)
             {
-                    crowd->init(MAX_AGENTS, m_recastDemo->m_agentRadius, nav);
+                    crowd->init(MAX_AGENTS, m_recast->m_agentRadius, nav);
 
                     // Make polygons with 'disabled' flag invalid.
                     crowd->getEditableFilter()->setExcludeFlags(SAMPLE_POLYFLAGS_DISABLED);
@@ -92,17 +92,17 @@ OgreDetourCrowd::~OgreDetourCrowd()
 
 Ogre::Real OgreDetourCrowd::getAgentHeight()
 {
-    return m_recastDemo->m_agentHeight;
+    return m_recast->m_agentHeight;
 }
 
 Ogre::Real OgreDetourCrowd::getAgentRadius()
 {
-    return m_recastDemo->m_agentRadius;
+    return m_recast->m_agentRadius;
 }
 
 void OgreDetourCrowd::updateTick(const float dt)
 {
-        dtNavMesh* nav = m_recastDemo->m_navMesh;
+        dtNavMesh* nav = m_recast->m_navMesh;
         dtCrowd* crowd = m_crowd;
         if (!nav || !crowd) return;
 
@@ -159,7 +159,7 @@ int OgreDetourCrowd::addAgent(const Ogre::Vector3 position)
         ap.separationWeight = m_separationWeight;
 
         float p[3];
-        OgreRecastDemo::OgreVect3ToFloatA(position, p);
+        OgreRecast::OgreVect3ToFloatA(position, p);
         int idx = m_crowd->addAgent(p, &ap);
         if (idx != -1)
         {
@@ -229,16 +229,16 @@ const dtCrowdAgent* OgreDetourCrowd::getAgent(int id)
 Ogre::Vector3 OgreDetourCrowd::calcVel(Ogre::Vector3 position, Ogre::Vector3 target, Ogre::Real speed)
 {
     float pos[3];
-    OgreRecastDemo::OgreVect3ToFloatA(position, pos);
+    OgreRecast::OgreVect3ToFloatA(position, pos);
 
     float tgt[3];
-    OgreRecastDemo::OgreVect3ToFloatA(target, tgt);
+    OgreRecast::OgreVect3ToFloatA(target, tgt);
 
     float res[3];
     calcVel(res, pos, tgt, speed);
 
     Ogre::Vector3 result;
-    OgreRecastDemo::FloatAToOgreVect3(res, result);
+    OgreRecast::FloatAToOgreVect3(res, result);
 
     return result;
 }
@@ -256,12 +256,12 @@ void OgreDetourCrowd::calcVel(float* velocity, const float* position, const floa
 void OgreDetourCrowd::setMoveTarget(Ogre::Vector3 position, bool adjust)
 {
         // Find nearest point on navmesh and set move request to that location.
-        dtNavMeshQuery* navquery = m_recastDemo->m_navQuery;
+        dtNavMeshQuery* navquery = m_recast->m_navQuery;
         dtCrowd* crowd = m_crowd;
         const dtQueryFilter* filter = crowd->getFilter();
         const float* ext = crowd->getQueryExtents();
         float p[3];
-        OgreRecastDemo::OgreVect3ToFloatA(position, p);
+        OgreRecast::OgreVect3ToFloatA(position, p);
 
         navquery->findNearestPoly(p, ext, filter, &m_targetRef, m_targetPos);
 
@@ -293,12 +293,12 @@ void OgreDetourCrowd::setMoveTarget(int agentId, Ogre::Vector3 position, bool ad
 {
     // TODO extract common method
     // Find nearest point on navmesh and set move request to that location.
-    dtNavMeshQuery* navquery = m_recastDemo->m_navQuery;
+    dtNavMeshQuery* navquery = m_recast->m_navQuery;
     dtCrowd* crowd = m_crowd;
     const dtQueryFilter* filter = crowd->getFilter();
     const float* ext = crowd->getQueryExtents();
     float p[3];
-    OgreRecastDemo::OgreVect3ToFloatA(position, p);
+    OgreRecast::OgreVect3ToFloatA(position, p);
 
     navquery->findNearestPoly(p, ext, filter, &m_targetRef, m_targetPos);
     // ----
@@ -316,7 +316,7 @@ void OgreDetourCrowd::setMoveTarget(int agentId, Ogre::Vector3 position, bool ad
 Ogre::Vector3 OgreDetourCrowd::getLastDestination()
 {
     Ogre::Vector3 result;
-    OgreRecastDemo::FloatAToOgreVect3(m_targetPos, result);
+    OgreRecast::FloatAToOgreVect3(m_targetPos, result);
     return result;
 }
 
