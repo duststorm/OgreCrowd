@@ -37,6 +37,10 @@ OgreRecastApplication::OgreRecastApplication(void)
         mDetourCrowd(0),
         mApplicationState(SIMPLE_PATHFIND),
         mLabelOverlay(0),
+        mCrosshair(0),
+        mChaseCam(0),
+        mMoveForwardKeyPressed(false),
+        mMouseMoveX(0),
         mCharacters()
 {
 }
@@ -51,6 +55,8 @@ void OgreRecastApplication::createScene(void)
     mSceneMgr->setAmbientLight(Ogre::ColourValue(0.5f, 0.5f, 0.5f));
     Ogre::Light* light = mSceneMgr->createLight( "MainLight" );
     light->setPosition(20, 80, 50);
+    mCamera->setPosition(-46.3106, 62.3307, 40.7579);
+    mCamera->setOrientation(Ogre::Quaternion(0.903189, -0.247085, - 0.338587, - 0.092626));
 
     // Create navigateable dungeon
     Ogre::Entity* mapE = mSceneMgr->createEntity("Map", "dungeon.mesh");
@@ -121,8 +127,20 @@ void OgreRecastApplication::createScene(void)
 
 
     // CREATE CURSOR OVERLAY
-    Ogre::Overlay *mCrosshair = Ogre::OverlayManager::getSingletonPtr()->getByName("GUI/Crosshair");
+    mCrosshair = Ogre::OverlayManager::getSingletonPtr()->getByName("GUI/Crosshair");
     mCrosshair->show(); // Show a cursor in the center of the screen
+
+
+    // SETUP AGENT STEERING DEMO
+    // Create a chase camera to follow the first agent
+    Ogre::SceneNode *node = mCharacters[0]->getNode();
+    mChaseCam = mSceneMgr->createCamera("AgentFollowCamera");
+    mChaseCam->setNearClipDistance(0.1);
+    node->attachObject(mChaseCam);
+    mChaseCam->setPosition(0, mDetourCrowd->getAgentHeight(), mDetourCrowd->getAgentRadius()*4);
+    mChaseCam->pitch(Ogre::Degree(-15));
+    Ogre::Viewport *vp = mWindow->getViewport(0);
+    mChaseCam->setAspectRatio(Ogre::Real(vp->getActualWidth()) / Ogre::Real(vp->getActualHeight()));
 }
 
 void OgreRecastApplication::createFrameListener()
@@ -139,6 +157,9 @@ void OgreRecastApplication::createFrameListener()
 
 bool OgreRecastApplication::mousePressed( const OIS::MouseEvent &arg, OIS::MouseButtonID id )
 {
+    if (mApplicationState == STEER_AGENT)
+        return true;
+
     // Do ray scene query
     //send a raycast straight out from the camera at the center position
     Ogre::Ray mouseRay = mCamera->getCameraToViewportRay(0.5, 0.5);
@@ -173,10 +194,22 @@ bool OgreRecastApplication::mousePressed( const OIS::MouseEvent &arg, OIS::Mouse
     BaseApplication::mousePressed(arg, id);
 }
 
+bool OgreRecastApplication::mouseMoved(const OIS::MouseEvent &arg)
+{
+    if (mApplicationState == STEER_AGENT) {
+        // Buffer mouse move input in agent steering demo mode
+        mMouseMoveX = -arg.state.X.rel;
+        return true;
+    }
+
+    return BaseApplication::mouseMoved(arg);
+}
+
 bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
 {
     // SPACE places a new agent at cursor position
     if(arg.key == OIS::KC_SPACE
+        && mApplicationState != STEER_AGENT  // no adding agents in steering mode (no mouse pointer)
         && mDetourCrowd->getNbAgents() < mDetourCrowd->getMaxNbAgents()) {
         // Find position on navmesh pointed to by cursor in the middle of the screen
         Ogre::Ray cursorRay = mCamera->getCameraToViewportRay(0.5, 0.5);
@@ -186,7 +219,7 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
             Character *character = createCharacter("Agent"+Ogre::StringConverter::toString(mCharacters.size()), rayHitPoint);
 
             // If in wander mode, give a random destination to agent (otherwise it will take the destination of the previous agent automatically)
-            if(mApplicationState == CROWD_WANDER) {
+            if(mApplicationState == CROWD_WANDER || mApplicationState == STEER_AGENT) {
                 character->updateDestination(mRecast->getRandomNavMeshPoint(), false);
             }
         }
@@ -201,28 +234,68 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
                 setRandomTargetsForCrowd();
                 setPathAndBeginMarkerVisibility(false);
                 mLabelOverlay->setCaption("Random crowd wander");
+                mCrosshair->show();
+                mWindow->getViewport(0)->setCamera(mCamera);
                 break;
             case CROWD_WANDER:      // Wander -> chase
                 mApplicationState = FOLLOW_TARGET;
                 setFollowTargetForCrowd(mCharacters[0]->getPosition());
                 setPathAndBeginMarkerVisibility(false);
                 mLabelOverlay->setCaption("Chase");
+                mCrosshair->show();
+                mWindow->getViewport(0)->setCamera(mCamera);
                 break;
-            case FOLLOW_TARGET:     // Chase -> simple
+            case FOLLOW_TARGET:     // Chase -> steer
+                mApplicationState = STEER_AGENT;
+                setRandomTargetsForCrowd();
+                setPathAndBeginMarkerVisibility(false);
+                mDetourCrowd->stopAgent(0); // Stop first agent
+                mLabelOverlay->setCaption("Steer agent");
+                mCrosshair->hide(); // Hide crosshair
+                mWindow->getViewport(0)->setCamera(mChaseCam);  // Set chase camera on first agent
+                break;
+            case STEER_AGENT:       // Steer -> simple
                 mApplicationState = SIMPLE_PATHFIND;
                 drawPathBetweenMarkers(1,1);    // Draw navigation path (in DRAW_DEBUG) and begin marker
                 UpdateAllAgentDestinations();   // Reinitialize path that all agents follow and steer them towards end marker
                 mLabelOverlay->setCaption("Simple navigation");
+                mCrosshair->show();
+                mWindow->getViewport(0)->setCamera(mCamera);
                 break;
             default:
                 mApplicationState = SIMPLE_PATHFIND;
                 drawPathBetweenMarkers(1,1);
                 UpdateAllAgentDestinations();
                 mLabelOverlay->setCaption("Simple navigation");
+                mCrosshair->show();
+                mWindow->getViewport(0)->setCamera(mCamera);
         }
     }
 
+    // Buffer input of W key for controlling first agent in steering demo mode
+    if (arg.key == OIS::KC_W)
+        mMoveForwardKeyPressed = true;
+
+    // Disable regular camera movement in agent steering demo mode
+    if( mApplicationState == STEER_AGENT &&
+        (arg.key == OIS::KC_W ||
+         arg.key == OIS::KC_A ||
+         arg.key == OIS::KC_S ||
+         arg.key == OIS::KC_D ||
+         arg.key == OIS::KC_PGUP ||
+         arg.key == OIS::KC_PGDOWN  ))
+        return true;
+
     return BaseApplication::keyPressed(arg);
+}
+
+bool OgreRecastApplication::keyReleased(const OIS::KeyEvent &arg)
+{
+    // Buffer input of W key for controlling first agent in steering demo mode
+    if (arg.key == OIS::KC_W)
+        mMoveForwardKeyPressed = false;
+
+    return BaseApplication::keyReleased(arg);
 }
 
 Ogre::SceneNode* OgreRecastApplication::getOrCreateMarker(Ogre::String name, Ogre::String materialName)
@@ -326,6 +399,27 @@ void OgreRecastApplication::setPathAndBeginMarkerVisibility(bool visibility)
 
 bool OgreRecastApplication::frameRenderingQueued(const Ogre::FrameEvent& evt)
 {
+    // Handle buffered input for controlling first agent in steering demo mode
+    if(mApplicationState == STEER_AGENT) {
+        // This is needed because we do not know in what order mouse and key events are signalled by OIS
+        // If key release and mouse move happen in the wrong order an agent can continue walking even though the walk key was released
+
+        Character *firstAgent = mCharacters[0];
+        bool agentIsMoving = firstAgent->isMoving();
+
+        if(!mMoveForwardKeyPressed && agentIsMoving) {
+            firstAgent->stop(); // Stop a moving agent if forward key is released
+        } else if(mMouseMoveX != 0) {
+            firstAgent->getNode()->yaw(Ogre::Degree(mMouseMoveX)); // Rotate character according to mouse move
+            if(mMoveForwardKeyPressed)
+                firstAgent->moveForward();  // Update move direction if mouse was moved
+        } else if(mMoveForwardKeyPressed && !agentIsMoving) {
+            // Mouse is not moved, but forward key is pressed and agent is not moving
+            firstAgent->moveForward();  // Start moving agent
+        }
+        mMouseMoveX = 0;    // Reset mouse input
+    }
+
     // First update the agents using the crowd in which they are controlled
     mDetourCrowd->updateTick(evt.timeSinceLastFrame);
 
@@ -341,7 +435,7 @@ bool OgreRecastApplication::frameRenderingQueued(const Ogre::FrameEvent& evt)
         // Set new destinations depending on current demo mode
 
         // RANDOM WANDER BEHAVIOUR
-        if(mApplicationState == CROWD_WANDER &&
+        if( (mApplicationState == CROWD_WANDER || mApplicationState == STEER_AGENT) &&
            character->getAgentID() != 0) // No random walking for first agent
         {
             // If destination reached: Set new random destination
@@ -373,7 +467,6 @@ void OgreRecastApplication::setRandomTargetsForCrowd()
             character->updateDestination( mRecast->getRandomNavMeshPoint() );
         }
     }
-
 }
 
 void OgreRecastApplication::setFollowTargetForCrowd(Ogre::Vector3 targetDestination)

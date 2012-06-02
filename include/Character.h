@@ -77,6 +77,63 @@ public:
       **/
     virtual bool destinationReached(void);
 
+    /**
+      * Request to set a manual velocity for this character, to control it
+      * manually.
+      * The set velocity will stay active, meaning that the character will
+      * keep moving in the set direction, until you stop() it.
+      * Manually controlling a character offers no absolute control as the
+      * laws of acceleration and max speed still apply to an agent, as well
+      * as the fact that it cannot steer off the navmesh or into other agents.
+      * You will notice small corrections to steering when walking into objects
+      * or the border of the navmesh (which is usually a wall or object).
+      **/
+    void setVelocity(Ogre::Vector3 velocity);
+
+    /**
+      * Manually control the character moving it forward.
+      **/
+    virtual void moveForward(void);
+
+    /**
+      * Stop any movement this character is currently doing. This means losing
+      * the requested velocity or target destination.
+      **/
+    virtual void stop(void);
+
+    /**
+      * The current velocity (speed and direction) this character is traveling
+      * at.
+      **/
+    virtual Ogre::Vector3 getVelocity(void);
+
+    /**
+      * The current speed this character is traveling at.
+      **/
+    virtual Ogre::Real getSpeed(void);
+
+    /**
+      * The maximum speed this character can attain.
+      * This parameter is configured for the agent controlling this character.
+      **/
+    virtual Ogre::Real getMaxSpeed(void);
+
+    /**
+      * The maximum acceleration this character has towards its maximum speed.
+      * This parameter is configured for the agent controlling this character.
+      **/
+    virtual Ogre::Real getMaxAcceleration(void);
+
+    /**
+      * Returns true if this character is moving.
+      **/
+    virtual bool isMoving(void);
+
+    /**
+      * The direction in which the character is currently looking.
+      **/
+    virtual Ogre::Vector3 getLookingDirection(void);
+
 protected:
     /**
       * Update current position of this character to the current position of its agent.
@@ -127,10 +184,22 @@ protected:
       * The current destination set for this agent.
       * Take care in properly setting this variable, as it is only updated properly when
       * using Character::updateDestination() to set an individual destination for this character.
-      * After creation of a new character, or when updating the destination of all agents this
-      * variable should be set externally using setDestination().
+      * After updating the destination of all agents this variable should be set externally using
+      * setDestination().
       **/
     Ogre::Vector3 mDestination;
+
+    /**
+      * Velocity set for this agent for manually controlling it.
+      * If this is not zero then a manually set velocity is currently controlling the movement
+      * of this character (not pathplanning towards a set destination).
+      **/
+    Ogre::Vector3 mManualVelocity;
+
+    /**
+      * True if this character is stopped.
+      **/
+    bool mStopped;
 
 
     // Friend the application class to allow setDestinationForAllAgents to update character destination values

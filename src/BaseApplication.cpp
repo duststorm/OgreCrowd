@@ -16,6 +16,11 @@ This source file is part of the
 */
 #include "BaseApplication.h"
 
+
+// Set to true to avoid application locking the mouse when debugging
+const bool BaseApplication::DISABLE_LOCK_MOUSE = false;
+
+
 //-------------------------------------------------------------------------------------
 BaseApplication::BaseApplication(void)
     : mRoot(0),

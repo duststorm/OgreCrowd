@@ -56,15 +56,14 @@ void AnimateableCharacter::update(Ogre::Real timeSinceLastFrame)
 {
     updatePosition();
 
-    Ogre::Vector3 velocity; // Current velocity of agent
-    OgreRecast::FloatAToOgreVect3(mAgent->vel, velocity);
-    Ogre::Real velocityLenght = velocity.length();
+    Ogre::Vector3 velocity = getVelocity(); // Current velocity of agent
+    Ogre::Real speed = velocity.length();
 
-    if(velocityLenght > 0.15) {
+    if(speed > 0.15) {
         mAnimState->setEnabled(true);
-        mAnimState->addTime(mAnimSpeedScale * velocity.length() * timeSinceLastFrame);
+        mAnimState->addTime(mAnimSpeedScale * speed * timeSinceLastFrame);
 
-        if(velocity.length() > 0/*0.8*/) {  // Avoid jitter (TODO keep this?)
+        if(speed > 0/*0.8*/) {  // Avoid jitter (TODO keep this?)
             // Rotate to look in walking direction
             Ogre::Vector3 src = mNode->getOrientation() * -(Ogre::Vector3::UNIT_Z);    // Character looks in negative Z direction
             src.y = 0;  // Ignore y direction

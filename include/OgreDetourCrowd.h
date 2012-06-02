@@ -56,6 +56,19 @@ public:
     void setMoveTarget(int agentId, Ogre::Vector3 position, bool adjust);
 
     /**
+      * Request a specified velocity for the agent with specified index.
+      * Requesting a velocity means manually controlling an agent.
+      * Returns true if the request was successful.
+      **/
+    bool requestVelocity(int agentId, Ogre::Vector3 velocity);
+
+    /**
+      * Cancels any request for the specified agent, making it stop.
+      * Returns true if the request was successul.
+      **/
+    bool stopAgent(int agentId);
+
+    /**
       * Helper that calculates the needed velocity to steer an agent to a target destination.
       * Parameters:
       *     position    is the current position of the agent

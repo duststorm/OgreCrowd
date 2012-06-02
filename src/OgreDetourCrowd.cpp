@@ -164,6 +164,7 @@ int OgreDetourCrowd::addAgent(const Ogre::Vector3 position)
         if (idx != -1)
         {
             // If a move target is defined: move agent towards it
+            // TODO remove this behaviour?
                 if (m_targetRef)
                         m_crowd->requestMoveTarget(idx, m_targetRef, m_targetPos);
 
@@ -320,3 +321,19 @@ Ogre::Vector3 OgreDetourCrowd::getLastDestination()
     return result;
 }
 
+bool OgreDetourCrowd::requestVelocity(int agentId, Ogre::Vector3 velocity)
+{
+    if (!getAgent(agentId)->active)
+        return false;
+
+    float vel[3];
+    OgreRecast::OgreVect3ToFloatA(velocity, vel);
+
+    return m_crowd->requestMoveVelocity(agentId, vel);
+}
+
+bool OgreDetourCrowd::stopAgent(int agentId)
+{
+    float zeroVel[] = {0,0,0};
+    return m_crowd->resetMoveTarget(agentId) && m_crowd->requestMoveVelocity(agentId, zeroVel);
+}

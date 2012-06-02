@@ -14,7 +14,9 @@ Character::Character(Ogre::String name, Ogre::SceneManager *sceneMgr, OgreDetour
     mNode(NULL),
     mAgent(NULL),
     mAgentID(-1),
-    mDestination(detourCrowd->getLastDestination())
+    mManualVelocity(Ogre::Vector3::ZERO),
+    mDestination(detourCrowd->getLastDestination()),
+    mStopped(false)
 {
     mAgentID = mDetourCrowd->addAgent(position);
     mAgent = mDetourCrowd->getAgent(mAgentID);
@@ -58,6 +60,8 @@ void Character::updateDestination(Ogre::Vector3 destination, bool updatePrevious
 {
     mDetourCrowd->setMoveTarget(mAgentID, destination, updatePreviousPath);
     mDestination = destination;
+    mStopped = false;
+    mManualVelocity = Ogre::Vector3::ZERO;
 }
 
 Ogre::Vector3 Character::getPosition()
@@ -92,4 +96,64 @@ bool Character::destinationReached()
 void Character::setDestination(Ogre::Vector3 destination)
 {
     mDestination = destination;
+    mManualVelocity = Ogre::Vector3::ZERO;
+    mStopped = false;
+}
+
+void Character::stop()
+{
+    if(mDetourCrowd->stopAgent(getAgentID())) {
+        mDestination = Ogre::Vector3::ZERO;     // TODO this is not ideal
+        mManualVelocity = Ogre::Vector3::ZERO;
+        mStopped = true;
+    }
+}
+
+Ogre::Vector3 Character::getLookingDirection()
+{
+    return mNode->getOrientation() * Ogre::Vector3::NEGATIVE_UNIT_Z;    // Character looks in negative Z direction
+}
+
+void Character::moveForward()
+{
+    Ogre::Vector3 lookDirection = getLookingDirection();
+    lookDirection.normalise();
+    setVelocity(getAgent()->params.maxSpeed * lookDirection);
+}
+
+void Character::setVelocity(Ogre::Vector3 velocity)
+{
+    mManualVelocity = velocity;
+    mStopped = false;
+    mDestination = Ogre::Vector3::ZERO;     // TODO this is not ideal
+
+    mDetourCrowd->requestVelocity(getAgentID(), mManualVelocity);
+}
+
+Ogre::Vector3 Character::getVelocity()
+{
+    Ogre::Vector3 velocity;
+    OgreRecast::FloatAToOgreVect3(getAgent()->nvel, velocity);
+
+    return velocity;
+}
+
+Ogre::Real Character::getSpeed()
+{
+    return getVelocity().length();
+}
+
+Ogre::Real Character::getMaxSpeed()
+{
+    return getAgent()->params.maxSpeed;
+}
+
+Ogre::Real Character::getMaxAcceleration()
+{
+    return getAgent()->params.maxAcceleration;
+}
+
+bool Character::isMoving()
+{
+    return !mStopped || getSpeed() != 0;
 }

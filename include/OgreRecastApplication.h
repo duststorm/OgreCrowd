@@ -85,9 +85,19 @@ protected:
     virtual bool mousePressed( const OIS::MouseEvent &arg, OIS::MouseButtonID id );
 
     /**
-      * Handle keyboard input.
+      * Handle mouse movement.
+      **/
+    bool mouseMoved(const OIS::MouseEvent &arg);
+
+    /**
+      * Handle keyboard input when keys are pressed.
       **/
     virtual bool keyPressed( const OIS::KeyEvent &arg );
+
+    /**
+      * Handle keyboard input when keys are released.
+      **/
+    bool keyReleased(const OIS::KeyEvent &arg);
 
     /**
       * Update state for rendering a new frame.
@@ -141,9 +151,10 @@ protected:
       **/
     enum ApplicationState
     {
-       SIMPLE_PATHFIND,
-       CROWD_WANDER,
-       FOLLOW_TARGET
+       SIMPLE_PATHFIND,     // All agents follow destination marker
+       CROWD_WANDER,        // All agents wander off except first one
+       FOLLOW_TARGET,       // All agents follow first one
+       STEER_AGENT          // Manually steer first agent, others wander
     } mApplicationState;
 
 private:
@@ -168,10 +179,23 @@ private:
     OgreBites::Label *mLabelOverlay;
 
     /**
+      * Crosshair overlay shown in the center of the screen.
+      **/
+    Ogre::Overlay *mCrosshair;
+
+    /**
       * All characters in the scene that represent an agent.
       **/
     std::vector<Character*> mCharacters;
 
+    /**
+      * The camera used in the agent steering demo mode
+      **/
+    Ogre::Camera *mChaseCam;
+
+    bool mMoveForwardKeyPressed;
+
+    Ogre::Real mMouseMoveX;
 };
 
 
