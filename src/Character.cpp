@@ -157,3 +157,13 @@ bool Character::isMoving()
 {
     return !mStopped || getSpeed() != 0;
 }
+
+Ogre::Real Character::getAgentHeight(void)
+{
+    return mDetourCrowd->getAgentHeight();
+}
+
+Ogre::Real Character::getAgentRadius(void)
+{
+    return mDetourCrowd->getAgentRadius();
+}

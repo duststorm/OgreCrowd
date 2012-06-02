@@ -32,6 +32,16 @@ public:
     virtual Ogre::Entity* getEntity(void);
 
     /**
+      * The height of the agent for this character.
+      **/
+    virtual Ogre::Real getAgentHeight(void);
+
+    /**
+      * The radius of the agent for this character.
+      **/
+    virtual Ogre::Real getAgentRadius(void);
+
+    /**
       * Update this character for drawing a new frame
       **/
     virtual void update(Ogre::Real timeSinceLastFrame) = 0;
