@@ -69,8 +69,6 @@ void OgreRecast::RecastCleanup()
 **/
 bool OgreRecast::NavMeshBuild(std::vector<Ogre::Entity*> srcMeshes)
 {
-//    std::vector<Ogre::Entity*> srcMeshes(srcMeshesA, srcMeshesA + sizeof(srcMeshesA)/sizeof(Ogre::Entity*));
-
     if (srcMeshes.empty()) {
         Ogre::LogManager::getSingletonPtr()->logMessage("Warning: Called NavMeshBuild without any entities. No navmesh was built.");
         return false;
@@ -86,8 +84,6 @@ bool OgreRecast::NavMeshBuild(std::vector<Ogre::Entity*> srcMeshes)
 
 
 
-   int nLoop=0 ;
-   
    /*
    float*           rc_verts;
    unsigned int     rc_nverts;
@@ -133,7 +129,7 @@ bool OgreRecast::NavMeshBuild(std::vector<Ogre::Entity*> srcMeshes)
    m_cellHeight = /*6.0 ;//*/0.2;       //*
    m_agentMaxSlope = /*45*/20;          //*
    m_agentHeight = 2.5/*64.0;  1*/;        //*
-   m_agentMaxClimb = 16;                //*
+   m_agentMaxClimb = 1;                //*
    m_agentRadius = /*16;*/0.5;          //*
    m_edgeMaxLen = 12/*512*/;
    m_edgeMaxError = 1.3;
@@ -226,6 +222,8 @@ bool OgreRecast::NavMeshBuild(std::vector<Ogre::Entity*> srcMeshes)
    rcVcopy(m_cfg.bmax, tmpV);
    rcCalcGridSize(m_cfg.bmin, m_cfg.bmax, m_cfg.cs, &m_cfg.width, &m_cfg.height);
 
+   Ogre::LogManager::getSingletonPtr()->logMessage("Bounds: "+Ogre::StringConverter::toString(min) + "   "+ Ogre::StringConverter::toString(max));
+
    // Reset build times gathering.
    m_ctx->resetTimers();
 
@@ -298,7 +296,7 @@ bool OgreRecast::NavMeshBuild(std::vector<Ogre::Entity*> srcMeshes)
            tris[prevIndexCountTotal+j] = meshIndices[i][j]+prevVerticiesCount;
        }
        prevIndexCountTotal += meshIndexCount[i];
-       prevVerticiesCount = meshVertexCount[i];
+       prevVerticiesCount += meshVertexCount[i];
 
        i++;
    }
@@ -338,6 +336,23 @@ bool OgreRecast::NavMeshBuild(std::vector<Ogre::Entity*> srcMeshes)
            n[2] *= d;
        }
    }
+
+   // Debug navmesh points
+   /*
+   Ogre::SceneManager *sm = srcMeshes[0]->getParentSceneNode()->getCreator();
+   Ogre::ManualObject *manual = sm->createManualObject("manualtest");
+   manual->begin("dungeon", Ogre::RenderOperation::OT_POINT_LIST);
+   for (int i = 0; i<nverts*3; i+=3) {
+       manual->position(verts[i], verts[i+1], verts[i+2]);
+   }
+
+   for (int i = 0; i<ntris*3; i++) {
+       manual->index(tris[i]);
+   }
+
+   manual->end();
+   sm->getRootSceneNode()->createChildSceneNode()->attachObject(manual);
+   */
 
 
    // Allocate voxel heightfield where we rasterize our input data to.

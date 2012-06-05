@@ -66,6 +66,11 @@ public:
       **/
     static const bool HUMAN_CHARACTERS;
 
+    /**
+      * Place obstacles in the scene as separate meshes.
+      **/
+    static const bool OBSTACLES;
+
 
 protected:
     /**
@@ -145,6 +150,11 @@ protected:
       * id is up to the developer, it's not used by recast or the demo app).
       **/
     void calculateAndDrawPath(Ogre::Vector3 beginPos, Ogre::Vector3 endPos, int pathNb, int targetId);
+
+    /**
+      * Create an obstacle in the scene.
+      **/
+    Ogre::Entity* createObstacle(Ogre::String name, Ogre::Vector3 position, Ogre::Vector3 scale);
 
     /**
       * Current state the demo application is in.

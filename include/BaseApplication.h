@@ -43,10 +43,10 @@ public:
     virtual void go(void);
 
     /**
-      * Set to true to prevent the application from locking the mouse when stopping at breakpoints using
+      * Set to true to prevent the application from locking/grabbing the mouse when stopping at breakpoints using
       * a debugger.
       **/
-    const static bool DISABLE_LOCK_MOUSE;
+    const static bool DISABLE_MOUSE_GRAB;
 
 protected:
     virtual bool setup();

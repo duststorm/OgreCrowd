@@ -29,6 +29,9 @@ const bool OgreRecastApplication::DEBUG_DRAW = true;
 // Set to true to show agents as animated human characters instead of cylinders
 const bool OgreRecastApplication::HUMAN_CHARACTERS = true;
 
+// Add extra obstacles
+const bool OgreRecastApplication::OBSTACLES = true;
+
 //-------------------------------------------------------------------------------------
 
 
@@ -65,18 +68,52 @@ void OgreRecastApplication::createScene(void)
     Ogre::SceneNode* mapNode = mSceneMgr->getRootSceneNode()->createChildSceneNode("MapNode");
     mapNode->attachObject(mapE);
 
-    // Add some extra obstacles
-    Ogre::SceneNode *potNode = mapNode->createChildSceneNode("PotNode");
-    Ogre::Entity* potE = mSceneMgr->createEntity("Pot1", "Pot.mesh");
-    potNode->attachObject(potE);
-    potNode->setScale(0.7, 0.7, 0.7);
-    potNode->setPosition(6, 10, -20);
+    // Add some obstacles
+    Ogre::Entity* potE = NULL;
+    Ogre::Entity *pot2ProxyE = NULL;
+    if (OBSTACLES) {
+        Ogre::SceneNode *potNode = mapNode->createChildSceneNode("PotNode");
+        potE = mSceneMgr->createEntity("Pot1", "Pot.mesh");
+        potNode->attachObject(potE);
+        potNode->setScale(0.7, 0.7, 0.7);
+        potNode->setPosition(6, 10, -20);
+
+        Ogre::SceneNode *pot2Node = mapNode->createChildSceneNode("Pot2Node");
+        Ogre::Entity *pot2E = mSceneMgr->createEntity("Pot2", "Pot.mesh");
+        pot2Node->attachObject(pot2E);
+        pot2Node->setScale(0.3, 0.3, 0.3);
+        pot2Node->setPosition(0.926607, 10, -37.7362);
+        // You can also create a proxy or collision mesh for the obstacle to use for building the navmesh
+        // This can speed up navmesh creation as we are using simpler cylinder shapes
+        Ogre::Vector3 potSize = pot2E->getBoundingBox().getSize();
+        pot2ProxyE = mSceneMgr->createEntity("Pot2Proxy", "Cylinder.mesh");
+        Ogre::SceneNode *pot2ProxyNode = pot2Node->createChildSceneNode("Pot2ProxyNode");
+        pot2ProxyNode->attachObject(pot2ProxyE);
+        pot2ProxyNode->setScale(potSize.x, potSize.y, potSize.z);
+        pot2ProxyE->setVisible(DEBUG_DRAW); // Hide collision mesh when not debug drawing
+    }
+
 
     // Create list of entities to build navmesh from
     std::vector<Ogre::Entity*> navmeshEnts;
     navmeshEnts.push_back(mapE);  // Add the map
-    // You should tweak your navmesh build max error parameter to properly detect smaller obstacles
-    navmeshEnts.push_back(potE);  // Add obstacle
+
+    // You should tweak your navmesh build max error and maxclimb parameter to properly detect smaller obstacles
+    if (OBSTACLES) {
+        navmeshEnts.push_back(potE);  // Add obstacle
+        navmeshEnts.push_back(pot2ProxyE);  // Add proxy or collision mesh for obstacle
+
+        // Create some additional obstacles
+        navmeshEnts.push_back( createObstacle("Pot3", Ogre::Vector3(44.2139, 10, -4.70583), Ogre::Vector3(0.3, 0.3, 0.3)) );
+        navmeshEnts.push_back( createObstacle("Pot4", Ogre::Vector3(40.3481, 10, 7.46006), Ogre::Vector3(0.3, 0.3, 0.3)) );
+        navmeshEnts.push_back( createObstacle("Pot5", Ogre::Vector3(37.9414, 10, 6.12506), Ogre::Vector3(0.3, 0.3, 0.3)) );
+        navmeshEnts.push_back( createObstacle("Pot6", Ogre::Vector3(2.98811, 10, -32.6629), Ogre::Vector3(0.3, 0.3, 0.3)) );
+        navmeshEnts.push_back( createObstacle("Pot7", Ogre::Vector3(-2.97011, 10, -33.819), Ogre::Vector3(0.3, 0.3, 0.3)) );
+        navmeshEnts.push_back( createObstacle("Pot8", Ogre::Vector3(-1.17544, 10, -37.0419), Ogre::Vector3(0.3, 0.3, 0.3)) );
+        navmeshEnts.push_back( createObstacle("Pot9", Ogre::Vector3(0.926607, 10, -37.7362), Ogre::Vector3(0.3, 0.3, 0.3)) );
+        navmeshEnts.push_back( createObstacle("Pot10", Ogre::Vector3(18.9451, 10.2355, 0.95), Ogre::Vector3(0.3, 0.3, 0.3)) );
+        navmeshEnts.push_back( createObstacle("Pot11", Ogre::Vector3(18.2158, 10.2355, 4), Ogre::Vector3(0.3, 0.3, 0.3)) );
+    }
 
 
     // RECAST (navmesh creation)
@@ -135,6 +172,8 @@ void OgreRecastApplication::createScene(void)
     navMeshNode->getAttachedObject("RecastMONeighbour")->setQueryFlags(DEFAULT_MASK);
     navMeshNode->getAttachedObject("RecastMOBoundary")->setQueryFlags(DEFAULT_MASK);
     mapE->setQueryFlags(DEFAULT_MASK);
+    potE->setQueryFlags(DEFAULT_MASK);
+    pot2ProxyE->setQueryFlags(DEFAULT_MASK);
 
     if(!OgreRecastApplication::DEBUG_DRAW)
         navMeshNode->setVisible(false); // Even though we make it invisible, we still keep the navmesh entity in the scene to do ray intersection tests
@@ -155,6 +194,18 @@ void OgreRecastApplication::createScene(void)
     mChaseCam->pitch(Ogre::Degree(-15));
     Ogre::Viewport *vp = mWindow->getViewport(0);
     mChaseCam->setAspectRatio(Ogre::Real(vp->getActualWidth()) / Ogre::Real(vp->getActualHeight()));
+}
+
+Ogre::Entity* OgreRecastApplication::createObstacle(Ogre::String name, Ogre::Vector3 position, Ogre::Vector3 scale) {
+    Ogre::SceneNode *mapNode = mSceneMgr->getSceneNode("MapNode");
+    Ogre::SceneNode *node = mapNode->createChildSceneNode(name+"Node");
+    Ogre::Entity *ent = mSceneMgr->createEntity(name, "Pot.mesh");
+    node->attachObject(ent);
+    node->setPosition(position);
+    node->setScale(scale);
+    ent->setQueryFlags(DEFAULT_MASK);   // Exclude from ray queries
+
+    return ent;
 }
 
 void OgreRecastApplication::createFrameListener()
@@ -230,7 +281,7 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
         Ogre::Vector3 rayHitPoint;
         Ogre::MovableObject *rayHitObject;
         if (rayQueryPointInScene(cursorRay, NAVMESH_MASK, rayHitPoint, *rayHitObject)) {
-            Ogre::LogManager::getSingletonPtr()->logMessage("Info: adding agent at position "+Ogre::StringConverter::toString(rayHitPoint));
+            Ogre::LogManager::getSingletonPtr()->logMessage("Info: added agent at position "+Ogre::StringConverter::toString(rayHitPoint));
 
             Character *character = createCharacter("Agent"+Ogre::StringConverter::toString(mCharacters.size()), rayHitPoint);
 
@@ -437,7 +488,8 @@ bool OgreRecastApplication::frameRenderingQueued(const Ogre::FrameEvent& evt)
     }
 
     // First update the agents using the crowd in which they are controlled
-    mDetourCrowd->updateTick(evt.timeSinceLastFrame);
+    if(mDetourCrowd)
+        mDetourCrowd->updateTick(evt.timeSinceLastFrame);
 
     // Then update all characters controlled by the agents
     Ogre::Vector3 firstAgentPos = Ogre::Vector3::ZERO;

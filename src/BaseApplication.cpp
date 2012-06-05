@@ -17,8 +17,8 @@ This source file is part of the
 #include "BaseApplication.h"
 
 
-// Set to true to avoid application locking the mouse when debugging
-const bool BaseApplication::DISABLE_LOCK_MOUSE = false;
+// Set to true to avoid application grabbing the mouse when debugging
+const bool BaseApplication::DISABLE_MOUSE_GRAB = false;
 
 
 //-------------------------------------------------------------------------------------
@@ -104,7 +104,7 @@ void BaseApplication::createFrameListener(void)
     pl.insert(std::make_pair(std::string("WINDOW"), windowHndStr.str()));
 
 
-    if(BaseApplication::DISABLE_LOCK_MOUSE)
+    if(BaseApplication::DISABLE_MOUSE_GRAB)
     {
         // Fix OIS locking the mouse in render window. Especially useful when debugging
         //      http://www.ogre3d.org/forums/viewtopic.php?f=5&t=61988
