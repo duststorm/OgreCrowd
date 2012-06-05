@@ -3,8 +3,11 @@ Art assets license
 
 The dungeon mesh is part of the original recastnavigation distribution. It was created and donated to the recastnavigation project by John Ratcliff. I hold no rights over it.
 
-The other meshes are my work, in particular Cylinder.mesh and textures and GameChar-male and its textures, as well as the overlay cursor.
+The other meshes are my work, in particular Cylinder.mesh and textures and GameChar-male and its textures, the Pot mesh, as well as the overlay cursor.
 The GameChar-male mesh was achieved with makehuman.org and Blender 2.62, to both projects goes sincere thanks and recognition.
 These models and their textures are released under the CC0 license.
 
 Note that it might be more interesting for an own project to use MakeHuman yourself to create more customized characters instead of reusing the existing character from the demo.
+
+The plaster texture on the pot is property of cgtextures.com, I do not hold the rights. This message applies to it:
+One or more textures on this 3D model have been created with images from CGTextures.com. These images may not be redistributed by default, please visit www.cgtextures.com for more information.

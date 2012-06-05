@@ -1,0 +1,14 @@
+material Pot 
+{
+    receive_shadows on
+    technique
+    {
+        pass Pot
+        {
+            texture_unit 
+            {
+                texture PlasterBare.jpg
+            }
+        }
+    }
+}

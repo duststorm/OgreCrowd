@@ -67,8 +67,16 @@ void OgreRecast::RecastCleanup()
  *
  * Perhaps the most important part of the above is setting the agent size with m_agentHeight and m_agentRadius, and the voxel cell size used, m_cellSize and m_cellHeight. In my project 32.0 units is 1 meter, so I've set the agent to 48 units high, and the cell sizes are quite large. The original cell sizes in the Recast/Detour demo were down around 0.3.
 **/
-bool OgreRecast::NavMeshBuild(Ogre::Entity* srcMesh)
+bool OgreRecast::NavMeshBuild(std::vector<Ogre::Entity*> srcMeshes)
 {
+//    std::vector<Ogre::Entity*> srcMeshes(srcMeshesA, srcMeshesA + sizeof(srcMeshesA)/sizeof(Ogre::Entity*));
+
+    if (srcMeshes.empty()) {
+        Ogre::LogManager::getSingletonPtr()->logMessage("Warning: Called NavMeshBuild without any entities. No navmesh was built.");
+        return false;
+    }
+
+
     // TODO: clean up unused variables
 
 
@@ -164,14 +172,57 @@ bool OgreRecast::NavMeshBuild(Ogre::Entity* srcMesh)
    m_pathCol                = Ogre::ColourValue(1,0,0);         // Red
 
    
+   //set the reference node
+   Ogre::SceneNode *referenceNode = m_pSceneMgr->getRootSceneNode();
+
 
    // Set the area where the navigation mesh will be build.
    // Using bounding box of source mesh and specified cell size
-   const Ogre::AxisAlignedBox srcMeshBB = srcMesh->getBoundingBox();
+   Ogre::Entity* ent = srcMeshes[0];
+   const Ogre::AxisAlignedBox srcMeshBB = ent->getBoundingBox();
+   Ogre::SceneNode *sn = ent->getParentSceneNode();
+   Ogre::Vector3 scale;
+   Ogre::Vector3 position;
+   Ogre::Quaternion orient;
+   if(sn != NULL) {
+       scale = sn->_getDerivedScale();
+       position = sn->_getDerivedPosition();
+       orient = sn->_getDerivedOrientation();
+    } else {
+        scale = 1;
+        position = Ogre::Vector3::ZERO;
+        orient = Ogre::Quaternion::IDENTITY;
+    }
+   Ogre::Vector3 min = (orient * ( srcMeshBB.getMinimum() * scale)) + position;
+   Ogre::Vector3 max = (orient * ( srcMeshBB.getMaximum() * scale)) + position;
    float tmpV[3];
-   OgreVect3ToFloatA(srcMeshBB.getMinimum(), tmpV);
+   // Calculate min and max from all entities
+   for(std::vector<Ogre::Entity*>::iterator iter = srcMeshes.begin(); iter != srcMeshes.end(); iter++) {
+       Ogre::Entity* ent = *iter;
+
+       //find the transform between the reference node and this node
+       Ogre::Matrix4 transform = referenceNode->_getFullTransform().inverse() * ent->getParentSceneNode()->_getFullTransform();
+
+       const Ogre::AxisAlignedBox srcMeshBB = ent->getBoundingBox();
+        Ogre::Vector3 min2 = transform * srcMeshBB.getMinimum();
+        if(min2.x < min.x)
+            min.x = min2.x;
+        if(min2.y < min.y)
+            min.y = min2.y;
+        if(min2.z < min.z)
+            min.z = min2.z;
+
+        Ogre::Vector3 max2 = transform * srcMeshBB.getMaximum();
+        if(max2.x > max.x)
+            max.x = max2.x;
+        if(max2.y > max.y)
+            max.y = max2.y;
+        if(max2.z > max.z)
+            max.z = max2.z;
+   }
+   OgreVect3ToFloatA(min, tmpV);
    rcVcopy(m_cfg.bmin, tmpV);
-   OgreVect3ToFloatA(srcMeshBB.getMaximum(), tmpV);
+   OgreVect3ToFloatA(max, tmpV);
    rcVcopy(m_cfg.bmax, tmpV);
    rcCalcGridSize(m_cfg.bmin, m_cfg.bmax, m_cfg.cs, &m_cfg.width, &m_cfg.height);
 
@@ -190,50 +241,77 @@ bool OgreRecast::NavMeshBuild(Ogre::Entity* srcMesh)
    //
    // Step 2. Rasterize input polygon soup.
    //
-   size_t meshVertexCount, meshIndexCount = 0;
-   Ogre::Vector3* meshVertices = 0;
-   unsigned long* meshIndices = 0;
-   getMeshInformation(srcMesh->getMesh(), meshVertexCount, meshVertices, meshIndexCount, meshIndices);
+
+   //get all vertices and triangles
+   const int numNodes = srcMeshes.size();
+   size_t *meshVertexCount = new size_t[numNodes];
+   size_t *meshIndexCount = new size_t[numNodes];
+   Ogre::Vector3 **meshVertices = new Ogre::Vector3*[numNodes];
+   unsigned long **meshIndices = new unsigned long*[numNodes];
+
+   int nverts = 0;
+   int ntris = 0;
+   size_t i = 0;
+   for(std::vector<Ogre::Entity*>::iterator iter = srcMeshes.begin(); iter != srcMeshes.end(); iter++) {
+       getMeshInformation((*iter)->getMesh(), meshVertexCount[i], meshVertices[i], meshIndexCount[i], meshIndices[i]);
+       //total number of verts
+       nverts += meshVertexCount[i];
+       //total number of indices
+       ntris += meshIndexCount[i];
+
+       i++;
+   }
+
+
+   // DECLARE RECAST DATA BUFFERS USING THE INFO WE GRABBED ABOVE
+   float *verts = new float[nverts*3];// *3 as verts holds x,y,&z for each verts in the array
+   int *tris = new int[ntris];// tris in recast is really indices like ogre
+
+   //convert index count into tri count
+   ntris = ntris/3; //although the tris array are indices the ntris is actual number of triangles, eg. indices/3;
 
    m_pLog->logMessage("Building navigation:");
    m_pLog->logMessage(" - " + Ogre::StringConverter::toString(m_cfg.width) + " x " + Ogre::StringConverter::toString(m_cfg.height) + " cells");
-   m_pLog->logMessage(" - " + Ogre::StringConverter::toString(meshVertexCount/1000.0f) + " K verts, " + Ogre::StringConverter::toString(meshIndexCount/1000.0f) + " K tris");
-
-   // DECLARE RECAST DATA BUFFERS USING THE INFO WE GRABBED ABOVE
-   float *verts = new float[meshVertexCount*3];// *3 as verts holds x,y,&z for each verts in the array
-   int *tris = new int[meshIndexCount];// tris in recast is really indices like ogre
+   m_pLog->logMessage(" - " + Ogre::StringConverter::toString(nverts/1000.0f) + " K verts, " + Ogre::StringConverter::toString(ntris/1000.0f) + " K tris");
    
-   //set the reference node
-   Ogre::SceneNode *rootNode = m_pSceneMgr->getRootSceneNode();
+   //copy all meshes verticies into single buffer and transform to world space relative to parentNode
+   int vertsIndex = 0;
+   int prevVerticiesCount = 0;
+   int prevIndexCountTotal = 0;
+   i = 0;
+   for (std::vector<Ogre::Entity*>::iterator iter = srcMeshes.begin(); iter != srcMeshes.end(); iter++) {
+       Ogre::Entity *ent = *iter;
+       //find the transform between the reference node and this node
+       Ogre::Matrix4 transform = referenceNode->_getFullTransform().inverse() * ent->getParentSceneNode()->_getFullTransform();
+       Ogre::Vector3 vertexPos;
+       for (uint j = 0 ; j < meshVertexCount[i] ; j++)
+       {
+           vertexPos = transform*meshVertices[i][j];
+           verts[vertsIndex] = vertexPos.x;
+           verts[vertsIndex+1] = vertexPos.y;
+           verts[vertsIndex+2] = vertexPos.z;
+           vertsIndex+=3;
+       }
 
-   //find the transform between the root node and this node
-   Ogre::Matrix4 transform = rootNode->_getFullTransform().inverse() * srcMesh->getParentNode()->_getFullTransform();
-   Ogre::Vector3 vertexPos;
-   uint vertsIndex = 0;
-   // copy all meshes verticies into single buffer and transform to world space relative to parentNode
-   for (uint j = 0 ; j < meshVertexCount ; j++)
-   {
-       vertexPos = transform*meshVertices[j];
-       verts[vertsIndex] = vertexPos.x;
-       verts[vertsIndex+1] = vertexPos.y;
-       verts[vertsIndex+2] = vertexPos.z;
-       vertsIndex+=3;
+       for (uint j = 0 ; j < meshIndexCount[i] ; j++)
+       {
+           tris[prevIndexCountTotal+j] = meshIndices[i][j]+prevVerticiesCount;
+       }
+       prevIndexCountTotal += meshIndexCount[i];
+       prevVerticiesCount = meshVertexCount[i];
+
+       i++;
    }
 
-   for (uint j = 0 ; j < meshIndexCount ; j++)
-   {
-       tris[j] = meshIndices[j];
-   }
-
-   //delete[] meshVertices;
-   //delete[] meshIndices;
+   //delete tempory arrays
+   //TODO These probably could member varibles, this would increase performance slightly
+   delete[] meshVertices;
+   delete[] meshIndices;
 
    // calculate normals data for Recast - im not 100% sure where this is required
    // but it is used, Ogre handles its own Normal data for rendering, this is not related
    // to Ogre at all ( its also not correct lol )
    // TODO : fix this
-   int ntris = meshIndexCount/3;
-   int nverts = meshVertexCount;
    m_normals = new float[ntris*3];
    for (int i = 0; i < ntris*3; i += 3)
    {

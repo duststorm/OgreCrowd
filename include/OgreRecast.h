@@ -23,14 +23,13 @@ public:
    void RecastCleanup();
 
    /**
-     * Build a navigation mesh from the specified Ogre::Mesh as source.
-     * Currently only one mesh is supported, which means your level map must consist of only
-     * one mesh.
+     * Build a navigation mesh from the specified list of Ogre::Entities as source.
+     *
      * Recast will construct a navmesh using some configuration parameters, which are currently
      * just set inside this method, but should be extracted to somewhere else in the future.
      * The most important parameters to set are cellsize, agentHeight and agentRadius.
      **/
-   bool NavMeshBuild(Ogre::Entity* srcMesh);
+   bool NavMeshBuild(std::vector<Ogre::Entity*> srcMeshesA);
 
    /**
     * Find a path beween start point and end point and, if possible, generates a list of lines in a path.

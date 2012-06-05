@@ -18,12 +18,13 @@ This source file is part of the
 #include "OgreRecastApplication.h"
 #include "TestCharacter.h"
 #include "AnimateableCharacter.h"
+#include <vector>
 
 
 //--- SETTINGS ------------------------------------------------------------------------
 
 // Set to true to draw debug objects
-const bool OgreRecastApplication::DEBUG_DRAW = false;
+const bool OgreRecastApplication::DEBUG_DRAW = true;
 
 // Set to true to show agents as animated human characters instead of cylinders
 const bool OgreRecastApplication::HUMAN_CHARACTERS = true;
@@ -64,11 +65,24 @@ void OgreRecastApplication::createScene(void)
     Ogre::SceneNode* mapNode = mSceneMgr->getRootSceneNode()->createChildSceneNode("MapNode");
     mapNode->attachObject(mapE);
 
+    // Add some extra obstacles
+    Ogre::SceneNode *potNode = mapNode->createChildSceneNode("PotNode");
+    Ogre::Entity* potE = mSceneMgr->createEntity("Pot1", "Pot.mesh");
+    potNode->attachObject(potE);
+    potNode->setScale(0.7, 0.7, 0.7);
+    potNode->setPosition(6, 10, -20);
+
+    // Create list of entities to build navmesh from
+    std::vector<Ogre::Entity*> navmeshEnts;
+    navmeshEnts.push_back(mapE);  // Add the map
+    // You should tweak your navmesh build max error parameter to properly detect smaller obstacles
+    navmeshEnts.push_back(potE);  // Add obstacle
+
 
     // RECAST (navmesh creation)
     // Create the navmesh and show it
     mRecast = new OgreRecast(mSceneMgr);
-    if(mRecast->NavMeshBuild(mapE)) {
+    if(mRecast->NavMeshBuild(navmeshEnts)) {
         mRecast->drawNavMesh();
     } else {
         Ogre::LogManager::getSingletonPtr()->logMessage("ERROR: could not generate useable navmesh from mesh.");
@@ -216,6 +230,8 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
         Ogre::Vector3 rayHitPoint;
         Ogre::MovableObject *rayHitObject;
         if (rayQueryPointInScene(cursorRay, NAVMESH_MASK, rayHitPoint, *rayHitObject)) {
+            Ogre::LogManager::getSingletonPtr()->logMessage("Info: adding agent at position "+Ogre::StringConverter::toString(rayHitPoint));
+
             Character *character = createCharacter("Agent"+Ogre::StringConverter::toString(mCharacters.size()), rayHitPoint);
 
             // If in wander mode, give a random destination to agent (otherwise it will take the destination of the previous agent automatically)
