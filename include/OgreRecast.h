@@ -24,6 +24,8 @@ public:
 
    /**
      * Build a navigation mesh from the specified list of Ogre::Entities as source.
+     * It is required that all supplied entities are attached to a scenenode in the scene
+     * before calling this method.
      *
      * Recast will construct a navmesh using some configuration parameters, which are currently
      * just set inside this method, but should be extracted to somewhere else in the future.
