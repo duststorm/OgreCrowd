@@ -144,6 +144,13 @@ public:
       **/
     virtual Ogre::Vector3 getLookingDirection(void);
 
+    /**
+      * Set to true to show visual recast debugging geometry.
+      * Will be initialized to OgreRecastApplication::getDebugDrawing()
+      * at character construction.
+      **/
+    virtual void setDebugVisibility(bool visible) = 0;
+
 protected:
     /**
       * Update current position of this character to the current position of its agent.

@@ -21,3 +21,8 @@ void TestCharacter::update(Ogre::Real timeSinceLastFrame)
 {
     updatePosition();
 }
+
+void TestCharacter::setDebugVisibility(bool visible)
+{
+    return;
+}

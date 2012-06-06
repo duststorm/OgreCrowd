@@ -66,19 +66,13 @@ void Character::updateDestination(Ogre::Vector3 destination, bool updatePrevious
 
 Ogre::Vector3 Character::getPosition()
 {
-    if(OgreRecastApplication::DEBUG_DRAW)
-        return getNode()->getPosition() - (mDetourCrowd->m_recast->m_navMeshOffsetFromGround * Ogre::Vector3::UNIT_Y);
-    else
-        return getNode()->getPosition();
+    return getNode()->getPosition();
 }
 
 void Character::updatePosition()
 {
     Ogre::Vector3 agentPos;
     OgreRecast::FloatAToOgreVect3(getAgent()->npos, agentPos);
-
-    if(OgreRecastApplication::DEBUG_DRAW)
-        agentPos.y = agentPos.y + mDetourCrowd->m_recast->m_navMeshOffsetFromGround; // Compensate for distance of navmesh above ground
 
     getNode()->setPosition(agentPos);
 }

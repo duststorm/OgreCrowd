@@ -71,6 +71,12 @@ public:
       **/
     static const bool OBSTACLES;
 
+    /**
+      * Sets recast visual debugging geometry in the scene to visible (true) or hide
+      * it (false).
+      **/
+    void setDebugVisibility(bool visible);
+
 
 protected:
     /**
@@ -117,7 +123,7 @@ protected:
 
     /**
       * Find a new path between the markers and draw it as a line (only for debugging purposes).
-      * Path is only drawn if DEBUG_DRAW is true.
+      * Path should only be drawn if mDebug is true.
       * Also makes begin marker visible.
       * Calculated path is stored at slot pathNb, its target is identified with id targetId.
       **/
@@ -203,9 +209,29 @@ private:
       **/
     Ogre::Camera *mChaseCam;
 
+    /**
+      * Buffers whether forward key was pressed this frame.
+      **/
     bool mMoveForwardKeyPressed;
 
+    /**
+      * Buffers the horizontal mouse movement performed this frame.
+      **/
     Ogre::Real mMouseMoveX;
+
+    /**
+      * Current visibility of recast visual debug structures.
+      * True renders them in the scene, false hides them.
+      **/
+    bool mDebugDraw;
+
+    /**
+      * The scenenode containing the visual representation of the navmesh
+      * and other static debug drawing geometry.
+      **/
+    Ogre::SceneNode *mNavMeshNode;
+
+    std::vector<Ogre::Entity*> mDebugEntities;
 };
 
 

@@ -1,10 +1,11 @@
 #include "AnimateableCharacter.h"
 #include "OgreRecastApplication.h"
 
-AnimateableCharacter::AnimateableCharacter(Ogre::String name, Ogre::SceneManager *sceneMgr, OgreDetourCrowd* detourCrowd, Ogre::Vector3 position)
+AnimateableCharacter::AnimateableCharacter(Ogre::String name, Ogre::SceneManager *sceneMgr, OgreDetourCrowd* detourCrowd, bool debugDraw, Ogre::Vector3 position)
     : Character::Character(name, sceneMgr, detourCrowd, position),
     mAnimState(NULL),
-    mAnimSpeedScale(1)
+    mAnimSpeedScale(1),
+    mDebugNode(NULL)
 {
     mNode = sceneMgr->getRootSceneNode()->createChildSceneNode(name+"Node");
     mEnt = sceneMgr->createEntity(name, "Gamechar-male.mesh");
@@ -40,16 +41,16 @@ AnimateableCharacter::AnimateableCharacter(Ogre::String name, Ogre::SceneManager
 
 
     // Debug draw agent
-    if(OgreRecastApplication::DEBUG_DRAW) {
-        Ogre::SceneNode *debugNode = mNode->createChildSceneNode(name+"AgentDebugNode");
-        Ogre::Entity* debugEnt = sceneMgr->createEntity(name+"AgentDebug", "Cylinder.mesh");
-        debugEnt->setMaterialName("Cylinder/Wires/LightBlue");
-        debugNode->attachObject(debugEnt);
-        // Set marker scale to size of agent
-        debugNode->setInheritScale(false);
-        debugNode->setScale(agentRadius*2, agentHeight, agentRadius*2);
-        debugEnt->setQueryFlags(OgreRecastApplication::DEFAULT_MASK);   // Exclude from ray queries
-    }
+    mDebugNode = mNode->createChildSceneNode(name+"AgentDebugNode");
+    mDebugNode->setPosition(0, mDetourCrowd->m_recast->m_navMeshEdgesOffsetFromGround, 0);
+    Ogre::Entity* debugEnt = sceneMgr->createEntity(name+"AgentDebug", "Cylinder.mesh");
+    debugEnt->setMaterialName("Cylinder/Wires/LightBlue");
+    mDebugNode->attachObject(debugEnt);
+    // Set marker scale to size of agent
+    mDebugNode->setInheritScale(false);
+    mDebugNode->setScale(agentRadius*2, agentHeight, agentRadius*2);
+    debugEnt->setQueryFlags(OgreRecastApplication::DEFAULT_MASK);   // Exclude from ray queries
+    mDebugNode->setVisible(debugDraw);
 }
 
 void AnimateableCharacter::update(Ogre::Real timeSinceLastFrame)
@@ -76,4 +77,9 @@ void AnimateableCharacter::update(Ogre::Real timeSinceLastFrame)
         mAnimState->setEnabled(false);
         mAnimState->setTimePosition(0);
     }
+}
+
+void AnimateableCharacter::setDebugVisibility(bool visible)
+{
+    mDebugNode->setVisible(visible);
 }

@@ -14,6 +14,8 @@ public:
     TestCharacter(Ogre::String name, Ogre::SceneManager *sceneMgr, OgreDetourCrowd* detourCrowd, Ogre::Vector3 position = Ogre::Vector3::ZERO);
 
     virtual void update(Ogre::Real timeSinceLastFrame);
+
+    virtual void setDebugVisibility(bool visible);
 };
 
 #endif // TESTCHARACTER_H

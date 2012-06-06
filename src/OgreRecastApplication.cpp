@@ -23,13 +23,13 @@ This source file is part of the
 
 //--- SETTINGS ------------------------------------------------------------------------
 
-// Set to true to draw debug objects
+// Set to true to draw debug objects. This is only the initial state of mDebugDraw, you can toggle using V key.
 const bool OgreRecastApplication::DEBUG_DRAW = true;
 
 // Set to true to show agents as animated human characters instead of cylinders
 const bool OgreRecastApplication::HUMAN_CHARACTERS = true;
 
-// Add extra obstacles
+// Add extra obstacles (pots)
 const bool OgreRecastApplication::OBSTACLES = true;
 
 //-------------------------------------------------------------------------------------
@@ -45,7 +45,10 @@ OgreRecastApplication::OgreRecastApplication(void)
         mChaseCam(0),
         mMoveForwardKeyPressed(false),
         mMouseMoveX(0),
-        mCharacters()
+        mCharacters(),
+        mDebugDraw(DEBUG_DRAW),
+        mNavMeshNode(NULL),
+        mDebugEntities()
 {
 }
 
@@ -90,7 +93,8 @@ void OgreRecastApplication::createScene(void)
         Ogre::SceneNode *pot2ProxyNode = pot2Node->createChildSceneNode("Pot2ProxyNode");
         pot2ProxyNode->attachObject(pot2ProxyE);
         pot2ProxyNode->setScale(potSize.x, potSize.y, potSize.z);
-        pot2ProxyE->setVisible(DEBUG_DRAW); // Hide collision mesh when not debug drawing
+        pot2ProxyE->setVisible(mDebugDraw); // Hide collision mesh when not debug drawing
+        mDebugEntities.push_back(pot2ProxyE);
     }
 
 
@@ -135,7 +139,7 @@ void OgreRecastApplication::createScene(void)
     int targetId = 0;   // Number identifying the target the path leads to
     Ogre::Vector3 beginPos = mRecast->getRandomNavMeshPoint();
     Ogre::Vector3 endPos = mRecast->getRandomNavMeshPoint();
-    if(OgreRecastApplication::DEBUG_DRAW)
+    if(OgreRecastApplication::mDebugDraw)
         calculateAndDrawPath(beginPos, endPos, pathNb, targetId);
 
 
@@ -153,8 +157,10 @@ void OgreRecastApplication::createScene(void)
     // The rest of this method is specific to the demo
 
     // PLACE PATH BEGIN AND END MARKERS
-    beginPos.y = beginPos.y + mRecast->m_navMeshOffsetFromGround;
-    endPos.y = endPos.y + mRecast->m_navMeshOffsetFromGround;
+    if(mDebugDraw) {
+        beginPos.y = beginPos.y + mRecast->m_navMeshOffsetFromGround;
+        endPos.y = endPos.y + mRecast->m_navMeshOffsetFromGround;
+    }
     getOrCreateMarker("BeginPos", "Cylinder/Wires/DarkGreen")->setPosition(beginPos);
     getOrCreateMarker("EndPos", "Cylinder/Wires/Brown")->setPosition(endPos);
 
@@ -166,17 +172,17 @@ void OgreRecastApplication::createScene(void)
     // SETUP RAY SCENE QUERYING
     // Used for mouse picking begin and end markers and determining the position to add new agents
     // Add navmesh to separate querying group that we will use
-    Ogre::SceneNode *navMeshNode = (Ogre::SceneNode*)mSceneMgr->getRootSceneNode()->getChild("RecastSN");
-    navMeshNode->getAttachedObject("RecastMOWalk")->setQueryFlags(NAVMESH_MASK);
+    mNavMeshNode = (Ogre::SceneNode*)mSceneMgr->getRootSceneNode()->getChild("RecastSN");
+    mNavMeshNode->getAttachedObject("RecastMOWalk")->setQueryFlags(NAVMESH_MASK);
     // Exclude other meshes from navmesh queries
-    navMeshNode->getAttachedObject("RecastMONeighbour")->setQueryFlags(DEFAULT_MASK);
-    navMeshNode->getAttachedObject("RecastMOBoundary")->setQueryFlags(DEFAULT_MASK);
+    mNavMeshNode->getAttachedObject("RecastMONeighbour")->setQueryFlags(DEFAULT_MASK);
+    mNavMeshNode->getAttachedObject("RecastMOBoundary")->setQueryFlags(DEFAULT_MASK);
     mapE->setQueryFlags(DEFAULT_MASK);
     potE->setQueryFlags(DEFAULT_MASK);
     pot2ProxyE->setQueryFlags(DEFAULT_MASK);
 
-    if(!OgreRecastApplication::DEBUG_DRAW)
-        navMeshNode->setVisible(false); // Even though we make it invisible, we still keep the navmesh entity in the scene to do ray intersection tests
+    if(!OgreRecastApplication::mDebugDraw)
+        mNavMeshNode->setVisible(false); // Even though we make it invisible, we still keep the navmesh entity in the scene to do ray intersection tests
 
 
     // CREATE CURSOR OVERLAY
@@ -232,8 +238,10 @@ bool OgreRecastApplication::mousePressed( const OIS::MouseEvent &arg, OIS::Mouse
     Ogre::Vector3 rayHitPoint;
     Ogre::MovableObject *rayHitObject;
     if (rayQueryPointInScene(mouseRay, NAVMESH_MASK, rayHitPoint, *rayHitObject)) {
-        Ogre::SceneNode *markerNode = NULL;
+        // Compensate for the fact that the ray-queried navmesh is drawn a little above the ground
+        rayHitPoint.y = rayHitPoint.y - mRecast->m_navMeshOffsetFromGround;
 
+        Ogre::SceneNode *markerNode = NULL;
 
         if(id == OIS::MB_Left) {
             markerNode = getOrCreateMarker("EndPos", "Cylinder/Wires/Brown");
@@ -247,6 +255,8 @@ bool OgreRecastApplication::mousePressed( const OIS::MouseEvent &arg, OIS::Mouse
         }
 
         if(markerNode != NULL) {
+            if(mDebugDraw)
+                rayHitPoint.y = rayHitPoint.y + mRecast->m_navMeshOffsetFromGround;
             markerNode->setPosition(rayHitPoint);
         }
 
@@ -274,14 +284,14 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
 {
     // SPACE places a new agent at cursor position
     if(arg.key == OIS::KC_SPACE
-        && mApplicationState != STEER_AGENT  // no adding agents in steering mode (no mouse pointer)
-        && mDetourCrowd->getNbAgents() < mDetourCrowd->getMaxNbAgents()) {
+       && mApplicationState != STEER_AGENT  // no adding agents in steering mode (no mouse pointer)
+       && mDetourCrowd->getNbAgents() < mDetourCrowd->getMaxNbAgents()) {
         // Find position on navmesh pointed to by cursor in the middle of the screen
         Ogre::Ray cursorRay = mCamera->getCameraToViewportRay(0.5, 0.5);
         Ogre::Vector3 rayHitPoint;
         Ogre::MovableObject *rayHitObject;
         if (rayQueryPointInScene(cursorRay, NAVMESH_MASK, rayHitPoint, *rayHitObject)) {
-            Ogre::LogManager::getSingletonPtr()->logMessage("Info: added agent at position "+Ogre::StringConverter::toString(rayHitPoint));
+            //Ogre::LogManager::getSingletonPtr()->logMessage("Info: added agent at position "+Ogre::StringConverter::toString(rayHitPoint));
 
             Character *character = createCharacter("Agent"+Ogre::StringConverter::toString(mCharacters.size()), rayHitPoint);
 
@@ -337,6 +347,12 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
                 mCrosshair->show();
                 mWindow->getViewport(0)->setCamera(mCamera);
         }
+    }
+
+    // V key shows or hides recast debug drawing
+    if(arg.key == OIS::KC_V) {
+        mDebugDraw = !mDebugDraw;
+        setDebugVisibility(mDebugDraw);
     }
 
     // Buffer input of W key for controlling first agent in steering demo mode
@@ -395,7 +411,7 @@ Character* OgreRecastApplication::createCharacter(Ogre::String name, Ogre::Vecto
 
     if( HUMAN_CHARACTERS ) {
         // Create human characters
-        Character *character = new AnimateableCharacter(name, mSceneMgr, mDetourCrowd, position);
+        Character *character = new AnimateableCharacter(name, mSceneMgr, mDetourCrowd, mDebugDraw, position);
         mCharacters.push_back(character);
         return character;
     } else {
@@ -413,12 +429,12 @@ void OgreRecastApplication::drawPathBetweenMarkers(int pathNb, int targetId)
         Ogre::Vector3 endPos = getOrCreateMarker("EndPos")->getPosition();
 
         // Draw path line if visual debugging is enabled
-        if(OgreRecastApplication::DEBUG_DRAW)
+        if(OgreRecastApplication::mDebugDraw)
             // Find new path from begin to end positions
             calculateAndDrawPath(beginPos, endPos, pathNb, targetId);
 
         // Show begin and end markers
-        setPathAndBeginMarkerVisibility(true);
+        setPathAndBeginMarkerVisibility(mDebugDraw);
     } catch(Ogre::Exception ex) {
         // Either begin or end marker have not yet been placed
         return;
@@ -674,6 +690,42 @@ bool OgreRecastApplication::rayQueryPointInScene(Ogre::Ray ray, unsigned long qu
     }
 
 }
+
+void OgreRecastApplication::setDebugVisibility(bool visible)
+{
+    mDebugDraw = visible;
+
+    mNavMeshNode->setVisible(visible);
+
+    if (mApplicationState == SIMPLE_PATHFIND)
+        drawPathBetweenMarkers(1, 1);
+
+    // Change visibility of all registered debug entities for the application
+    for(std::vector<Ogre::Entity*>::iterator iter = mDebugEntities.begin(); iter != mDebugEntities.end(); iter++) {
+        Ogre::Entity *ent = *iter;
+        ent->setVisible(visible);
+    }
+
+    for(std::vector<Character*>::iterator iter = mCharacters.begin(); iter != mCharacters.end(); iter++) {
+        Character *character = *iter;
+        character->setDebugVisibility(visible);
+    }
+
+    Ogre::SceneNode* beginMarker = getOrCreateMarker("BeginPos");
+    Ogre::SceneNode* endMarker = getOrCreateMarker("EndPos");
+    Ogre::Vector3 beginPos= beginMarker->getPosition();
+    Ogre::Vector3 endPos= endMarker->getPosition();
+    if (visible) {
+        beginPos.y = beginPos.y + mRecast->m_navMeshEdgesOffsetFromGround;
+        endPos.y = endPos.y + mRecast->m_navMeshEdgesOffsetFromGround;
+    } else {
+        beginPos.y = beginPos.y - mRecast->m_navMeshEdgesOffsetFromGround;
+        endPos.y = endPos.y - mRecast->m_navMeshEdgesOffsetFromGround;
+    }
+    beginMarker->setPosition(beginPos);
+    endMarker->setPosition(endPos);
+}
+
 
 
 #if OGRE_PLATFORM == OGRE_PLATFORM_WIN32

@@ -6,9 +6,11 @@
 class AnimateableCharacter : public Character
 {
 public:
-    AnimateableCharacter(Ogre::String name, Ogre::SceneManager* sceneMgr, OgreDetourCrowd* detourCrowd, Ogre::Vector3 position = Ogre::Vector3::ZERO);
+    AnimateableCharacter(Ogre::String name, Ogre::SceneManager* sceneMgr, OgreDetourCrowd* detourCrowd, bool debugDraw = false, Ogre::Vector3 position = Ogre::Vector3::ZERO);
 
     virtual void update(Ogre::Real timeSinceLastFrame);
+
+    virtual void setDebugVisibility(bool visible);
 
 protected:
     /**
@@ -20,6 +22,13 @@ protected:
       * Speed scaling factor of the animation playback.
       **/
     Ogre::Real mAnimSpeedScale;
+
+    /**
+      * Scenenode that stores all geometry related to
+      * recast debug drawing. Can be made visible with
+      * setDebugVisibility().
+      **/
+    Ogre::SceneNode *mDebugNode;
 };
 
 #endif // ANIMATEABLECHARACTER_H
