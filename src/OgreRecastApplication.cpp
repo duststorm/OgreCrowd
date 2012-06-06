@@ -699,6 +699,8 @@ void OgreRecastApplication::setDebugVisibility(bool visible)
 
     if (mApplicationState == SIMPLE_PATHFIND)
         drawPathBetweenMarkers(1, 1);
+    else
+        setPathAndBeginMarkerVisibility(false);
 
     // Change visibility of all registered debug entities for the application
     for(std::vector<Ogre::Entity*>::iterator iter = mDebugEntities.begin(); iter != mDebugEntities.end(); iter++) {
