@@ -121,7 +121,8 @@ SOURCES += src/BaseApplication.cpp \
     src/DetourTileCache/DetourTileCacheBuilder.cpp \
     src/DetourTileCache/DetourTileCache.cpp \
     src/OgreDetourTileCache.cpp \
-    src/RecastContrib/fastlz/fastlz.c
+    src/RecastContrib/fastlz/fastlz.c \
+    src/RecastInputGeom.cpp
 HEADERS += include/BaseApplication.h \
     include/OgreRecastApplication.h \
     include/OgreRecastDefinitions.h \
@@ -152,4 +153,5 @@ HEADERS += include/BaseApplication.h \
     include/DetourTileCache/DetourTileCacheBuilder.h \
     include/DetourTileCache/DetourTileCache.h \
     include/OgreDetourTileCache.h \
-    include/RecastContrib/fastlz/fastlz.h
+    include/RecastContrib/fastlz/fastlz.h \
+    include/RecastInputGeom.h

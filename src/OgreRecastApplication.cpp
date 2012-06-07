@@ -18,6 +18,7 @@ This source file is part of the
 #include "OgreRecastApplication.h"
 #include "TestCharacter.h"
 #include "AnimateableCharacter.h"
+#include "RecastInputGeom.h"
 #include <vector>
 
 
@@ -623,7 +624,7 @@ bool OgreRecastApplication::rayQueryPointInScene(Ogre::Ray ray, unsigned long qu
                 // get the entity to check
                 Ogre::Entity *pentity = static_cast<Ogre::Entity*>(query_result[qr_idx].movable);
 
-                mRecast->getMeshInformation(pentity->getMesh(), vertex_count, vertices, index_count, indices,
+                InputGeom::getMeshInformation(pentity->getMesh(), vertex_count, vertices, index_count, indices,
                               pentity->getParentNode()->_getDerivedPosition(),
                               pentity->getParentNode()->_getDerivedOrientation(),
                               pentity->getParentNode()->_getDerivedScale());
@@ -632,7 +633,7 @@ bool OgreRecastApplication::rayQueryPointInScene(Ogre::Ray ray, unsigned long qu
                 // get the entity to check
                 Ogre::ManualObject *pmanual = static_cast<Ogre::ManualObject*>(query_result[qr_idx].movable);
 
-                mRecast->getManualMeshInformation(pmanual, vertex_count, vertices, index_count, indices,
+                InputGeom::getManualMeshInformation(pmanual, vertex_count, vertices, index_count, indices,
                               pmanual->getParentNode()->_getDerivedPosition(),
                               pmanual->getParentNode()->_getDerivedOrientation(),
                               pmanual->getParentNode()->_getDerivedScale());

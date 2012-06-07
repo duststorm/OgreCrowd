@@ -116,37 +116,6 @@ public:
    Ogre::String getPathFindErrorMsg(int errorCode);
 
 
-   /**
-     * Retrieve vertex data from a mesh
-     * From http://www.ogre3d.org/tikiwiki/RetrieveVertexData
-     *
-     * This example is taken from monster's OgreODE project. The full source can be found under ogreaddons/ogreode in the Ogre SVN.
-     * It has been adopted, so that it can be used separately. Just copy/paste it into your own project.
-     *
-     * Note that this code assumes sizeof(long) == sizeof(uint32_t), which is not true on AMD64 Linux.
-    **/
-   void getMeshInformation(const Ogre::MeshPtr mesh,
-                           size_t &vertex_count,
-                           Ogre::Vector3* &vertices,
-                           size_t &index_count,
-                           unsigned long* &indices,
-                           const Ogre::Vector3 &position = Ogre::Vector3::ZERO,
-                           const Ogre::Quaternion &orient = Ogre::Quaternion::IDENTITY,
-                           const Ogre::Vector3 &scale = Ogre::Vector3::UNIT_SCALE);
-
-   /**
-     * getMeshInformation for manual meshes.
-     **/
-   void getManualMeshInformation(const Ogre::ManualObject *manual,
-                           size_t &vertex_count,
-                           Ogre::Vector3* &vertices,
-                           size_t &index_count,
-                           unsigned long* &indices,
-                           const Ogre::Vector3 &position = Ogre::Vector3::ZERO,
-                           const Ogre::Quaternion &orient = Ogre::Quaternion::IDENTITY,
-                           const Ogre::Vector3 &scale = Ogre::Vector3::UNIT_SCALE);
-
-
    unsigned char* m_triareas;
    rcHeightfield* m_solid;
    rcCompactHeightfield* m_chf;
