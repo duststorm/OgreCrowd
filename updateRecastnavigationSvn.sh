@@ -27,9 +27,11 @@ pushd ../
 cp recastnavigation/Recast/Source/*cpp ogreRecast/src/Recast/
 cp recastnavigation/Detour/Source/*cpp ogreRecast/src/Detour/
 cp recastnavigation/DetourCrowd/Source/*cpp ogreRecast/src/DetourCrowd/
+cp recastnavigation/DetourTileCache/Source/*cpp ogreRecast/src/DetourTileCache/
 cp recastnavigation/Recast/Include/*h ogreRecast/include/Recast/
 cp recastnavigation/Detour/Include/*h ogreRecast/include/Detour
 cp recastnavigation/DetourCrowd/Include/*h ogreRecast/include/DetourCrowd/
+cp recastnavigation/DetourTileCache/Include/*h ogreRecast/include/DetourTileCache/
 
 # Apply a small patch that fixes include paths
 patch -p0 < ogreRecast/patchRecastnavigationSvn.patch

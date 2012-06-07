@@ -117,7 +117,11 @@ SOURCES += src/BaseApplication.cpp \
     src/OgreDetourCrowd.cpp \
     src/Character.cpp \
     src/TestCharacter.cpp \
-    src/AnimateableCharacter.cpp
+    src/AnimateableCharacter.cpp \
+    src/DetourTileCache/DetourTileCacheBuilder.cpp \
+    src/DetourTileCache/DetourTileCache.cpp \
+    src/OgreDetourTileCache.cpp \
+    src/RecastContrib/fastlz/fastlz.c
 HEADERS += include/BaseApplication.h \
     include/OgreRecastApplication.h \
     include/OgreRecastDefinitions.h \
@@ -143,4 +147,9 @@ HEADERS += include/BaseApplication.h \
     include/OgreDetourCrowd.h \
     include/Character.h \
     include/TestCharacter.h \
-    include/AnimateableCharacter.h
+    include/AnimateableCharacter.h \
+    include/DetourTileCache.h \
+    include/DetourTileCache/DetourTileCacheBuilder.h \
+    include/DetourTileCache/DetourTileCache.h \
+    include/OgreDetourTileCache.h \
+    include/RecastContrib/fastlz/fastlz.h

@@ -435,3 +435,68 @@ diff -uN recastnavigation/DetourCrowd/Include/DetourPathQueue.h ogreRecast/inclu
  static const unsigned int DT_PATHQ_INVALID = 0;
  
 
+diff -uN recastnavigation/DetourTileCache/Source/DetourTileCacheBuilder.cpp ogreRecast/src/DetourTileCache/DetourTileCacheBuilder.cpp
+--- recastnavigation/DetourTileCache/Source/DetourTileCacheBuilder.cpp	2012-03-19 22:16:33.078353266 +0100
++++ ogreRecast/src/DetourTileCache/DetourTileCacheBuilder.cpp	2012-06-07 12:09:55.080598870 +0200
+@@ -16,10 +16,10 @@
+ // 3. This notice may not be removed or altered from any source distribution.
+ //
+ 
+-#include "DetourCommon.h"
+-#include "DetourStatus.h"
+-#include "DetourAssert.h"
+-#include "DetourTileCacheBuilder.h"
++#include "Detour/DetourCommon.h"
++#include "Detour/DetourStatus.h"
++#include "Detour/DetourAssert.h"
++#include "DetourTileCache/DetourTileCacheBuilder.h"
+ #include <string.h>
+ #include <math.h>
+ 
+diff -uN recastnavigation/DetourTileCache/Source/DetourTileCache.cpp ogreRecast/src/DetourTileCache/DetourTileCache.cpp
+--- recastnavigation/DetourTileCache/Source/DetourTileCache.cpp	2012-06-01 16:04:13.250813859 +0200
++++ ogreRecast/src/DetourTileCache/DetourTileCache.cpp	2012-06-07 12:11:42.828604227 +0200
+@@ -1,10 +1,10 @@
+-#include "DetourTileCache.h"
+-#include "DetourTileCacheBuilder.h"
+-#include "DetourNavMeshBuilder.h"
+-#include "DetourNavMesh.h"
+-#include "DetourCommon.h"
+-#include "DetourAlloc.h"
+-#include "DetourAssert.h"
++#include "DetourTileCache/DetourTileCache.h"
++#include "DetourTileCache/DetourTileCacheBuilder.h"
++#include "Detour/DetourNavMeshBuilder.h"
++#include "Detour/DetourNavMesh.h"
++#include "Detour/DetourCommon.h"
++#include "Detour/DetourAlloc.h"
++#include "Detour/DetourAssert.h"
+ #include <math.h>
+ #include <string.h>
+ #include <new>
+diff -uN recastnavigation/DetourTileCache/Include/DetourTileCacheBuilder.h ogreRecast/include/DetourTileCache/DetourTileCacheBuilder.h
+--- recastnavigation/DetourTileCache/Include/DetourTileCacheBuilder.h	2012-03-19 22:16:33.082849199 +0100
++++ ogreRecast/include/DetourTileCache/DetourTileCacheBuilder.h	2012-06-07 12:10:37.760640423 +0200
+@@ -19,8 +19,8 @@
+ #ifndef DETOURTILECACHEBUILDER_H
+ #define DETOURTILECACHEBUILDER_H
+ 
+-#include "DetourAlloc.h"
+-#include "DetourStatus.h"
++#include "Detour/DetourAlloc.h"
++#include "Detour/DetourStatus.h"
+ 
+ static const int DT_TILECACHE_MAGIC = 'D'<<24 | 'T'<<16 | 'L'<<8 | 'R'; ///< 'DTLR';
+ static const int DT_TILECACHE_VERSION = 1;
+diff -uN recastnavigation/DetourTileCache/Include/DetourTileCache.h ogreRecast/include/DetourTileCache/DetourTileCache.h
+--- recastnavigation/DetourTileCache/Include/DetourTileCache.h	2012-03-19 22:16:33.082849199 +0100
++++ ogreRecast/include/DetourTileCache/DetourTileCache.h	2012-06-07 12:11:54.305400574 +0200
+@@ -1,7 +1,7 @@
+ #ifndef DETOURTILECACHE_H
+ #define DETOURTILECACHE_H
+ 
+-#include "DetourStatus.h"
++#include "Detour/DetourStatus.h"
+ 
+ 
+ 
