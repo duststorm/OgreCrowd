@@ -3,9 +3,9 @@
 #include "Detour/DetourCommon.h"
 
 
-OgreDetourCrowd::OgreDetourCrowd(OgreRecast *recastDemo)
+OgreDetourCrowd::OgreDetourCrowd(OgreRecast *recast)
     : m_crowd(0),
-    m_recast(recastDemo),
+    m_recast(recast),
     m_targetRef(0),
     m_activeAgents(0)
 {
@@ -36,7 +36,7 @@ OgreDetourCrowd::OgreDetourCrowd(OgreRecast *recastDemo)
 
 
 
-    dtNavMesh* nav = recastDemo->m_navMesh;
+    dtNavMesh* nav = recast->m_navMesh;
     dtCrowd* crowd = m_crowd;
             if (nav && crowd && crowd->getAgentCount() == 0)
             {
