@@ -22,6 +22,7 @@ This source file is part of the
 #include "OgreRecast.h"
 #include "OgreDetourCrowd.h"
 #include "Character.h"
+#include "OgreDetourTileCache.h"
 
 class OgreRecastApplication : public BaseApplication
 {
@@ -70,6 +71,12 @@ public:
       * Place obstacles in the scene as separate meshes.
       **/
     static const bool OBSTACLES;
+
+    /**
+      * Determines whether demo app will build simple single navmesh,
+      * or build a tiled navmesh using detourTileCache that supports temp obstacles.
+      **/
+    static const bool SINGLE_NAVMESH;
 
     /**
       * Sets recast visual debugging geometry in the scene to visible (true) or hide
@@ -178,6 +185,12 @@ private:
       * Ogre version of the code of the original Recast demo that comes with the recast distribution.
       **/
     OgreRecast* mRecast;
+
+    /**
+      * Ogre version of DetourTileCache.
+      * Only used when SINGLE_NAVMESH is false.
+      **/
+    OgreDetourTileCache *mDetourTileCache;
 
     /**
       * Ray scene intersection query object.

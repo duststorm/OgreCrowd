@@ -6,9 +6,19 @@
 #include "DetourTileCache/DetourTileCache.h"
 #include "Detour/DetourCommon.h"
 #include "RecastContrib/fastlz/fastlz.h"
+#include "RecastInputGeom.h"
 
 struct MeshProcess : public dtTileCacheMeshProcess
 {
+    InputGeom* m_geom;
+
+    inline MeshProcess() : m_geom(0) {
+    }
+
+    inline void init(InputGeom* geom) {
+        m_geom = geom;
+    }
+
     virtual void process(struct dtNavMeshCreateParams* params,
                          unsigned char* polyAreas, unsigned short* polyFlags)
     {
@@ -32,6 +42,21 @@ struct MeshProcess : public dtTileCacheMeshProcess
             {
                 polyFlags[i] = SAMPLE_POLYFLAGS_WALK | SAMPLE_POLYFLAGS_DOOR;
             }
+        }
+
+        // Pass in off-mesh connections.
+        if (m_geom)
+        {
+            // TODO implement off-mesh connections
+            /*
+            params->offMeshConVerts = m_geom->getOffMeshConnectionVerts();
+            params->offMeshConRad = m_geom->getOffMeshConnectionRads();
+            params->offMeshConDir = m_geom->getOffMeshConnectionDirs();
+            params->offMeshConAreas = m_geom->getOffMeshConnectionAreas();
+            params->offMeshConFlags = m_geom->getOffMeshConnectionFlags();
+            params->offMeshConUserID = m_geom->getOffMeshConnectionId();
+            params->offMeshConCount = m_geom->getOffMeshConnectionCount();
+            */
         }
 
     }
@@ -209,19 +234,27 @@ public:
     /**
       * This is an Ogre adaptation of Sample_TempObstacles::handleBuild()
       * First init the OgreRecast module like you would construct a simple single
-      * navmesh, then invoke this method to finish the partial navmesh build and create
-      * a tileCache from it.
+      * navmesh, then invoke this method instead of OgreRecast::NavMeshBuild() to create
+      * a tileCache from the specified ogre geometry.
+      * The specified ogre entities need to be added to a scenenode in the scene before this
+      * method is called.
+      * The resulting navmesh will be created in the OgreRecast module, at OgreRecast::m_navMesh;
       **/
-    bool TileCacheBuild(void);
+    bool TileCacheBuild(std::vector<Ogre::Entity*> srcMeshes);
 
     /**
-      * Build the 2D navigation grid per divided in layers that is the intermediary format stored in the tilecache.
+      * Build the 2D navigation grid divided in layers that is the intermediary format stored in the tilecache.
+      * Builds the specified tile from the given input geometry. Only the part of the geometry that intersects the
+      * needed tile is used.
       * From this format a 3D navmesh can be quickly generated at runtime.
       * This process uses a large part of the recast navmesh building pipeline (implemented in OgreRecast::NavMeshBuild()),
       * up till step 4.
       **/
-    int rasterizeTileLayers(const int tx, const int ty, TileCacheData* tiles, const int maxTiles);
+    int rasterizeTileLayers(InputGeom* geom, const int tx, const int ty, TileCacheData* tiles, const int maxTiles);
 
+    /**
+      * Gets world position of tile with specified index.
+      **/
     void getTilePos(const float* pos, int& tx, int& ty);
 
     void handleUpdate(const float dt);
@@ -240,6 +273,8 @@ public:
 
 
 protected:
+    InputGeom* m_geom;
+
     bool m_keepInterResults;
 
     struct LinearAllocator *m_talloc;

@@ -58,6 +58,59 @@ void OgreRecast::RecastCleanup()
 
 
 
+void OgreRecast::configure()
+{
+    // NOTE: this is one of the most important parts to get it right!!
+     /*
+       Perhaps the most important part of the above is setting the agent size with m_agentHeight and m_agentRadius, and the voxel cell size used, m_cellSize and m_cellHeight. In my project 32.0 units is 1 meter, so I've set the agent to 48 units high, and the cell sizes are quite large. The original cell sizes in the Recast/Detour demo were down around 0.3.
+       */
+
+    // cellsize (1.5, 1.0) was the most accurate at finding all the places we could go, but was also slow to generate.
+    // Might be suitable for pre-generated meshes. Though it also produces a lot more polygons.
+
+    // TODO clean this up, put in some more clear place, allow config file
+    m_cellSize = /*9.0 ;//*/0.3;         //*
+    m_cellHeight = /*6.0 ;//*/0.2;       //*
+    m_agentMaxSlope = /*45*/20;          //*
+    m_agentHeight = 2.5/*64.0;  1*/;        //*
+    m_agentMaxClimb = 1;                //*
+    m_agentRadius = /*16;*/0.5;          //*
+    m_edgeMaxLen = 12/*512*/;
+    m_edgeMaxError = 1.3;
+    m_regionMinSize = 50;
+    m_regionMergeSize = 20;
+    m_vertsPerPoly = 6;
+    m_detailSampleDist = 6;
+    m_detailSampleMaxError = 1;
+    m_keepInterResults = false;
+
+    // Init build configuration from GUI
+    memset(&m_cfg, 0, sizeof(m_cfg));
+    m_cfg.cs = m_cellSize;
+    m_cfg.ch = m_cellHeight;
+    m_cfg.walkableSlopeAngle = m_agentMaxSlope;
+    m_cfg.walkableHeight = (int)ceilf(m_agentHeight / m_cfg.ch);
+    m_cfg.walkableClimb = (int)floorf(m_agentMaxClimb / m_cfg.ch);
+    m_cfg.walkableRadius = (int)ceilf(m_agentRadius / m_cfg.cs);
+    m_cfg.maxEdgeLen = (int)(m_edgeMaxLen / m_cellSize);
+    m_cfg.maxSimplificationError = m_edgeMaxError;
+    m_cfg.minRegionArea = (int)rcSqr(m_regionMinSize);      // Note: area = size*size
+    m_cfg.mergeRegionArea = (int)rcSqr(m_regionMergeSize);   // Note: area = size*size
+    m_cfg.maxVertsPerPoly = (int)m_vertsPerPoly;
+    m_cfg.detailSampleDist = m_detailSampleDist < 0.9f ? 0 : m_cellSize * m_detailSampleDist;
+    m_cfg.detailSampleMaxError = m_cellHeight * m_detailSampleMaxError;
+
+
+    m_navMeshOffsetFromGround = m_cellHeight/5;//0.25;      // Distance above ground for drawing navmesh polygons
+    m_navMeshEdgesOffsetFromGround = m_cellHeight/3;        // Distance above ground for drawing edges of navmesh (should be slightly higher than navmesh polygons)
+    m_pathOffsetFromGround = m_agentHeight+m_navMeshOffsetFromGround; // Distance above ground for drawing path debug lines relative to cellheight (should be higher than navmesh polygons)
+
+    m_navmeshNeighbourEdgeCol= Ogre::ColourValue(0.9,0.9,0.9);   // Light Grey
+    m_navmeshOuterEdgeCol    = Ogre::ColourValue(0,0,0);         // Black
+    m_navmeshGroundPolygonCol= Ogre::ColourValue(0,0.7,0);       // Green
+    m_navmeshOtherPolygonCol = Ogre::ColourValue(0,0.175,0);     // Dark green
+    m_pathCol                = Ogre::ColourValue(1,0,0);         // Red
+}
 
 
 
@@ -76,7 +129,6 @@ bool OgreRecast::NavMeshBuild(std::vector<Ogre::Entity*> srcMeshes)
         return false;
     }
 
-
     // TODO: clean up unused variables
 
 
@@ -90,57 +142,7 @@ bool OgreRecast::NavMeshBuild(std::vector<Ogre::Entity*> srcMeshes)
    //
    // Step 1. Initialize build config.
    //
-
-   // NOTE: this is one of the most important parts to get it right!!
-    /*
-      Perhaps the most important part of the above is setting the agent size with m_agentHeight and m_agentRadius, and the voxel cell size used, m_cellSize and m_cellHeight. In my project 32.0 units is 1 meter, so I've set the agent to 48 units high, and the cell sizes are quite large. The original cell sizes in the Recast/Detour demo were down around 0.3.
-      */
-
-   // cellsize (1.5, 1.0) was the most accurate at finding all the places we could go, but was also slow to generate.
-   // Might be suitable for pre-generated meshes. Though it also produces a lot more polygons.
-
-   // TODO clean this up, put in some more clear place, allow config file
-   m_cellSize = /*9.0 ;//*/0.3;         //*
-   m_cellHeight = /*6.0 ;//*/0.2;       //*
-   m_agentMaxSlope = /*45*/20;          //*
-   m_agentHeight = 2.5/*64.0;  1*/;        //*
-   m_agentMaxClimb = 1;                //*
-   m_agentRadius = /*16;*/0.5;          //*
-   m_edgeMaxLen = 12/*512*/;
-   m_edgeMaxError = 1.3;
-   m_regionMinSize = 50;
-   m_regionMergeSize = 20;
-   m_vertsPerPoly = 6;
-   m_detailSampleDist = 6;
-   m_detailSampleMaxError = 1;
-   m_keepInterResults = false;
-   
-   // Init build configuration from GUI
-   memset(&m_cfg, 0, sizeof(m_cfg));
-   m_cfg.cs = m_cellSize;
-   m_cfg.ch = m_cellHeight;
-   m_cfg.walkableSlopeAngle = m_agentMaxSlope;
-   m_cfg.walkableHeight = (int)ceilf(m_agentHeight / m_cfg.ch);
-   m_cfg.walkableClimb = (int)floorf(m_agentMaxClimb / m_cfg.ch);
-   m_cfg.walkableRadius = (int)ceilf(m_agentRadius / m_cfg.cs);
-   m_cfg.maxEdgeLen = (int)(m_edgeMaxLen / m_cellSize);
-   m_cfg.maxSimplificationError = m_edgeMaxError;
-   m_cfg.minRegionArea = (int)rcSqr(m_regionMinSize);      // Note: area = size*size
-   m_cfg.mergeRegionArea = (int)rcSqr(m_regionMergeSize);   // Note: area = size*size
-   m_cfg.maxVertsPerPoly = (int)m_vertsPerPoly;
-   m_cfg.detailSampleDist = m_detailSampleDist < 0.9f ? 0 : m_cellSize * m_detailSampleDist;
-   m_cfg.detailSampleMaxError = m_cellHeight * m_detailSampleMaxError;
-
-
-   m_navMeshOffsetFromGround = m_cellHeight/5;//0.25;      // Distance above ground for drawing navmesh polygons
-   m_navMeshEdgesOffsetFromGround = m_cellHeight/3;        // Distance above ground for drawing edges of navmesh (should be slightly higher than navmesh polygons)
-   m_pathOffsetFromGround = m_agentHeight+m_navMeshOffsetFromGround; // Distance above ground for drawing path debug lines relative to cellheight (should be higher than navmesh polygons)
-
-   m_navmeshNeighbourEdgeCol= Ogre::ColourValue(0.9,0.9,0.9);   // Light Grey
-   m_navmeshOuterEdgeCol    = Ogre::ColourValue(0,0,0);         // Black
-   m_navmeshGroundPolygonCol= Ogre::ColourValue(0,0.7,0);       // Green
-   m_navmeshOtherPolygonCol = Ogre::ColourValue(0,0.175,0);     // Dark green
-   m_pathCol                = Ogre::ColourValue(1,0,0);         // Red
+   configure();
 
 
    // Reset build times gathering.
@@ -148,7 +150,6 @@ bool OgreRecast::NavMeshBuild(std::vector<Ogre::Entity*> srcMeshes)
 
    // Start the build process.
    m_ctx->startTimer(RC_TIMER_TOTAL);
-
 
 
 
@@ -169,7 +170,7 @@ bool OgreRecast::NavMeshBuild(std::vector<Ogre::Entity*> srcMeshes)
    Ogre::Vector3 min; FloatAToOgreVect3(inputGeom->getMeshBoundsMin(), min);
    Ogre::Vector3 max; FloatAToOgreVect3(inputGeom->getMeshBoundsMax(), max);
 
-   Ogre::LogManager::getSingletonPtr()->logMessage("Bounds: "+Ogre::StringConverter::toString(min) + "   "+ Ogre::StringConverter::toString(max));
+   //Ogre::LogManager::getSingletonPtr()->logMessage("Bounds: "+Ogre::StringConverter::toString(min) + "   "+ Ogre::StringConverter::toString(max));
 
 
    m_pLog->logMessage("Building navigation:");
@@ -267,12 +268,12 @@ bool OgreRecast::NavMeshBuild(std::vector<Ogre::Entity*> srcMeshes)
       return false;
    }
 
+// TODO implement
    // (Optional) Mark areas.
    //const ConvexVolume* vols = m_geom->getConvexVolumes();
    //for (int i  = 0; i < m_geom->getConvexVolumeCount(); ++i)
    //   rcMarkConvexPolyArea(m_ctx, vols[i].verts, vols[i].nverts, vols[i].hmin, vols[i].hmax, (unsigned char)vols[i].area, *m_chf);
 
-// TODO stop here for tilecache build
 
    // Prepare for region partitioning, by calculating distance field along the walkable surface.
    if (!rcBuildDistanceField(m_ctx, *m_chf))
@@ -607,7 +608,8 @@ int OgreRecast::FindPath(Ogre::Vector3 startPos, Ogre::Vector3 endPos, int nPath
 **/
 
 void OgreRecast::drawNavMesh() {
-    CreateRecastPolyMesh(*m_pmesh);
+    if(m_pmesh)
+        CreateRecastPolyMesh(*m_pmesh);
 }
 
 void OgreRecast::CreateRecastPolyMesh(const struct rcPolyMesh& mesh, bool colorRegions)

@@ -33,6 +33,9 @@ const bool OgreRecastApplication::HUMAN_CHARACTERS = true;
 // Add extra obstacles (pots)
 const bool OgreRecastApplication::OBSTACLES = true;
 
+// Set to true to build simple single navmesh, set to false to build tiled navmesh using detourTileCache that supports temp obstacles
+const bool OgreRecastApplication::SINGLE_NAVMESH = true;
+
 //-------------------------------------------------------------------------------------
 
 
@@ -49,7 +52,8 @@ OgreRecastApplication::OgreRecastApplication(void)
         mCharacters(),
         mDebugDraw(DEBUG_DRAW),
         mNavMeshNode(NULL),
-        mDebugEntities()
+        mDebugEntities(),
+        mDetourTileCache(NULL)
 {
 }
 
@@ -124,11 +128,25 @@ void OgreRecastApplication::createScene(void)
     // RECAST (navmesh creation)
     // Create the navmesh and show it
     mRecast = new OgreRecast(mSceneMgr);
-    if(mRecast->NavMeshBuild(navmeshEnts)) {
-        mRecast->drawNavMesh();
+    if(SINGLE_NAVMESH) {
+        // Simple recast navmesh build example
+
+        if(mRecast->NavMeshBuild(navmeshEnts)) {
+            mRecast->drawNavMesh();
+        } else {
+            Ogre::LogManager::getSingletonPtr()->logMessage("ERROR: could not generate useable navmesh from mesh.");
+            return;
+        }
     } else {
-        Ogre::LogManager::getSingletonPtr()->logMessage("ERROR: could not generate useable navmesh from mesh.");
-        return;
+        // More advanced: use DetourTileCache
+
+        mDetourTileCache = new OgreDetourTileCache(mRecast);
+        if(mDetourTileCache->TileCacheBuild(navmeshEnts)) {
+            mRecast->drawNavMesh();
+        } else {
+            Ogre::LogManager::getSingletonPtr()->logMessage("ERROR: could not generate useable navmesh from mesh using detourTileCache.");
+            return;
+        }
     }
 
 

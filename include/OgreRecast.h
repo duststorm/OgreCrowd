@@ -23,6 +23,12 @@ public:
    void RecastCleanup();
 
    /**
+     * Configure navbuild parameters for this module.
+     * Sets m_cfg and other parameters.
+     **/
+   void configure(void);
+
+   /**
      * Build a navigation mesh from the specified list of Ogre::Entities as source.
      * It is required that all supplied entities are attached to a scenenode in the scene
      * before calling this method.
