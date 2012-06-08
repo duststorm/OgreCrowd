@@ -90,7 +90,12 @@ public:
      * "RecastMOBoundary" is added to the scene node. It is a collection of lines that represent
      * the outer edges of the navmesh, being the ones that do not have any neighbouring segments.
      **/
-   void CreateRecastPolyMesh(const struct rcPolyMesh& mesh, bool colorRegions=true);
+   void CreateRecastPolyMesh(const unsigned short *verts, const int nverts, const unsigned short *polys, const int npolys,
+                             const unsigned char *areas, const int maxpolys, const unsigned short *regions,
+                             const int nvp, const float cs, const float ch, const float *orig,
+                             bool colorRegions=true);
+
+   void drawPolyMesh(const struct rcPolyMesh &mesh, bool colorRegions=true);
 
    /**
      * Create an Ogre::ManualObject mesh to visually debug a path on the navmesh found
@@ -209,6 +214,7 @@ public:
 
    Ogre::LogManager* m_pLog;
    Ogre::SceneManager* m_pSceneMgr;
+   int m_manualOIndex;
 };
 
 #endif // #ifndef __OgreRecast_h_

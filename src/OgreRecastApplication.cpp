@@ -34,7 +34,7 @@ const bool OgreRecastApplication::HUMAN_CHARACTERS = true;
 const bool OgreRecastApplication::OBSTACLES = true;
 
 // Set to true to build simple single navmesh, set to false to build tiled navmesh using detourTileCache that supports temp obstacles
-const bool OgreRecastApplication::SINGLE_NAVMESH = true;
+const bool OgreRecastApplication::SINGLE_NAVMESH = false;
 
 //-------------------------------------------------------------------------------------
 
@@ -142,7 +142,7 @@ void OgreRecastApplication::createScene(void)
 
         mDetourTileCache = new OgreDetourTileCache(mRecast);
         if(mDetourTileCache->TileCacheBuild(navmeshEnts)) {
-            mRecast->drawNavMesh();
+            mDetourTileCache->drawNavMesh();
         } else {
             Ogre::LogManager::getSingletonPtr()->logMessage("ERROR: could not generate useable navmesh from mesh using detourTileCache.");
             return;
@@ -192,10 +192,11 @@ void OgreRecastApplication::createScene(void)
     // Used for mouse picking begin and end markers and determining the position to add new agents
     // Add navmesh to separate querying group that we will use
     mNavMeshNode = (Ogre::SceneNode*)mSceneMgr->getRootSceneNode()->getChild("RecastSN");
-    mNavMeshNode->getAttachedObject("RecastMOWalk")->setQueryFlags(NAVMESH_MASK);
+//TODO fix for multiple navmesh entities
+    mNavMeshNode->getAttachedObject("RecastMOWalk0")->setQueryFlags(NAVMESH_MASK);
     // Exclude other meshes from navmesh queries
-    mNavMeshNode->getAttachedObject("RecastMONeighbour")->setQueryFlags(DEFAULT_MASK);
-    mNavMeshNode->getAttachedObject("RecastMOBoundary")->setQueryFlags(DEFAULT_MASK);
+    mNavMeshNode->getAttachedObject("RecastMONeighbour0")->setQueryFlags(DEFAULT_MASK);
+    mNavMeshNode->getAttachedObject("RecastMOBoundary0")->setQueryFlags(DEFAULT_MASK);
     mapE->setQueryFlags(DEFAULT_MASK);
     potE->setQueryFlags(DEFAULT_MASK);
     pot2ProxyE->setQueryFlags(DEFAULT_MASK);

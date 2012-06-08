@@ -18,9 +18,12 @@ OgreDetourTileCache::OgreDetourTileCache(OgreRecast *recast)
     m_tileSize(48),
     m_cellSize(0),
     m_tcomp(0),
-    m_geom(0)
+    m_geom(0),
+    m_th(0),
+    m_tw(0)
 {
     m_talloc = new LinearAllocator(32000);
+    m_tcomp = new FastLZCompressor;
     m_tmproc = new MeshProcess;
 }
 
@@ -47,28 +50,10 @@ bool OgreDetourTileCache::TileCacheBuild(std::vector<Ogre::Entity*> srcMeshes)
 
     m_tmproc->init(m_geom);
 
+
     // Init cache
     const float* bmin = m_geom->getMeshBoundsMin();
     const float* bmax = m_geom->getMeshBoundsMax();
-    // Determine grid size (number of tiles)
-    int gw = 0, gh = 0;
-    rcCalcGridSize(bmin, bmax, m_cellSize, &gw, &gh);
-    const int ts = (int)m_tileSize;
-    const int tw = (gw + ts-1) / ts;    // Tile width
-    const int th = (gh + ts-1) / ts;    // Tile height
-    Ogre::LogManager::getSingletonPtr()->logMessage("Tiles: "+Ogre::StringConverter::toString(gw) + " x " + Ogre::StringConverter::toString(gh));
-
-    // Max tiles and max polys affect how the tile IDs are caculated.
-    // There are 22 bits available for identifying a tile and a polygon.
-// TODO add more of the options available in the original recastDemo application GUI
-    int tileBits = rcMin((int)dtIlog2(dtNextPow2(tw*th*EXPECTED_LAYERS_PER_TILE)), 14);
-    if (tileBits > 14) tileBits = 14;
-    int polyBits = 22 - tileBits;
-    m_maxTiles = 1 << tileBits;
-    m_maxPolysPerTile = 1 << polyBits;
-    Ogre::LogManager::getSingletonPtr()->logMessage("Max Tiles: " + Ogre::StringConverter::toString(m_maxTiles));
-    Ogre::LogManager::getSingletonPtr()->logMessage("Max Polys: " + Ogre::StringConverter::toString(m_maxPolysPerTile));
-
 
     // Navmesh generation params.
     // Use config from recast module
@@ -85,6 +70,28 @@ bool OgreDetourTileCache::TileCacheBuild(std::vector<Ogre::Entity*> srcMeshes)
     rcVcopy(cfg.bmax, bmax);
 
     m_cellSize = cfg.cs;
+
+    // Determine grid size (number of tiles)
+    int gw = 0, gh = 0;
+    rcCalcGridSize(bmin, bmax, m_cellSize, &gw, &gh);
+    const int ts = (int)m_tileSize;
+    const int tw = (gw + ts-1) / ts;    // Tile width
+    const int th = (gh + ts-1) / ts;    // Tile height
+    m_tw = tw;
+    m_th = th;
+    Ogre::LogManager::getSingletonPtr()->logMessage("Tiles: "+Ogre::StringConverter::toString(gw) + " x " + Ogre::StringConverter::toString(gh));
+
+
+    // Max tiles and max polys affect how the tile IDs are caculated.
+    // There are 22 bits available for identifying a tile and a polygon.
+// TODO add more of the options available in the original recastDemo application GUI
+    int tileBits = rcMin((int)dtIlog2(dtNextPow2(tw*th*EXPECTED_LAYERS_PER_TILE)), 14);
+    if (tileBits > 14) tileBits = 14;
+    int polyBits = 22 - tileBits;
+    m_maxTiles = 1 << tileBits;
+    m_maxPolysPerTile = 1 << polyBits;
+    Ogre::LogManager::getSingletonPtr()->logMessage("Max Tiles: " + Ogre::StringConverter::toString(m_maxTiles));
+    Ogre::LogManager::getSingletonPtr()->logMessage("Max Polys: " + Ogre::StringConverter::toString(m_maxPolysPerTile));
 
 
     // Tile cache params.
@@ -173,7 +180,7 @@ bool OgreDetourTileCache::TileCacheBuild(std::vector<Ogre::Entity*> srcMeshes)
         {
             TileCacheData tiles[MAX_LAYERS];
             memset(tiles, 0, sizeof(tiles));
-            int ntiles = rasterizeTileLayers(m_geom, x, y, tiles, MAX_LAYERS);  // This is where the tile is built
+            int ntiles = rasterizeTileLayers(m_geom, x, y, cfg, tiles, MAX_LAYERS);  // This is where the tile is built
 
             for (int i = 0; i < ntiles; ++i)
             {
@@ -222,8 +229,11 @@ bool OgreDetourTileCache::TileCacheBuild(std::vector<Ogre::Entity*> srcMeshes)
 }
 
 
-int OgreDetourTileCache::rasterizeTileLayers(InputGeom* geom, const int tx, const int ty, TileCacheData* tiles, const int maxTiles)
+int OgreDetourTileCache::rasterizeTileLayers(InputGeom* geom, const int tx, const int ty, const rcConfig& cfg, TileCacheData* tiles, const int maxTiles)
 {
+    if(!m_recast->m_ctx)
+        m_recast->m_ctx=new rcContext(true);
+
     rcContext *ctx = m_recast->m_ctx;
 
     if (!geom || geom->isEmpty() || !geom->getChunkyMesh()) {
@@ -239,17 +249,17 @@ int OgreDetourTileCache::rasterizeTileLayers(InputGeom* geom, const int tx, cons
     const rcChunkyTriMesh* chunkyMesh = geom->getChunkyMesh();
 
     // Tile bounds.
-    const float tcs = m_recast->m_cfg.tileSize * m_recast->m_cfg.cs;
+    const float tcs = m_tileSize * m_cellSize;
 
     rcConfig tcfg;
-    memcpy(&tcfg, &(m_recast->m_cfg), sizeof(tcfg));
+    memcpy(&tcfg, &cfg, sizeof(tcfg));
 
-    tcfg.bmin[0] = m_recast->m_cfg.bmin[0] + tx*tcs;
-    tcfg.bmin[1] = m_recast->m_cfg.bmin[1];
-    tcfg.bmin[2] = m_recast->m_cfg.bmin[2] + ty*tcs;
-    tcfg.bmax[0] = m_recast->m_cfg.bmin[0] + (tx+1)*tcs;
-    tcfg.bmax[1] = m_recast->m_cfg.bmax[1];
-    tcfg.bmax[2] = m_recast->m_cfg.bmin[2] + (ty+1)*tcs;
+    tcfg.bmin[0] = cfg.bmin[0] + tx*tcs;
+    tcfg.bmin[1] = cfg.bmin[1];
+    tcfg.bmin[2] = cfg.bmin[2] + ty*tcs;
+    tcfg.bmax[0] = cfg.bmin[0] + (tx+1)*tcs;
+    tcfg.bmax[1] = cfg.bmax[1];
+    tcfg.bmax[2] = cfg.bmin[2] + (ty+1)*tcs;
     tcfg.bmin[0] -= tcfg.borderSize*tcfg.cs;
     tcfg.bmin[2] -= tcfg.borderSize*tcfg.cs;
     tcfg.bmax[0] += tcfg.borderSize*tcfg.cs;
@@ -427,7 +437,7 @@ void OgreDetourTileCache::handleUpdate(const float dt)
 void OgreDetourTileCache::getTilePos(const float* pos, int& tx, int& ty)
 {
 //    if (!m_geom) return;
-
+// TODO is it correct to read from OgreRecast cfg here?
     const float* bmin = m_recast->m_cfg.bmin;
 
     const float ts = m_tileSize*m_cellSize;
@@ -438,7 +448,7 @@ void OgreDetourTileCache::getTilePos(const float* pos, int& tx, int& ty)
 
 void OgreDetourTileCache::handleMeshChanged(class InputGeom* geom)
 {
-//    Sample::handleMeshChanged(geom);
+    //    Sample::handleMeshChanged(geom);
 
     dtFreeTileCache(m_tileCache);
     m_tileCache = 0;
@@ -481,66 +491,169 @@ void OgreDetourTileCache::removeTempObstacle(const float* sp, const float* sq)
 }
 
 static bool isectSegAABB(const float* sp, const float* sq,
-                                                 const float* amin, const float* amax,
-                                                 float& tmin, float& tmax)
+                         const float* amin, const float* amax,
+                         float& tmin, float& tmax)
 {
-        static const float EPS = 1e-6f;
+    static const float EPS = 1e-6f;
 
-        float d[3];
-        rcVsub(d, sq, sp);
-        tmin = 0;  // set to -FLT_MAX to get first hit on line
-        tmax = FLT_MAX;		// set to max distance ray can travel (for segment)
+    float d[3];
+    rcVsub(d, sq, sp);
+    tmin = 0;  // set to -FLT_MAX to get first hit on line
+    tmax = FLT_MAX;		// set to max distance ray can travel (for segment)
 
-        // For all three slabs
-        for (int i = 0; i < 3; i++)
+    // For all three slabs
+    for (int i = 0; i < 3; i++)
+    {
+        if (fabsf(d[i]) < EPS)
         {
-                if (fabsf(d[i]) < EPS)
-                {
-                        // Ray is parallel to slab. No hit if origin not within slab
-                        if (sp[i] < amin[i] || sp[i] > amax[i])
-                                return false;
-                }
-                else
-                {
-                        // Compute intersection t value of ray with near and far plane of slab
-                        const float ood = 1.0f / d[i];
-                        float t1 = (amin[i] - sp[i]) * ood;
-                        float t2 = (amax[i] - sp[i]) * ood;
-                        // Make t1 be intersection with near plane, t2 with far plane
-                        if (t1 > t2) rcSwap(t1, t2);
-                        // Compute the intersection of slab intersections intervals
-                        if (t1 > tmin) tmin = t1;
-                        if (t2 < tmax) tmax = t2;
-                        // Exit with no collision as soon as slab intersection becomes empty
-                        if (tmin > tmax) return false;
-                }
+            // Ray is parallel to slab. No hit if origin not within slab
+            if (sp[i] < amin[i] || sp[i] > amax[i])
+                return false;
         }
+        else
+        {
+            // Compute intersection t value of ray with near and far plane of slab
+            const float ood = 1.0f / d[i];
+            float t1 = (amin[i] - sp[i]) * ood;
+            float t2 = (amax[i] - sp[i]) * ood;
+            // Make t1 be intersection with near plane, t2 with far plane
+            if (t1 > t2) rcSwap(t1, t2);
+            // Compute the intersection of slab intersections intervals
+            if (t1 > tmin) tmin = t1;
+            if (t2 < tmax) tmax = t2;
+            // Exit with no collision as soon as slab intersection becomes empty
+            if (tmin > tmax) return false;
+        }
+    }
 
-        return true;
+    return true;
 }
 
 dtObstacleRef OgreDetourTileCache::hitTestObstacle(const dtTileCache* tc, const float* sp, const float* sq)
 {
-        float tmin = FLT_MAX;
-        const dtTileCacheObstacle* obmin = 0;
-        for (int i = 0; i < tc->getObstacleCount(); ++i)
+    float tmin = FLT_MAX;
+    const dtTileCacheObstacle* obmin = 0;
+    for (int i = 0; i < tc->getObstacleCount(); ++i)
+    {
+        const dtTileCacheObstacle* ob = tc->getObstacle(i);
+        if (ob->state == DT_OBSTACLE_EMPTY)
+            continue;
+
+        float bmin[3], bmax[3], t0,t1;
+        tc->getObstacleBounds(ob, bmin,bmax);
+
+        if (isectSegAABB(sp,sq, bmin,bmax, t0,t1))
         {
-                const dtTileCacheObstacle* ob = tc->getObstacle(i);
-                if (ob->state == DT_OBSTACLE_EMPTY)
-                        continue;
-
-                float bmin[3], bmax[3], t0,t1;
-                tc->getObstacleBounds(ob, bmin,bmax);
-
-                if (isectSegAABB(sp,sq, bmin,bmax, t0,t1))
-                {
-                        if (t0 < tmin)
-                        {
-                                tmin = t0;
-                                obmin = ob;
-                        }
-                }
+            if (t0 < tmin)
+            {
+                tmin = t0;
+                obmin = ob;
+            }
         }
-        return tc->getObstacleRef(obmin);
+    }
+    return tc->getObstacleRef(obmin);
 }
 
+
+void OgreDetourTileCache::drawNavMesh()
+{
+    for (int y = 0; y < m_th; ++y)
+    {
+        for (int x = 0; x < m_tw; ++x)
+        {
+            drawDetail(x, y);
+        }
+    }
+}
+
+void OgreDetourTileCache::drawDetail(const int tx, const int ty)
+{
+    struct TileCacheBuildContext
+    {
+        inline TileCacheBuildContext(struct dtTileCacheAlloc* a) : layer(0), lcset(0), lmesh(0), alloc(a) {}
+        inline ~TileCacheBuildContext() { purge(); }
+        void purge()
+        {
+            dtFreeTileCacheLayer(alloc, layer);
+            layer = 0;
+            dtFreeTileCacheContourSet(alloc, lcset);
+            lcset = 0;
+            dtFreeTileCachePolyMesh(alloc, lmesh);
+            lmesh = 0;
+        }
+        struct dtTileCacheLayer* layer;
+        struct dtTileCacheContourSet* lcset;
+        struct dtTileCachePolyMesh* lmesh;
+        struct dtTileCacheAlloc* alloc;
+    };
+
+    dtCompressedTileRef tiles[MAX_LAYERS];
+    const int ntiles = m_tileCache->getTilesAt(tx,ty,tiles,MAX_LAYERS);
+
+    dtTileCacheAlloc* talloc = m_tileCache->getAlloc();
+    dtTileCacheCompressor* tcomp = m_tileCache->getCompressor();
+    const dtTileCacheParams* params = m_tileCache->getParams();
+
+    for (int i = 0; i < ntiles; ++i)
+    {
+        const dtCompressedTile* tile = m_tileCache->getTileByRef(tiles[i]);
+
+        talloc->reset();
+
+        TileCacheBuildContext bc(talloc);
+        const int walkableClimbVx = (int)(params->walkableClimb / params->ch);
+        dtStatus status;
+
+        // Decompress tile layer data.
+        status = dtDecompressTileCacheLayer(talloc, tcomp, tile->data, tile->dataSize, &bc.layer);
+        if (dtStatusFailed(status))
+            return;
+
+        // Build navmesh
+        status = dtBuildTileCacheRegions(talloc, *bc.layer, walkableClimbVx);
+        if (dtStatusFailed(status))
+            return;
+
+        bc.lcset = dtAllocTileCacheContourSet(talloc);
+        if (!bc.lcset)
+            return;
+        status = dtBuildTileCacheContours(talloc, *bc.layer, walkableClimbVx,
+                                          params->maxSimplificationError, *bc.lcset);
+        if (dtStatusFailed(status))
+            return;
+
+        bc.lmesh = dtAllocTileCachePolyMesh(talloc);
+        if (!bc.lmesh)
+            return;
+        status = dtBuildTileCachePolyMesh(talloc, *bc.lcset, *bc.lmesh);
+        if (dtStatusFailed(status))
+            return;
+
+        // Draw navmesh
+//        duDebugDrawTileCachePolyMesh(dd, *bc.lmesh, tile->header->bmin, params->cs, params->ch);
+        drawPolyMesh(*bc.lmesh, tile->header->bmin, params->cs, params->ch, *bc.layer);
+
+    }
+}
+
+void OgreDetourTileCache::drawPolyMesh(const struct dtTileCachePolyMesh &mesh, const float *orig, const float cs, const float ch, const struct dtTileCacheLayer &regionLayers, bool colorRegions)
+{
+            const int nvp = mesh.nvp;
+
+            const unsigned short* verts = mesh.verts;
+            const unsigned short* polys = mesh.polys;
+            const unsigned char* areas = mesh.areas;
+            const unsigned char *regs = regionLayers.regs;
+            const int nverts = mesh.nverts;
+            const int npolys = mesh.npolys;
+            const int maxpolys = m_maxPolysPerTile;
+
+            unsigned short *regions = new unsigned short[npolys];
+            for (int i =0; i< npolys; i++) {
+                regions[i] = (const unsigned short)regs[i];
+            }
+
+            m_recast->CreateRecastPolyMesh(verts, nverts, polys, npolys, areas, maxpolys, regions, nvp, cs, ch, orig, colorRegions);
+
+            delete[] regions;
+}

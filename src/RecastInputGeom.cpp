@@ -30,6 +30,7 @@ InputGeom::InputGeom(std::vector<Ogre::Entity*> srcMeshes)
     m_offMeshConCount = 0;
     m_volumeCount = 0;
 
+// TODO maybe I don't need this in single navmesh mode
     m_chunkyMesh = new rcChunkyTriMesh;
     if (!m_chunkyMesh)
     {

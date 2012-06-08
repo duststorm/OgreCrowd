@@ -250,7 +250,7 @@ public:
       * This process uses a large part of the recast navmesh building pipeline (implemented in OgreRecast::NavMeshBuild()),
       * up till step 4.
       **/
-    int rasterizeTileLayers(InputGeom* geom, const int tx, const int ty, TileCacheData* tiles, const int maxTiles);
+    int rasterizeTileLayers(InputGeom* geom, const int tx, const int ty, const rcConfig& cfg, TileCacheData* tiles, const int maxTiles);
 
     /**
       * Gets world position of tile with specified index.
@@ -266,6 +266,12 @@ public:
     void addTempObstacle(const float* pos);
 
     void removeTempObstacle(const float* sp, const float* sq);
+
+    void drawDetail(const int tx, const int ty);
+
+    void drawNavMesh(void);
+
+    void drawPolyMesh(const struct dtTileCachePolyMesh &mesh, const float *orig, const float cs, const float ch, const struct dtTileCacheLayer &regionLayers, bool colorRegions=true);
 
     dtObstacleRef hitTestObstacle(const dtTileCache* tc, const float* sp, const float* sq);
 
@@ -299,6 +305,8 @@ protected:
 
     float m_cellSize;
 
+    int m_tw;
+    int m_th;
 };
 
 #endif // OGREDETOURTILECACHE_H

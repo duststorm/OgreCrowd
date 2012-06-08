@@ -3,7 +3,9 @@
 
 
 OgreRecast::OgreRecast(Ogre::SceneManager* sceneMgr)
-    : m_pSceneMgr(sceneMgr)
+    : m_pSceneMgr(sceneMgr),
+    m_pRecastSN(NULL),
+    m_manualOIndex(-1)
 {
    // Init recast stuff in a safe state
    
@@ -607,47 +609,67 @@ int OgreRecast::FindPath(Ogre::Vector3 startPos, Ogre::Vector3 endPos, int nPath
  * Debug drawing functionality:
 **/
 
-void OgreRecast::drawNavMesh() {
+void OgreRecast::drawNavMesh()
+{
     if(m_pmesh)
-        CreateRecastPolyMesh(*m_pmesh);
+        drawPolyMesh(*m_pmesh);
 }
 
-void OgreRecast::CreateRecastPolyMesh(const struct rcPolyMesh& mesh, bool colorRegions)
+void OgreRecast::drawPolyMesh(const struct rcPolyMesh &mesh, bool colorRegions)
 {
-   const int nvp = mesh.nvp; 
-   const float cs = mesh.cs;
-   const float ch = mesh.ch;
-   const float* orig = mesh.bmin;
+    const int nvp = mesh.nvp;
+    const float cs = mesh.cs;
+    const float ch = mesh.ch;
+    const float* orig = mesh.bmin;
 
-   m_flDataX=mesh.npolys ;
-   m_flDataY=mesh.nverts ;
+    const unsigned short* verts = mesh.verts;
+    const unsigned short* polys = mesh.polys;
+    const unsigned char* areas = mesh.areas;
+    const unsigned short* regions = mesh.regs;
+    const int nverts = mesh.nverts;
+    const int npolys = mesh.npolys;
+    const int maxpolys = mesh.maxpolys;
+
+
+    CreateRecastPolyMesh(verts, nverts, polys, npolys, areas, maxpolys, regions, nvp, cs, ch, orig, colorRegions);
+}
+
+
+
+void OgreRecast::CreateRecastPolyMesh(const unsigned short *verts, const int nverts, const unsigned short *polys, const int npolys, const unsigned char *areas, const int maxpolys, const unsigned short *regions, const int nvp, const float cs, const float ch, const float *orig, bool colorRegions)
+{
+    m_flDataX=npolys ;
+    m_flDataY=nverts ;
 
    // When drawing regions choose different random colors for each region
    Ogre::ColourValue* regionColors = NULL;
    if(colorRegions) {
-       regionColors = new Ogre::ColourValue[mesh.maxpolys];
-       for (int i = 0; i < mesh.maxpolys; ++i) {
+       regionColors = new Ogre::ColourValue[maxpolys];
+       for (int i = 0; i < maxpolys; ++i) {
            regionColors[i] = Ogre::ColourValue(Ogre::Math::RangeRandom(0,1), Ogre::Math::RangeRandom(0,1), Ogre::Math::RangeRandom(0,1), 1);
        }
    }
    
    // create scenenodes
-   m_pRecastSN=m_pSceneMgr->getRootSceneNode()->createChildSceneNode("RecastSN") ;
+   if(!m_pRecastSN)
+       m_pRecastSN=m_pSceneMgr->getRootSceneNode()->createChildSceneNode("RecastSN");
+
+   m_manualOIndex++;
 
    int nIndex=0 ;
-   m_nAreaCount=mesh.npolys;
+   m_nAreaCount=npolys;
 
 
    if(m_nAreaCount)
    {
 
       // start defining the manualObject with the navmesh planes
-      m_pRecastMOWalk = m_pSceneMgr->createManualObject("RecastMOWalk");
+      m_pRecastMOWalk = m_pSceneMgr->createManualObject("RecastMOWalk"+Ogre::StringConverter::toString(m_manualOIndex));
       m_pRecastMOWalk->begin("recastdebug", Ogre::RenderOperation::OT_TRIANGLE_LIST) ;
-      for (int i = 0; i < mesh.npolys; ++i) // go through all polygons
-         if (mesh.areas[i] == SAMPLE_POLYAREA_GROUND)
+      for (int i = 0; i < npolys; ++i) // go through all polygons
+         if (areas[i] == SAMPLE_POLYAREA_GROUND)
          {
-            const unsigned short* p = &mesh.polys[i*nvp*2];
+            const unsigned short* p = &polys[i*nvp*2];
 
             unsigned short vi[3];
             for (int j = 2; j < nvp; ++j) // go through all verts in the polygon
@@ -658,16 +680,16 @@ void OgreRecast::CreateRecastPolyMesh(const struct rcPolyMesh& mesh, bool colorR
                vi[2] = p[j];
                for (int k = 0; k < 3; ++k) // create a 3-vert triangle for each 3 verts in the polygon.
                {
-                  const unsigned short* v = &mesh.verts[vi[k]*3];
+                  const unsigned short* v = &verts[vi[k]*3];
                   const float x = orig[0] + v[0]*cs;
                   const float y = orig[1] + (v[1]/*+1*/)*ch;
                   const float z = orig[2] + v[2]*cs;
 
                   m_pRecastMOWalk->position(x, y+m_navMeshOffsetFromGround, z);
                   if(colorRegions) {
-                      m_pRecastMOWalk->colour(regionColors[mesh.regs[i]]);  // Assign vertex color
+                      m_pRecastMOWalk->colour(regionColors[regions[i]]);  // Assign vertex color
                   } else {
-                      if (mesh.areas[i] == SAMPLE_POLYAREA_GROUND)
+                      if (areas[i] == SAMPLE_POLYAREA_GROUND)
                          m_pRecastMOWalk->colour(m_navmeshGroundPolygonCol);
                       else
                          m_pRecastMOWalk->colour(m_navmeshOtherPolygonCol);
@@ -684,12 +706,12 @@ void OgreRecast::CreateRecastPolyMesh(const struct rcPolyMesh& mesh, bool colorR
 
 
       // Define manualObject with the navmesh edges between neighbouring polygons
-      m_pRecastMONeighbour = m_pSceneMgr->createManualObject("RecastMONeighbour");
+      m_pRecastMONeighbour = m_pSceneMgr->createManualObject("RecastMONeighbour"+Ogre::StringConverter::toString(m_manualOIndex));
       m_pRecastMONeighbour->begin("recastdebug", Ogre::RenderOperation::OT_LINE_LIST) ;
 
-      for (int i = 0; i < mesh.npolys; ++i)
+      for (int i = 0; i < npolys; ++i)
       {
-         const unsigned short* p = &mesh.polys[i*nvp*2];
+         const unsigned short* p = &polys[i*nvp*2];
          for (int j = 0; j < nvp; ++j)
          {
             if (p[j] == RC_MESH_NULL_IDX) break;
@@ -702,7 +724,7 @@ void OgreRecast::CreateRecastPolyMesh(const struct rcPolyMesh& mesh, bool colorR
                vi[1] = p[j+1];
             for (int k = 0; k < 2; ++k)
             {
-               const unsigned short* v = &mesh.verts[vi[k]*3];
+               const unsigned short* v = &verts[vi[k]*3];
                const float x = orig[0] + v[0]*cs;
                const float y = orig[1] + (v[1]/*+1*/)*ch /*+ 0.1f*/;
                const float z = orig[2] + v[2]*cs;
@@ -719,12 +741,12 @@ void OgreRecast::CreateRecastPolyMesh(const struct rcPolyMesh& mesh, bool colorR
       
 
       // Define manualObject with navmesh outer edges (boundaries)
-      m_pRecastMOBoundary = m_pSceneMgr->createManualObject("RecastMOBoundary");
+      m_pRecastMOBoundary = m_pSceneMgr->createManualObject("RecastMOBoundary"+Ogre::StringConverter::toString(m_manualOIndex));
       m_pRecastMOBoundary->begin("recastdebug", Ogre::RenderOperation::OT_LINE_LIST) ;
 
-      for (int i = 0; i < mesh.npolys; ++i)
+      for (int i = 0; i < npolys; ++i)
       {
-         const unsigned short* p = &mesh.polys[i*nvp*2];
+         const unsigned short* p = &polys[i*nvp*2];
          for (int j = 0; j < nvp; ++j)
          {
             if (p[j] == RC_MESH_NULL_IDX) break;
@@ -737,7 +759,7 @@ void OgreRecast::CreateRecastPolyMesh(const struct rcPolyMesh& mesh, bool colorR
                vi[1] = p[j+1];
             for (int k = 0; k < 2; ++k)
             {
-               const unsigned short* v = &mesh.verts[vi[k]*3];
+               const unsigned short* v = &verts[vi[k]*3];
                const float x = orig[0] + v[0]*cs;
                const float y = orig[1] + (v[1]/*+1*/)*ch /*+ 0.1f*/;
                const float z = orig[2] + v[2]*cs;
@@ -773,7 +795,7 @@ void OgreRecast::CreateRecastPathLine(int nPathSlot)
    }
 
    // Create new manualobject for the line
-   m_pRecastMOPath = m_pSceneMgr->createManualObject("RecastMOPath");
+   m_pRecastMOPath = m_pSceneMgr->createManualObject("RecastMOPath"+Ogre::StringConverter::toString(m_manualOIndex));
    m_pRecastMOPath->begin("recastdebug", Ogre::RenderOperation::OT_LINE_STRIP) ;
 
    
