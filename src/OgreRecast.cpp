@@ -1,5 +1,6 @@
 #include "OgreRecast.h"
 #include "RecastInputGeom.h"
+#include "DetourTileCache/DetourTileCacheBuilder.h"
 
 
 OgreRecast::OgreRecast(Ogre::SceneManager* sceneMgr)
@@ -666,8 +667,8 @@ void OgreRecast::CreateRecastPolyMesh(const unsigned short *verts, const int nve
       // start defining the manualObject with the navmesh planes
       m_pRecastMOWalk = m_pSceneMgr->createManualObject("RecastMOWalk"+Ogre::StringConverter::toString(m_manualOIndex));
       m_pRecastMOWalk->begin("recastdebug", Ogre::RenderOperation::OT_TRIANGLE_LIST) ;
-      for (int i = 0; i < npolys; ++i) // go through all polygons
-         if (areas[i] == SAMPLE_POLYAREA_GROUND)
+      for (int i = 0; i < npolys; ++i) {    // go through all polygons
+         if (areas[i] == SAMPLE_POLYAREA_GROUND || areas[i] == DT_TILECACHE_WALKABLE_AREA)
          {
             const unsigned short* p = &polys[i*nvp*2];
 
@@ -700,6 +701,7 @@ void OgreRecast::CreateRecastPolyMesh(const unsigned short *verts, const int nve
                nIndex+=3 ;
             }
          }
+     }
       m_pRecastMOWalk->end() ;
       m_pRecastSN->attachObject(m_pRecastMOWalk) ;
 
@@ -782,6 +784,7 @@ void OgreRecast::CreateRecastPolyMesh(const unsigned short *verts, const int nve
    if(regionColors)
        delete[] regionColors;
 
+   Ogre::LogManager::getSingletonPtr()->logMessage("Added navmesh part "+Ogre::StringConverter::toString(m_manualOIndex)+" to the scene.");
 }
 
 void OgreRecast::CreateRecastPathLine(int nPathSlot)
