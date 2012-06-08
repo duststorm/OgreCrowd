@@ -164,7 +164,7 @@ int OgreDetourCrowd::addAgent(const Ogre::Vector3 position)
         if (idx != -1)
         {
             // If a move target is defined: move agent towards it
-            // TODO remove this behaviour?
+// TODO do we want to set newly added agent's destination to previously set target? or remove this behaviour?
                 if (m_targetRef)
                         m_crowd->requestMoveTarget(idx, m_targetRef, m_targetPos);
 
@@ -192,10 +192,11 @@ int OgreDetourCrowd::getMaxNbAgents()
 
 std::vector<dtCrowdAgent*> OgreDetourCrowd::getActiveAgents()
 {
-    dtCrowdAgent* resultEntries[getMaxNbAgents()];
+    dtCrowdAgent** resultEntries = new dtCrowdAgent*[getMaxNbAgents()];
     int size = m_crowd->getActiveAgents(resultEntries,getMaxNbAgents());
 
     std::vector<dtCrowdAgent*> result(resultEntries, resultEntries + size);
+    delete[] resultEntries;
     return result;
 }
 
