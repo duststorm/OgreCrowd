@@ -33,7 +33,7 @@ public:
     /**
       * Calculate an intersection point of a ray with objects in the scene.
       **/
-    bool rayQueryPointInScene(Ogre::Ray ray, unsigned long queryMask, Ogre::Vector3 &result, Ogre::MovableObject& foundMovable);
+    bool rayQueryPointInScene(Ogre::Ray ray, unsigned long queryMask, Ogre::Vector3 &result, Ogre::MovableObject **foundMovable);
 
     /**
       * Retrieve a marker with specified name and optional material (to override default material).

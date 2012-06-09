@@ -490,10 +490,15 @@ dtObstacleRef OgreDetourTileCache::addTempObstacle(Ogre::Vector3 pos)
     return result;
 }
 
-dtObstacleRef OgreDetourTileCache::removeTempObstacle(const float* sp, const float* sq)
+dtObstacleRef OgreDetourTileCache::removeTempObstacle(Ogre::Vector3 raySource, Ogre::Vector3 rayHit)
 {
     if (!m_tileCache)
         return 0;
+
+    float sp[3]; float sq[3];
+    OgreRecast::OgreVect3ToFloatA(raySource, sp);
+    OgreRecast::OgreVect3ToFloatA(rayHit, sq);
+
     dtObstacleRef ref = hitTestObstacle(m_tileCache, sp, sq);
     m_tileCache->removeObstacle(ref);
 

@@ -325,7 +325,7 @@ bool OgreRecastApplication::mousePressed( const OIS::MouseEvent &arg, OIS::Mouse
 
     Ogre::Vector3 rayHitPoint;
     Ogre::MovableObject *rayHitObject;
-    if (rayQueryPointInScene(mouseRay, NAVMESH_MASK, rayHitPoint, *rayHitObject)) {
+    if (rayQueryPointInScene(mouseRay, NAVMESH_MASK, rayHitPoint, &rayHitObject)) {
         // Compensate for the fact that the ray-queried navmesh is drawn a little above the ground
         rayHitPoint.y = rayHitPoint.y - mRecast->m_navMeshOffsetFromGround;
 
@@ -378,7 +378,7 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
         Ogre::Ray cursorRay = mCamera->getCameraToViewportRay(0.5, 0.5);
         Ogre::Vector3 rayHitPoint;
         Ogre::MovableObject *rayHitObject;
-        if (rayQueryPointInScene(cursorRay, NAVMESH_MASK, rayHitPoint, *rayHitObject)) {
+        if (rayQueryPointInScene(cursorRay, NAVMESH_MASK, rayHitPoint, &rayHitObject)) {
             //Ogre::LogManager::getSingletonPtr()->logMessage("Info: added agent at position "+Ogre::StringConverter::toString(rayHitPoint));
 
             Character *character = createCharacter("Agent"+Ogre::StringConverter::toString(mCharacters.size()), rayHitPoint);
@@ -443,7 +443,7 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
         Ogre::Ray cursorRay = mCamera->getCameraToViewportRay(0.5, 0.5);
         Ogre::Vector3 rayHitPoint;
         Ogre::MovableObject *rayHitObject;
-        if (rayQueryPointInScene(cursorRay, NAVMESH_MASK, rayHitPoint, *rayHitObject)) {
+        if (rayQueryPointInScene(cursorRay, NAVMESH_MASK, rayHitPoint, &rayHitObject)) {
             dtObstacleRef oRef = mDetourTileCache->addTempObstacle(rayHitPoint);
             if (oRef) {
                 // Add visualization of temp obstacle
@@ -454,6 +454,26 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
                 Ogre::Entity *obstacleEnt = (Ogre::Entity*)obstacleMarker->getAttachedObject(0);
                 obstacleEnt->setQueryFlags(DEFAULT_MASK);  // exclude from navmesh queries
                 mDebugEntities.push_back(obstacleEnt);
+            }
+        }
+    }
+
+    // Delete removes a temporary obstacle from the navmesh (in dtTileCache mode)
+    if(!SINGLE_NAVMESH && arg.key == OIS::KC_DELETE) {
+        // Find position on navmesh pointed to by cursor in the middle of the screen
+        Ogre::Ray cursorRay = mCamera->getCameraToViewportRay(0.5, 0.5);
+        Ogre::Vector3 rayHitPoint;
+        Ogre::MovableObject *rayHitObject;
+        if (rayQueryPointInScene(cursorRay, NAVMESH_MASK, rayHitPoint, &rayHitObject)) {
+            dtObstacleRef oRef = mDetourTileCache->removeTempObstacle(cursorRay.getOrigin(), rayHitPoint);
+            if (oRef) {
+                // Add visualization of temp obstacle
+                Ogre::SceneNode *obstacleMarker = getOrCreateMarker("TempObstacle"+Ogre::StringConverter::toString(oRef));
+                Ogre::Entity *obstacleEnt = (Ogre::Entity*)obstacleMarker->getAttachedObject(0);
+                // Remove debug entity
+                mDebugEntities.erase(remove(mDebugEntities.begin(), mDebugEntities.end(), obstacleEnt), mDebugEntities.end());
+                obstacleEnt->detachFromParent();
+                mSceneMgr->destroyEntity(obstacleEnt);
             }
         }
     }
@@ -623,7 +643,7 @@ void OgreRecastApplication::setDestinationForAllAgents(Ogre::Vector3 destination
     }
 }
 
-bool OgreRecastApplication::rayQueryPointInScene(Ogre::Ray ray, unsigned long queryMask, Ogre::Vector3 &result, Ogre::MovableObject &foundMovable)
+bool OgreRecastApplication::rayQueryPointInScene(Ogre::Ray ray, unsigned long queryMask, Ogre::Vector3 &result, Ogre::MovableObject **foundMovable)
 {
     mRayScnQuery = mSceneMgr->createRayQuery(Ogre::Ray(), queryMask);
 
@@ -727,7 +747,7 @@ bool OgreRecastApplication::rayQueryPointInScene(Ogre::Ray ray, unsigned long qu
     {
         // raycast success
         result = closest_result;
-        //foundMovable = *closest_movable;  // TODO fix this!
+        *foundMovable = closest_movable;
         return (true);
     }
     else

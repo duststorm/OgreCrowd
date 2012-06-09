@@ -268,7 +268,7 @@ public:
 
     dtObstacleRef addTempObstacle(Ogre::Vector3 pos);
 
-    dtObstacleRef    removeTempObstacle(const float* sp, const float* sq);
+    dtObstacleRef removeTempObstacle(Ogre::Vector3 raySource, Ogre::Vector3 rayHit);
 
     void drawDetail(const int tx, const int ty);
 
