@@ -8,6 +8,9 @@
 #include "RecastContrib/fastlz/fastlz.h"
 #include "RecastInputGeom.h"
 
+const float TEMP_OBSTACLE_RADIUS = 1.0f;
+const float TEMP_OBSTACLE_HEIGHT = 2.0f;
+
 struct MeshProcess : public dtTileCacheMeshProcess
 {
     InputGeom* m_geom;
@@ -263,9 +266,9 @@ public:
 
     void clearAllTempObstacles(void);
 
-    void addTempObstacle(const float* pos);
+    dtObstacleRef addTempObstacle(Ogre::Vector3 pos);
 
-    void removeTempObstacle(const float* sp, const float* sq);
+    dtObstacleRef    removeTempObstacle(const float* sp, const float* sq);
 
     void drawDetail(const int tx, const int ty);
 
@@ -274,6 +277,8 @@ public:
     void drawPolyMesh(const struct dtTileCachePolyMesh &mesh, const float *orig, const float cs, const float ch, const struct dtTileCacheLayer &regionLayers, bool colorRegions=true);
 
     dtObstacleRef hitTestObstacle(const dtTileCache* tc, const float* sp, const float* sq);
+
+    void drawObstacles(const dtTileCache* tc);
 
     OgreRecast *m_recast;
 

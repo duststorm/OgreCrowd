@@ -427,8 +427,6 @@ int OgreDetourTileCache::rasterizeTileLayers(InputGeom* geom, const int tx, cons
 
 void OgreDetourTileCache::handleUpdate(const float dt)
 {
-    handleUpdate(dt);
-
     if (!m_recast->m_navMesh)
         return;
     if (!m_tileCache)
@@ -476,22 +474,30 @@ void OgreDetourTileCache::clearAllTempObstacles()
 }
 
 
-void OgreDetourTileCache::addTempObstacle(const float* pos)
+dtObstacleRef OgreDetourTileCache::addTempObstacle(Ogre::Vector3 pos)
 {
     if (!m_tileCache)
-        return;
+        return 0;
+
     float p[3];
-    dtVcopy(p, pos);
+    OgreRecast::OgreVect3ToFloatA(pos, p);
     p[1] -= 0.5f;
-    m_tileCache->addObstacle(p, 1.0f, 2.0f, 0);
+    dtObstacleRef result;
+    dtObstacleRef rval = m_tileCache->addObstacle(p, TEMP_OBSTACLE_RADIUS, TEMP_OBSTACLE_HEIGHT, &result);
+    if(rval != DT_SUCCESS)
+        return 0;
+
+    return result;
 }
 
-void OgreDetourTileCache::removeTempObstacle(const float* sp, const float* sq)
+dtObstacleRef OgreDetourTileCache::removeTempObstacle(const float* sp, const float* sq)
 {
     if (!m_tileCache)
-        return;
+        return 0;
     dtObstacleRef ref = hitTestObstacle(m_tileCache, sp, sq);
     m_tileCache->removeObstacle(ref);
+
+    return ref;
 }
 
 static bool isectSegAABB(const float* sp, const float* sq,
@@ -556,6 +562,31 @@ dtObstacleRef OgreDetourTileCache::hitTestObstacle(const dtTileCache* tc, const 
         }
     }
     return tc->getObstacleRef(obmin);
+}
+
+void drawObstacles(const dtTileCache* tc)
+{
+        // Draw obstacles
+        for (int i = 0; i < tc->getObstacleCount(); ++i)
+        {
+                const dtTileCacheObstacle* ob = tc->getObstacle(i);
+                if (ob->state == DT_OBSTACLE_EMPTY) continue;
+                float bmin[3], bmax[3];
+                tc->getObstacleBounds(ob, bmin,bmax);
+
+                unsigned int col = 0;
+/*
+                if (ob->state == DT_OBSTACLE_PROCESSING)
+                        col = duRGBA(255,255,0,128);
+                else if (ob->state == DT_OBSTACLE_PROCESSED)
+                        col = duRGBA(255,192,0,192);
+                else if (ob->state == DT_OBSTACLE_REMOVING)
+                        col = duRGBA(220,0,0,128);
+*/
+// TODO draw in Ogre scene
+//		duDebugDrawCylinder(dd, bmin[0],bmin[1],bmin[2], bmax[0],bmax[1],bmax[2], col);
+//		duDebugDrawCylinderWire(dd, bmin[0],bmin[1],bmin[2], bmax[0],bmax[1],bmax[2], duDarkenCol(col), 2);
+        }
 }
 
 

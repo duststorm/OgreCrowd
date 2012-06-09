@@ -137,8 +137,9 @@ void OgreRecastApplication::createScene(void)
             Ogre::LogManager::getSingletonPtr()->logMessage("ERROR: could not generate useable navmesh from mesh.");
             return;
         }
+    // DetourTileCache navmesh creation
     } else {
-        // More advanced: use DetourTileCache
+        // More advanced: use DetourTileCache to build a tiled and cached navmesh that can be updated with dynamic obstacles at runtime.
 
         mDetourTileCache = new OgreDetourTileCache(mRecast);
         if(mDetourTileCache->TileCacheBuild(navmeshEnts)) {
@@ -192,11 +193,12 @@ void OgreRecastApplication::createScene(void)
     // Used for mouse picking begin and end markers and determining the position to add new agents
     // Add navmesh to separate querying group that we will use
     mNavMeshNode = (Ogre::SceneNode*)mSceneMgr->getRootSceneNode()->getChild("RecastSN");
-//TODO fix for multiple navmesh entities
-    mNavMeshNode->getAttachedObject("RecastMOWalk0")->setQueryFlags(NAVMESH_MASK);
+    //mNavMeshNode->getAttachedObject("RecastMOWalk0")->setQueryFlags(NAVMESH_MASK);    // Will be queryable by default, no need to explicitly set it.
     // Exclude other meshes from navmesh queries
     mNavMeshNode->getAttachedObject("RecastMONeighbour0")->setQueryFlags(DEFAULT_MASK);
     mNavMeshNode->getAttachedObject("RecastMOBoundary0")->setQueryFlags(DEFAULT_MASK);
+// TODO
+    Ogre::uint32 flags = mapE->getQueryFlags();
     mapE->setQueryFlags(DEFAULT_MASK);
     potE->setQueryFlags(DEFAULT_MASK);
     pot2ProxyE->setQueryFlags(DEFAULT_MASK);
@@ -220,6 +222,72 @@ void OgreRecastApplication::createScene(void)
     mChaseCam->pitch(Ogre::Degree(-15));
     Ogre::Viewport *vp = mWindow->getViewport(0);
     mChaseCam->setAspectRatio(Ogre::Real(vp->getActualWidth()) / Ogre::Real(vp->getActualHeight()));
+}
+
+bool OgreRecastApplication::frameRenderingQueued(const Ogre::FrameEvent& evt)
+{
+    // Handle buffered input for controlling first agent in steering demo mode
+    if(mApplicationState == STEER_AGENT) {
+        // This is needed because we do not know in what order mouse and key events are signalled by OIS
+        // If key release and mouse move happen in the wrong order an agent can continue walking even though the walk key was released
+
+        Character *firstAgent = mCharacters[0];
+        bool agentIsMoving = firstAgent->isMoving();
+
+        if(!mMoveForwardKeyPressed && agentIsMoving) {
+            firstAgent->stop(); // Stop a moving agent if forward key is released
+        } else if(mMouseMoveX != 0) {
+            firstAgent->getNode()->yaw(Ogre::Degree(mMouseMoveX)); // Rotate character according to mouse move
+            if(mMoveForwardKeyPressed)
+                firstAgent->moveForward();  // Update move direction if mouse was moved
+        } else if(mMoveForwardKeyPressed && !agentIsMoving) {
+            // Mouse is not moved, but forward key is pressed and agent is not moving
+            firstAgent->moveForward();  // Start moving agent
+        }
+        mMouseMoveX = 0;    // Reset mouse input
+    }
+
+    // Update DetourTileCache (handle dynamic changes to navmesh)
+    if(!SINGLE_NAVMESH && mDetourTileCache)
+        mDetourTileCache->handleUpdate(evt.timeSinceLastFrame);
+
+    // First update the agents using the crowd in which they are controlled
+    if(mDetourCrowd)
+        mDetourCrowd->updateTick(evt.timeSinceLastFrame);
+
+    // Then update all characters controlled by the agents
+    Ogre::Vector3 firstAgentPos = Ogre::Vector3::ZERO;
+    for(std::vector<Character*>::iterator iter=mCharacters.begin(); iter != mCharacters.end(); iter++) {
+        Character *character = *iter;
+
+        // Update character (position, animations, state)
+        character->update(evt.timeSinceLastFrame);
+
+
+        // Set new destinations depending on current demo mode
+
+        // RANDOM WANDER BEHAVIOUR
+        if( (mApplicationState == CROWD_WANDER || mApplicationState == STEER_AGENT) &&
+            character->getAgentID() != 0) // No random walking for first agent
+        {
+            // If destination reached: Set new random destination
+            if ( character->destinationReached() ) {
+                character->updateDestination( mRecast->getRandomNavMeshPoint() );
+            }
+        }
+
+        // CHASE BEHAVIOUR
+        if(mApplicationState == FOLLOW_TARGET) {
+            // We specifically need the position of the first agent for the others to chase
+            if(character->getAgentID() == 0)
+                firstAgentPos = character->getPosition();
+            else
+                // Only ADJUST path to follow target (no full recalculation of the corridor to follow)
+                character->updateDestination(firstAgentPos, true);
+        }
+    }
+
+    return BaseApplication::frameRenderingQueued(evt);
 }
 
 Ogre::Entity* OgreRecastApplication::createObstacle(Ogre::String name, Ogre::Vector3 position, Ogre::Vector3 scale) {
@@ -369,6 +437,27 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
         }
     }
 
+    // Backspace adds a temporary obstacle to the navmesh (in dtTileCache mode)
+    if(!SINGLE_NAVMESH && arg.key == OIS::KC_BACK) {
+        // Find position on navmesh pointed to by cursor in the middle of the screen
+        Ogre::Ray cursorRay = mCamera->getCameraToViewportRay(0.5, 0.5);
+        Ogre::Vector3 rayHitPoint;
+        Ogre::MovableObject *rayHitObject;
+        if (rayQueryPointInScene(cursorRay, NAVMESH_MASK, rayHitPoint, *rayHitObject)) {
+            dtObstacleRef oRef = mDetourTileCache->addTempObstacle(rayHitPoint);
+            if (oRef) {
+                // Add visualization of temp obstacle
+                Ogre::SceneNode *obstacleMarker = getOrCreateMarker("TempObstacle"+Ogre::StringConverter::toString(oRef));
+                obstacleMarker->setPosition(rayHitPoint);
+                obstacleMarker->setVisible(mDebugDraw);
+                obstacleMarker->setScale(TEMP_OBSTACLE_RADIUS, TEMP_OBSTACLE_HEIGHT, TEMP_OBSTACLE_RADIUS);
+                Ogre::Entity *obstacleEnt = (Ogre::Entity*)obstacleMarker->getAttachedObject(0);
+                obstacleEnt->setQueryFlags(DEFAULT_MASK);  // exclude from navmesh queries
+                mDebugEntities.push_back(obstacleEnt);
+            }
+        }
+    }
+
     // V key shows or hides recast debug drawing
     if(arg.key == OIS::KC_V) {
         mDebugDraw = !mDebugDraw;
@@ -500,68 +589,6 @@ void OgreRecastApplication::setPathAndBeginMarkerVisibility(bool visibility)
         mRecast->m_pRecastMOPath->setVisible(visibility);
 }
 
-bool OgreRecastApplication::frameRenderingQueued(const Ogre::FrameEvent& evt)
-{
-    // Handle buffered input for controlling first agent in steering demo mode
-    if(mApplicationState == STEER_AGENT) {
-        // This is needed because we do not know in what order mouse and key events are signalled by OIS
-        // If key release and mouse move happen in the wrong order an agent can continue walking even though the walk key was released
-
-        Character *firstAgent = mCharacters[0];
-        bool agentIsMoving = firstAgent->isMoving();
-
-        if(!mMoveForwardKeyPressed && agentIsMoving) {
-            firstAgent->stop(); // Stop a moving agent if forward key is released
-        } else if(mMouseMoveX != 0) {
-            firstAgent->getNode()->yaw(Ogre::Degree(mMouseMoveX)); // Rotate character according to mouse move
-            if(mMoveForwardKeyPressed)
-                firstAgent->moveForward();  // Update move direction if mouse was moved
-        } else if(mMoveForwardKeyPressed && !agentIsMoving) {
-            // Mouse is not moved, but forward key is pressed and agent is not moving
-            firstAgent->moveForward();  // Start moving agent
-        }
-        mMouseMoveX = 0;    // Reset mouse input
-    }
-
-    // First update the agents using the crowd in which they are controlled
-    if(mDetourCrowd)
-        mDetourCrowd->updateTick(evt.timeSinceLastFrame);
-
-    // Then update all characters controlled by the agents
-    Ogre::Vector3 firstAgentPos = Ogre::Vector3::ZERO;
-    for(std::vector<Character*>::iterator iter=mCharacters.begin(); iter != mCharacters.end(); iter++) {
-        Character *character = *iter;
-
-        // Update character (position, animations, state)
-        character->update(evt.timeSinceLastFrame);
-
-
-        // Set new destinations depending on current demo mode
-
-        // RANDOM WANDER BEHAVIOUR
-        if( (mApplicationState == CROWD_WANDER || mApplicationState == STEER_AGENT) &&
-           character->getAgentID() != 0) // No random walking for first agent
-        {
-            // If destination reached: Set new random destination
-            if ( character->destinationReached() ) {
-                character->updateDestination( mRecast->getRandomNavMeshPoint() );
-            }
-        }
-
-        // CHASE BEHAVIOUR
-        if(mApplicationState == FOLLOW_TARGET) {
-            // We specifically need the position of the first agent for the others to chase
-            if(character->getAgentID() == 0)
-                firstAgentPos = character->getPosition();
-            else
-                // Only ADJUST path to follow target (no full recalculation of the corridor to follow)
-                character->updateDestination(firstAgentPos, true);
-        }
-    }
-
-    return BaseApplication::frameRenderingQueued(evt);
-}
-
 void OgreRecastApplication::setRandomTargetsForCrowd()
 {
     for(std::vector<Character*>::iterator iter=mCharacters.begin(); iter != mCharacters.end(); iter++) {
@@ -623,13 +650,13 @@ bool OgreRecastApplication::rayQueryPointInScene(Ogre::Ray ray, unsigned long qu
         if ((closest_distance >= 0.0f) &&
             (closest_distance < query_result[qr_idx].distance))
         {
-             break;
+            break;
         }
 
         // only check this result if its a hit against an entity
         if ((query_result[qr_idx].movable != NULL) &&
             ((query_result[qr_idx].movable->getMovableType().compare("Entity") == 0)
-            ||query_result[qr_idx].movable->getMovableType().compare("ManualObject") == 0))
+             ||query_result[qr_idx].movable->getMovableType().compare("ManualObject") == 0))
         {
             // mesh data to retrieve
             size_t vertex_count;
@@ -644,18 +671,18 @@ bool OgreRecastApplication::rayQueryPointInScene(Ogre::Ray ray, unsigned long qu
                 Ogre::Entity *pentity = static_cast<Ogre::Entity*>(query_result[qr_idx].movable);
 
                 InputGeom::getMeshInformation(pentity->getMesh(), vertex_count, vertices, index_count, indices,
-                              pentity->getParentNode()->_getDerivedPosition(),
-                              pentity->getParentNode()->_getDerivedOrientation(),
-                              pentity->getParentNode()->_getDerivedScale());
+                                              pentity->getParentNode()->_getDerivedPosition(),
+                                              pentity->getParentNode()->_getDerivedOrientation(),
+                                              pentity->getParentNode()->_getDerivedScale());
             } else {
                 // For manualObjects
                 // get the entity to check
                 Ogre::ManualObject *pmanual = static_cast<Ogre::ManualObject*>(query_result[qr_idx].movable);
 
                 InputGeom::getManualMeshInformation(pmanual, vertex_count, vertices, index_count, indices,
-                              pmanual->getParentNode()->_getDerivedPosition(),
-                              pmanual->getParentNode()->_getDerivedOrientation(),
-                              pmanual->getParentNode()->_getDerivedScale());
+                                                    pmanual->getParentNode()->_getDerivedPosition(),
+                                                    pmanual->getParentNode()->_getDerivedOrientation(),
+                                                    pmanual->getParentNode()->_getDerivedScale());
             }
 
             // test for hitting individual triangles on the mesh
@@ -664,7 +691,7 @@ bool OgreRecastApplication::rayQueryPointInScene(Ogre::Ray ray, unsigned long qu
             {
                 // check for a hit against this triangle
                 std::pair<bool, Ogre::Real> hit = Ogre::Math::intersects(ray, vertices[indices[i]],
-                    vertices[indices[i+1]], vertices[indices[i+2]], true, false);
+                                                                         vertices[indices[i+1]], vertices[indices[i+2]], true, false);
 
                 // if it was a hit check if its the closest
                 if (hit.first)
@@ -680,7 +707,7 @@ bool OgreRecastApplication::rayQueryPointInScene(Ogre::Ray ray, unsigned long qu
             }
 
 
-         // free the verticies and indicies memory
+            // free the verticies and indicies memory
             delete[] vertices;
             delete[] indices;
 
