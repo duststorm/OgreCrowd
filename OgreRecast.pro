@@ -149,7 +149,6 @@ HEADERS += include/BaseApplication.h \
     include/Character.h \
     include/TestCharacter.h \
     include/AnimateableCharacter.h \
-    include/DetourTileCache.h \
     include/DetourTileCache/DetourTileCacheBuilder.h \
     include/DetourTileCache/DetourTileCache.h \
     include/OgreDetourTileCache.h \
