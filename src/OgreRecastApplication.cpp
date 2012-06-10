@@ -36,6 +36,9 @@ const bool OgreRecastApplication::OBSTACLES = true;
 // Set to true to build simple single navmesh, set to false to build tiled navmesh using detourTileCache that supports temp obstacles
 const bool OgreRecastApplication::SINGLE_NAVMESH = false;
 
+// Set to true to also query dungeon mesh when clicking to set begin position or destination
+const bool OgreRecastApplication::RAYCAST_SCENE = true;
+
 //-------------------------------------------------------------------------------------
 
 
@@ -193,13 +196,12 @@ void OgreRecastApplication::createScene(void)
     // Used for mouse picking begin and end markers and determining the position to add new agents
     // Add navmesh to separate querying group that we will use
     mNavMeshNode = (Ogre::SceneNode*)mSceneMgr->getRootSceneNode()->getChild("RecastSN");
-    //mNavMeshNode->getAttachedObject("RecastMOWalk0")->setQueryFlags(NAVMESH_MASK);    // Will be queryable by default, no need to explicitly set it.
+    mNavMeshNode->getAttachedObject("RecastMOWalk0")->setQueryFlags(NAVMESH_MASK);  // TODO make sure that other added navmesh parts are given the proper query mask too!
     // Exclude other meshes from navmesh queries
     mNavMeshNode->getAttachedObject("RecastMONeighbour0")->setQueryFlags(DEFAULT_MASK);
     mNavMeshNode->getAttachedObject("RecastMOBoundary0")->setQueryFlags(DEFAULT_MASK);
-// TODO
-    Ogre::uint32 flags = mapE->getQueryFlags();
-    mapE->setQueryFlags(DEFAULT_MASK);
+    if (!RAYCAST_SCENE)
+        mapE->setQueryFlags(DEFAULT_MASK);
     potE->setQueryFlags(DEFAULT_MASK);
     pot2ProxyE->setQueryFlags(DEFAULT_MASK);
 
@@ -326,8 +328,14 @@ bool OgreRecastApplication::mousePressed( const OIS::MouseEvent &arg, OIS::Mouse
     Ogre::Vector3 rayHitPoint;
     Ogre::MovableObject *rayHitObject;
     if (rayQueryPointInScene(mouseRay, NAVMESH_MASK, rayHitPoint, &rayHitObject)) {
-        // Compensate for the fact that the ray-queried navmesh is drawn a little above the ground
-        rayHitPoint.y = rayHitPoint.y - mRecast->m_navMeshOffsetFromGround;
+
+        if ( Ogre::StringUtil::startsWith(rayHitObject->getName(), "recastmowalk", true) ) {
+            // Compensate for the fact that the ray-queried navmesh is drawn a little above the ground
+            rayHitPoint.y = rayHitPoint.y - mRecast->m_navMeshOffsetFromGround;
+        } else {
+            // Queried point was not on navmesh, find nearest point on the navmesh
+            mRecast->findNearestPointOnNavmesh(rayHitPoint, rayHitPoint);
+        }
 
         Ogre::SceneNode *markerNode = NULL;
 

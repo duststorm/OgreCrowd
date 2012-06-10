@@ -888,3 +888,27 @@ Ogre::String OgreRecast::getPathFindErrorMsg(int errorCode)
     }
 }
 
+bool OgreRecast::findNearestPointOnNavmesh(Ogre::Vector3 position, Ogre::Vector3 &resultPt)
+{
+    // You can modify these settings if you want
+    float pExtents[3]={32.0f, 32.0f, 32.0f} ; // size of box around start/end points to look for nav polygons
+
+    // setup the filter
+    dtQueryFilter Filter;
+    Filter.setIncludeFlags(0xFFFF) ;
+    Filter.setExcludeFlags(0) ;
+    Filter.setAreaCost(SAMPLE_POLYAREA_GROUND, 1.0f);
+    Filter.setAreaCost(DT_TILECACHE_WALKABLE_AREA, 1.0f);
+    ////
+
+    float pt[3];
+    OgreVect3ToFloatA(position, pt);
+    float rPt[3];
+    dtPolyRef navmeshPoly;
+    dtStatus status=m_navQuery->findNearestPoly(pt, pExtents, &Filter, &navmeshPoly, rPt);
+    if((status&DT_FAILURE) || (status&DT_STATUS_DETAIL_MASK))
+        return false; // couldn't find a polygon
+
+    FloatAToOgreVect3(rPt, resultPt);
+    return true;
+}

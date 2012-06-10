@@ -105,6 +105,14 @@ public:
    void CreateRecastPathLine(int nPathSlot);
 
    /**
+     * Find a point on the navmesh closest to the specified point position, within predefined
+     * bounds.
+     * Returns true if such a point is found (returned as resultPt), returns false
+     * if no point is found.
+     **/
+   bool findNearestPointOnNavmesh(Ogre::Vector3 position, Ogre::Vector3 &resultPt);
+
+   /**
      * Returns a random point on the navmesh.
      **/
    Ogre::Vector3 getRandomNavMeshPoint();
