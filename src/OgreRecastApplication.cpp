@@ -438,7 +438,7 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
     }
 
     // Backspace adds a temporary obstacle to the navmesh (in dtTileCache mode)
-    if(!SINGLE_NAVMESH && arg.key == OIS::KC_BACK) {
+    if(!SINGLE_NAVMESH && mApplicationState != STEER_AGENT && arg.key == OIS::KC_BACK) {
         // Find position on navmesh pointed to by cursor in the middle of the screen
         Ogre::Ray cursorRay = mCamera->getCameraToViewportRay(0.5, 0.5);
         Ogre::Vector3 rayHitPoint;
@@ -459,7 +459,7 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
     }
 
     // Delete removes a temporary obstacle from the navmesh (in dtTileCache mode)
-    if(!SINGLE_NAVMESH && arg.key == OIS::KC_DELETE) {
+    if(!SINGLE_NAVMESH && mApplicationState != STEER_AGENT && arg.key == OIS::KC_DELETE) {
         // Find position on navmesh pointed to by cursor in the middle of the screen
         Ogre::Ray cursorRay = mCamera->getCameraToViewportRay(0.5, 0.5);
         Ogre::Vector3 rayHitPoint;
