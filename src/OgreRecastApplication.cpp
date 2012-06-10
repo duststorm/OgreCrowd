@@ -37,7 +37,7 @@ const bool OgreRecastApplication::OBSTACLES = true;
 const bool OgreRecastApplication::SINGLE_NAVMESH = false;
 
 // Set to true to also query dungeon mesh when clicking to set begin position or destination
-const bool OgreRecastApplication::RAYCAST_SCENE = true;
+const bool OgreRecastApplication::RAYCAST_SCENE = false;
 
 //-------------------------------------------------------------------------------------
 

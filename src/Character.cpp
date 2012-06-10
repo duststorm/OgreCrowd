@@ -49,6 +49,10 @@ Ogre::Vector3 Character::getDestination()
 
 void Character::setPosition(Ogre::Vector3 position)
 {
+    // Find position on navmesh
+    if (!mDetourCrowd->m_recast->findNearestPointOnNavmesh(position, position))
+        return;
+
     // Remove agent from crowd and re-add at position
     mDetourCrowd->removeAgent(mAgentID);
     mAgentID = mDetourCrowd->addAgent(position);
@@ -58,6 +62,10 @@ void Character::setPosition(Ogre::Vector3 position)
 
 void Character::updateDestination(Ogre::Vector3 destination, bool updatePreviousPath)
 {
+    // Find position on navmesh
+    if(!mDetourCrowd->m_recast->findNearestPointOnNavmesh(destination, destination))
+        return;
+
     mDetourCrowd->setMoveTarget(mAgentID, destination, updatePreviousPath);
     mDestination = destination;
     mStopped = false;
