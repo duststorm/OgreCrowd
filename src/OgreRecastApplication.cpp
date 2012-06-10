@@ -578,7 +578,8 @@ void OgreRecastApplication::calculateAndDrawPath(Ogre::Vector3 beginPos, Ogre::V
     if( ret >= 0 )
             mRecast->CreateRecastPathLine(pathNb) ; // Draw a line showing path at specified slot
     else
-        Ogre::LogManager::getSingletonPtr()->logMessage("ERROR: could not find a path. ("+mRecast->getPathFindErrorMsg(ret)+")");
+        Ogre::LogManager::getSingletonPtr()->logMessage("ERROR: could not find a (full) path ("+mRecast->getPathFindErrorMsg(ret)+"). It's possible there is a partial path.");
+        // We dont bother with partial paths as this is only for debug drawing. DetourCrowd handles this for us anyway.
 }
 
 

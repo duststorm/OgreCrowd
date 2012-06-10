@@ -554,7 +554,8 @@ int OgreRecast::FindPath(float* pStartPos, float* pEndPos, int nPathSlot, int nT
    dtQueryFilter Filter;
    Filter.setIncludeFlags(0xFFFF) ;
    Filter.setExcludeFlags(0) ;
-   Filter.setAreaCost(SAMPLE_POLYAREA_GROUND, 1.0f) ;
+   Filter.setAreaCost(SAMPLE_POLYAREA_GROUND, 1.0f);
+   Filter.setAreaCost(DT_TILECACHE_WALKABLE_AREA, 1.0f);
 
    // find the start polygon
    status=m_navQuery->findNearestPoly(pStartPos, pExtents, &Filter, &StartPoly, StartNearest) ;
@@ -798,7 +799,7 @@ void OgreRecast::CreateRecastPathLine(int nPathSlot)
    }
 
    // Create new manualobject for the line
-   m_pRecastMOPath = m_pSceneMgr->createManualObject("RecastMOPath"+Ogre::StringConverter::toString(m_manualOIndex));
+   m_pRecastMOPath = m_pSceneMgr->createManualObject("RecastMOPath");
    m_pRecastMOPath->begin("recastdebug", Ogre::RenderOperation::OT_LINE_STRIP) ;
 
    
@@ -855,6 +856,7 @@ Ogre::Vector3 OgreRecast::getRandomNavMeshPoint()
     Filter.setIncludeFlags(0xFFFF) ;
     Filter.setExcludeFlags(0) ;
     Filter.setAreaCost(SAMPLE_POLYAREA_GROUND, 1.0f) ;
+    Filter.setAreaCost(DT_TILECACHE_WALKABLE_AREA, 1.0f);
 
     float resultPoint[3];
     dtPolyRef resultPoly;

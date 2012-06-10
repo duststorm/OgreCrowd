@@ -18,7 +18,7 @@ This source file is part of the
 
 
 // Set to true to avoid application grabbing the mouse when debugging
-const bool BaseApplication::DISABLE_MOUSE_GRAB = true;
+const bool BaseApplication::DISABLE_MOUSE_GRAB = false;
 
 
 //-------------------------------------------------------------------------------------
