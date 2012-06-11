@@ -270,6 +270,8 @@ public:
 
     dtObstacleRef removeTempObstacle(Ogre::Vector3 raySource, Ogre::Vector3 rayHit);
 
+    bool removeTempObstacle(dtObstacleRef obstacleRef);
+
     void drawDetail(const int tx, const int ty);
 
     void drawNavMesh(void);

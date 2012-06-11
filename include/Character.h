@@ -4,6 +4,7 @@
 #include <Ogre.h>
 #include "OgreDetourCrowd.h"
 #include "DetourCrowd/DetourCrowd.h"
+#include "OgreDetourTileCache.h"
 
 class OgreRecastApplication;    //Advance declaration
 
@@ -151,11 +152,33 @@ public:
       **/
     virtual void setDebugVisibility(bool visible) = 0;
 
+    /**
+      * Set whether this character is controlled by an agent or whether it
+      * will position itself independently based on the requested velocity.
+      * Set to true to let the character be controlled by an agent.
+      * Set to false to manually control it without agent, you need to set
+      * detourTileCache first.
+      **/
+    void setAgentControlled(bool agentControlled);
+
+    /**
+      * Determines whether this character is controlled by an agent.
+      **/
+    bool isAgentControlled(void);
+
+    /**
+      * Set detour tile cache component.
+      * This is needed for controlling the agent manually without agent,
+      * as it will use dtTileCache to add a temporary obstacle at its
+      * current position to make other characters in the crowd avoid it.
+      **/
+    void setDetourTileCache(OgreDetourTileCache* dtTileCache);
+
 protected:
     /**
       * Update current position of this character to the current position of its agent.
       **/
-    virtual void updatePosition(void);
+    virtual void updatePosition(Ogre::Real timeSinceLastFrame);
 
     /**
       * Set destination member variable directly without updating the agent state.
@@ -217,6 +240,27 @@ protected:
       * True if this character is stopped.
       **/
     bool mStopped;
+
+    /**
+      * True if character is controlled by agent.
+      * False if character is manually controlled without agent.
+      **/
+    bool mAgentControlled;
+
+    /**
+      * Detour Tile Cache component needed when controlling this character
+      * manually without agent. It needs the dtTileCache to place a temporary
+      * obstacle at its current position to make other characters in the crowd
+      * avoid it.
+      **/
+    OgreDetourTileCache* mDetourTileCache;
+
+    /**
+      * Obstacle used when character is not being controlled by agent.
+      * The temp obstacle is placed on the current position of this character
+      * so that other agents in the crowd will not walk through it.
+      **/
+    dtTileRef mTempObstacle;
 
 
     // Friend the application class to allow setDestinationForAllAgents to update character destination values

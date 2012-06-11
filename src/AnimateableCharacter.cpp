@@ -55,7 +55,7 @@ AnimateableCharacter::AnimateableCharacter(Ogre::String name, Ogre::SceneManager
 
 void AnimateableCharacter::update(Ogre::Real timeSinceLastFrame)
 {
-    updatePosition();
+    updatePosition(timeSinceLastFrame);
 
     Ogre::Vector3 velocity = getVelocity(); // Current velocity of agent
     Ogre::Real speed = velocity.length();

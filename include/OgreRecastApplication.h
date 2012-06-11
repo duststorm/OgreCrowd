@@ -79,11 +79,19 @@ public:
     static const bool SINGLE_NAVMESH;
 
     /**
-      * Set to true to also query dungeon mesh when clicking to set begin position or
-      * destination. Nearest point to navmesh within certain bounds will be found.
+      * Determines whether also dungeon mesh will be queried when clicking to set
+      * begin position or destination.
+      * Nearest point to navmesh within certain bounds will be found.
       * Set to false to only query points exactly on the navmesh.
       **/
     static const bool RAYCAST_SCENE;
+
+    /**
+      * Determines whether agent steering mode of the demo will use a temp obstacle.
+      * Set to false to steer an agent in the crowd instead.
+      * Setting to true only has effect when SINGLE_NAVMESH is false.
+      **/
+    static const bool TEMP_OBSTACLE_STEERING;
 
     /**
       * Sets recast visual debugging geometry in the scene to visible (true) or hide

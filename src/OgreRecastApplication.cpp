@@ -39,6 +39,9 @@ const bool OgreRecastApplication::SINGLE_NAVMESH = false;
 // Set to true to also query dungeon mesh when clicking to set begin position or destination
 const bool OgreRecastApplication::RAYCAST_SCENE = false;
 
+// Set to true to use a temp obstacle in the agent steering demo instead of an agent with velocity (only works when SINGLE_NAVMESH is false)
+const bool OgreRecastApplication::TEMP_OBSTACLE_STEERING = true;
+
 //-------------------------------------------------------------------------------------
 
 
@@ -234,6 +237,7 @@ bool OgreRecastApplication::frameRenderingQueued(const Ogre::FrameEvent& evt)
         // If key release and mouse move happen in the wrong order an agent can continue walking even though the walk key was released
 
         Character *firstAgent = mCharacters[0];
+
         bool agentIsMoving = firstAgent->isMoving();
 
         if(!mMoveForwardKeyPressed && agentIsMoving) {
@@ -246,10 +250,11 @@ bool OgreRecastApplication::frameRenderingQueued(const Ogre::FrameEvent& evt)
             // Mouse is not moved, but forward key is pressed and agent is not moving
             firstAgent->moveForward();  // Start moving agent
         }
+
         mMouseMoveX = 0;    // Reset mouse input
     }
 
-    // Update DetourTileCache (handle dynamic changes to navmesh)
+    // Update DetourTileCache (handle dynamic changes to navmesh such as temp obstacles)
     if(!SINGLE_NAVMESH && mDetourTileCache)
         mDetourTileCache->handleUpdate(evt.timeSinceLastFrame);
 
@@ -422,13 +427,23 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
                 mApplicationState = STEER_AGENT;
                 setRandomTargetsForCrowd();
                 setPathAndBeginMarkerVisibility(false);
-                mDetourCrowd->stopAgent(0); // Stop first agent
-                mLabelOverlay->setCaption("Steer agent");
+                if (!SINGLE_NAVMESH && TEMP_OBSTACLE_STEERING) {
+                    // Use temporary obstacle for player collision avoidance
+                    // Player has absolute control
+                    mLabelOverlay->setCaption("Steer obstacle");
+                    mCharacters[0]->setDetourTileCache(mDetourTileCache);
+                    mCharacters[0]->setAgentControlled(false);
+                } else {
+                    // Steer an agent in the crowd (less control by the player)
+                    mLabelOverlay->setCaption("Steer agent");
+                }
                 mCrosshair->hide(); // Hide crosshair
                 mWindow->getViewport(0)->setCamera(mChaseCam);  // Set chase camera on first agent
                 break;
             case STEER_AGENT:       // Steer -> simple
                 mApplicationState = SIMPLE_PATHFIND;
+                if (!SINGLE_NAVMESH && TEMP_OBSTACLE_STEERING)
+                    mCharacters[0]->setAgentControlled(true);  // Restore agent controlled state to first character
                 drawPathBetweenMarkers(1,1);    // Draw navigation path (in DRAW_DEBUG) and begin marker
                 UpdateAllAgentDestinations();   // Reinitialize path that all agents follow and steer them towards end marker
                 mLabelOverlay->setCaption("Simple navigation");

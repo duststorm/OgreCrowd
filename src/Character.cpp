@@ -16,7 +16,10 @@ Character::Character(Ogre::String name, Ogre::SceneManager *sceneMgr, OgreDetour
     mAgentID(-1),
     mManualVelocity(Ogre::Vector3::ZERO),
     mDestination(detourCrowd->getLastDestination()),
-    mStopped(false)
+    mStopped(false),
+    mAgentControlled(true),
+    mDetourTileCache(NULL),
+    mTempObstacle(0)
 {
     mAgentID = mDetourCrowd->addAgent(position);
     mAgent = mDetourCrowd->getAgent(mAgentID);
@@ -44,11 +47,19 @@ Ogre::SceneNode* Character::getNode()
 
 Ogre::Vector3 Character::getDestination()
 {
-    return mDestination;
+    if (mAgentControlled)
+        return mDestination;
+
+    return Ogre::Vector3::ZERO;     // TODO this is not ideal
 }
 
 void Character::setPosition(Ogre::Vector3 position)
 {
+    if(!mAgentControlled) {
+        getNode()->setPosition(position);
+        return;
+    }
+
     // Find position on navmesh
     if (!mDetourCrowd->m_recast->findNearestPointOnNavmesh(position, position))
         return;
@@ -62,6 +73,9 @@ void Character::setPosition(Ogre::Vector3 position)
 
 void Character::updateDestination(Ogre::Vector3 destination, bool updatePreviousPath)
 {
+    if(!mAgentControlled)
+        return;
+
     // Find position on navmesh
     if(!mDetourCrowd->m_recast->findNearestPointOnNavmesh(destination, destination))
         return;
@@ -77,12 +91,24 @@ Ogre::Vector3 Character::getPosition()
     return getNode()->getPosition();
 }
 
-void Character::updatePosition()
+void Character::updatePosition(Ogre::Real timeSinceLastFrame)
 {
-    Ogre::Vector3 agentPos;
-    OgreRecast::FloatAToOgreVect3(getAgent()->npos, agentPos);
+    if (mAgentControlled) {
+        Ogre::Vector3 agentPos;
+        OgreRecast::FloatAToOgreVect3(getAgent()->npos, agentPos);
 
-    getNode()->setPosition(agentPos);
+        getNode()->setPosition(agentPos);
+    } else {
+        // Move character manually to new position
+        if(getVelocity().isZeroLength())
+            return;
+
+        // Make other agents avoid first character by placing a temporary obstacle in its position
+        mDetourTileCache->removeTempObstacle(mTempObstacle);   // Remove old obstacle
+        getNode()->setPosition(getPosition() + timeSinceLastFrame * getVelocity());
+        // TODO check whether this position is within navmesh
+        mTempObstacle = mDetourTileCache->addTempObstacle(getPosition());   // Add new obstacle
+    }
 }
 
 bool Character::destinationReached()
@@ -97,6 +123,9 @@ bool Character::destinationReached()
 
 void Character::setDestination(Ogre::Vector3 destination)
 {
+    if (!mAgentControlled)
+        return;
+
     mDestination = destination;
     mManualVelocity = Ogre::Vector3::ZERO;
     mStopped = false;
@@ -104,6 +133,12 @@ void Character::setDestination(Ogre::Vector3 destination)
 
 void Character::stop()
 {
+    if(!mAgentControlled) {
+        mManualVelocity = Ogre::Vector3::ZERO;
+        mStopped = true;
+        return;
+    }
+
     if(mDetourCrowd->stopAgent(getAgentID())) {
         mDestination = Ogre::Vector3::ZERO;     // TODO this is not ideal
         mManualVelocity = Ogre::Vector3::ZERO;
@@ -120,7 +155,8 @@ void Character::moveForward()
 {
     Ogre::Vector3 lookDirection = getLookingDirection();
     lookDirection.normalise();
-    setVelocity(getAgent()->params.maxSpeed * lookDirection);
+
+    setVelocity(getMaxSpeed() * lookDirection);
 }
 
 void Character::setVelocity(Ogre::Vector3 velocity)
@@ -129,15 +165,19 @@ void Character::setVelocity(Ogre::Vector3 velocity)
     mStopped = false;
     mDestination = Ogre::Vector3::ZERO;     // TODO this is not ideal
 
-    mDetourCrowd->requestVelocity(getAgentID(), mManualVelocity);
+    if(mAgentControlled)
+        mDetourCrowd->requestVelocity(getAgentID(), mManualVelocity);
 }
 
 Ogre::Vector3 Character::getVelocity()
 {
-    Ogre::Vector3 velocity;
-    OgreRecast::FloatAToOgreVect3(getAgent()->nvel, velocity);
-
-    return velocity;
+    if(mAgentControlled) {
+        Ogre::Vector3 velocity;
+        OgreRecast::FloatAToOgreVect3(getAgent()->nvel, velocity);
+        return velocity;
+    } else {
+        return mManualVelocity;
+    }
 }
 
 Ogre::Real Character::getSpeed()
@@ -168,4 +208,36 @@ Ogre::Real Character::getAgentHeight(void)
 Ogre::Real Character::getAgentRadius(void)
 {
     return mDetourCrowd->getAgentRadius();
+}
+
+void Character::setAgentControlled(bool agentControlled)
+{
+    if (mAgentControlled != agentControlled) {
+        if (agentControlled) {
+            if(mTempObstacle)
+                mDetourTileCache->removeTempObstacle(mTempObstacle);
+            mTempObstacle = 0;
+            mAgentID = mDetourCrowd->addAgent(getPosition());
+            mDestination = mDetourCrowd->getLastDestination();
+            mManualVelocity = Ogre::Vector3::ZERO;
+            mStopped = true;
+        } else {
+            mTempObstacle = mDetourTileCache->addTempObstacle(getPosition());   // Add temp obstacle at current position
+            mDetourCrowd->removeAgent(mAgentID);
+            mAgentID = -1;
+            mDestination = Ogre::Vector3::ZERO;     // TODO this is not ideal
+            mStopped = false;
+        }
+        mAgentControlled = agentControlled;
+    }
+}
+
+bool Character::isAgentControlled()
+{
+    return mAgentControlled;
+}
+
+void Character::setDetourTileCache(OgreDetourTileCache *dtTileCache)
+{
+    mDetourTileCache = dtTileCache;
 }

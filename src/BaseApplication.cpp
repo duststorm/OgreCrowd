@@ -169,7 +169,7 @@ void BaseApplication::createViewports(void)
 {
     // Create one viewport, entire window
     Ogre::Viewport* vp = mWindow->addViewport(mCamera);
-    vp->setBackgroundColour(Ogre::ColourValue(0,0,0));
+    vp->setBackgroundColour(Ogre::ColourValue(0.2,0.2,0.2));
 
     // Alter the camera aspect ratio to match the viewport
     mCamera->setAspectRatio(

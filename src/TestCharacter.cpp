@@ -19,7 +19,7 @@ TestCharacter::TestCharacter(Ogre::String name, Ogre::SceneManager *sceneMgr, Og
 
 void TestCharacter::update(Ogre::Real timeSinceLastFrame)
 {
-    updatePosition();
+    updatePosition(timeSinceLastFrame);
 }
 
 void TestCharacter::setDebugVisibility(bool visible)

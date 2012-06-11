@@ -505,6 +505,15 @@ dtObstacleRef OgreDetourTileCache::removeTempObstacle(Ogre::Vector3 raySource, O
     return ref;
 }
 
+bool OgreDetourTileCache::removeTempObstacle(dtObstacleRef obstacleRef)
+{
+    if(m_tileCache->removeObstacle(obstacleRef) == DT_SUCCESS)
+        return true;
+    else
+        return false;
+}
+
+
 static bool isectSegAABB(const float* sp, const float* sq,
                          const float* amin, const float* amax,
                          float& tmin, float& tmax)
