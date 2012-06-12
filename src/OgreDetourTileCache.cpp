@@ -20,7 +20,8 @@ OgreDetourTileCache::OgreDetourTileCache(OgreRecast *recast)
     m_tcomp(0),
     m_geom(0),
     m_th(0),
-    m_tw(0)
+    m_tw(0),
+    mChangedConvexVolumesCount(0)
 {
     m_talloc = new LinearAllocator(32000);
     m_tcomp = new FastLZCompressor;
@@ -34,17 +35,16 @@ OgreDetourTileCache::~OgreDetourTileCache()
     dtFreeTileCache(m_tileCache);
 }
 
-
-bool OgreDetourTileCache::TileCacheBuild(std::vector<Ogre::Entity*> srcMeshes)
+bool OgreDetourTileCache::configure(std::vector<Ogre::Entity*> srcMeshes)
 {
-    rcContext *ctx = m_recast->m_ctx;
-
-    dtStatus status;
-
     m_geom = new InputGeom(srcMeshes);
 
+    m_recast->configure();  // Set recast params, we will reuse some of those
+
+    m_ctx = m_recast->m_ctx;
+
     if (!m_geom || m_geom->isEmpty()) {
-        ctx->log(RC_LOG_ERROR, "buildTiledNavigation: No vertices and triangles.");
+        m_ctx->log(RC_LOG_ERROR, "buildTiledNavigation: No vertices and triangles.");
         return false;
     }
 
@@ -57,19 +57,18 @@ bool OgreDetourTileCache::TileCacheBuild(std::vector<Ogre::Entity*> srcMeshes)
 
     // Navmesh generation params.
     // Use config from recast module
-    m_recast->configure();  // Set recast params
-    rcConfig cfg = m_recast->m_cfg;
+    m_cfg = m_recast->m_cfg;
 
     // Most params are taken from OgreRecast::configure, except for these:
-    cfg.tileSize = (int)m_tileSize;
-    cfg.borderSize = cfg.walkableRadius + 3; // Reserve enough padding.
-    cfg.width = cfg.tileSize + cfg.borderSize*2;
-    cfg.height = cfg.tileSize + cfg.borderSize*2;
+    m_cfg.tileSize = (int)m_tileSize;
+    m_cfg.borderSize = m_cfg.walkableRadius + 3; // Reserve enough padding.
+    m_cfg.width = m_cfg.tileSize + m_cfg.borderSize*2;
+    m_cfg.height = m_cfg.tileSize + m_cfg.borderSize*2;
 
-    rcVcopy(cfg.bmin, bmin);
-    rcVcopy(cfg.bmax, bmax);
+    rcVcopy(m_cfg.bmin, bmin);
+    rcVcopy(m_cfg.bmax, bmax);
 
-    m_cellSize = cfg.cs;
+    m_cellSize = m_cfg.cs;
 
     // Determine grid size (number of tiles)
     int gw = 0, gh = 0;
@@ -95,20 +94,29 @@ bool OgreDetourTileCache::TileCacheBuild(std::vector<Ogre::Entity*> srcMeshes)
 
 
     // Tile cache params.
-    dtTileCacheParams tcparams;
-    memset(&tcparams, 0, sizeof(tcparams));
-    rcVcopy(tcparams.orig, bmin);
+    memset(&m_tcparams, 0, sizeof(m_tcparams));
+    rcVcopy(m_tcparams.orig, bmin);
     // Copy some parameters from recast config
-    tcparams.cs = cfg.cs;
-    tcparams.ch = cfg.ch;
-    tcparams.width = (int)m_tileSize;
-    tcparams.height = (int)m_tileSize;
-    tcparams.walkableHeight = cfg.walkableHeight;
-    tcparams.walkableRadius = cfg.walkableRadius;
-    tcparams.walkableClimb = cfg.walkableClimb;
-    tcparams.maxSimplificationError = cfg.maxSimplificationError;
-    tcparams.maxTiles = tw*th*EXPECTED_LAYERS_PER_TILE;
-    tcparams.maxObstacles = 128;    // Max number of temp obstacles that can be added to or removed from navmesh
+    m_tcparams.cs = m_cfg.cs;
+    m_tcparams.ch = m_cfg.ch;
+    m_tcparams.width = (int)m_tileSize;
+    m_tcparams.height = (int)m_tileSize;
+    m_tcparams.walkableHeight = m_cfg.walkableHeight;
+    m_tcparams.walkableRadius = m_cfg.walkableRadius;
+    m_tcparams.walkableClimb = m_cfg.walkableClimb;
+    m_tcparams.maxSimplificationError = m_cfg.maxSimplificationError;
+    m_tcparams.maxTiles = tw*th*EXPECTED_LAYERS_PER_TILE;
+    m_tcparams.maxObstacles = 128;    // Max number of temp obstacles that can be added to or removed from navmesh
+
+    return true;
+}
+
+
+bool OgreDetourTileCache::TileCacheBuild(std::vector<Ogre::Entity*> srcMeshes)
+{
+    configure(srcMeshes);
+
+    dtStatus status;
 
 
     // BUILD TileCache
@@ -117,13 +125,13 @@ bool OgreDetourTileCache::TileCacheBuild(std::vector<Ogre::Entity*> srcMeshes)
     m_tileCache = dtAllocTileCache();
     if (!m_tileCache)
     {
-        ctx->log(RC_LOG_ERROR, "buildTiledNavigation: Could not allocate tile cache.");
+        m_ctx->log(RC_LOG_ERROR, "buildTiledNavigation: Could not allocate tile cache.");
         return false;
     }
-    status = m_tileCache->init(&tcparams, m_talloc, m_tcomp, m_tmproc);
+    status = m_tileCache->init(&m_tcparams, m_talloc, m_tcomp, m_tmproc);
     if (dtStatusFailed(status))
     {
-        ctx->log(RC_LOG_ERROR, "buildTiledNavigation: Could not init tile cache.");
+        m_ctx->log(RC_LOG_ERROR, "buildTiledNavigation: Could not init tile cache.");
         return false;
     }
 
@@ -132,7 +140,7 @@ bool OgreDetourTileCache::TileCacheBuild(std::vector<Ogre::Entity*> srcMeshes)
     m_recast->m_navMesh = dtAllocNavMesh();
     if (!m_recast->m_navMesh)
     {
-        ctx->log(RC_LOG_ERROR, "buildTiledNavigation: Could not allocate navmesh.");
+        m_ctx->log(RC_LOG_ERROR, "buildTiledNavigation: Could not allocate navmesh.");
         return false;
     }
 
@@ -140,26 +148,25 @@ bool OgreDetourTileCache::TileCacheBuild(std::vector<Ogre::Entity*> srcMeshes)
     // Init multi-tile navmesh parameters
     dtNavMeshParams params;
     memset(&params, 0, sizeof(params));
-    rcVcopy(params.orig, tcparams.orig);   // Set world-space origin of tile grid
-    params.tileWidth = m_tileSize*tcparams.cs;
-    params.tileHeight = m_tileSize*tcparams.cs;
+    rcVcopy(params.orig, m_tcparams.orig);   // Set world-space origin of tile grid
+    params.tileWidth = m_tileSize*m_tcparams.cs;
+    params.tileHeight = m_tileSize*m_tcparams.cs;
     params.maxTiles = m_maxTiles;
     params.maxPolys = m_maxPolysPerTile;
 
     status = m_recast->m_navMesh->init(&params);
     if (dtStatusFailed(status))
     {
-        ctx->log(RC_LOG_ERROR, "buildTiledNavigation: Could not init navmesh.");
+        m_ctx->log(RC_LOG_ERROR, "buildTiledNavigation: Could not init navmesh.");
         return false;
     }
 
-    // TODO: this is redundant from OgreRecast class functionality. Leave those functions there and allocate the m_navMesh var in OgreRecast?
-    // Init recast navmeshquery with created navmesh
+    // Init recast navmeshquery with created navmesh (in OgreRecast component)
     m_recast->m_navQuery = dtAllocNavMeshQuery();
     status = m_recast->m_navQuery->init(m_recast->m_navMesh, 2048);
     if (dtStatusFailed(status))
     {
-        ctx->log(RC_LOG_ERROR, "buildTiledNavigation: Could not init Detour navmesh query");
+        m_ctx->log(RC_LOG_ERROR, "buildTiledNavigation: Could not init Detour navmesh query");
         return false;
     }
 
@@ -174,18 +181,18 @@ bool OgreDetourTileCache::TileCacheBuild(std::vector<Ogre::Entity*> srcMeshes)
     m_cacheCompressedSize = 0;
     m_cacheRawSize = 0;
 
-    for (int y = 0; y < th; ++y)
+    for (int y = 0; y < m_th; ++y)
     {
-        for (int x = 0; x < tw; ++x)
+        for (int x = 0; x < m_tw; ++x)
         {
             TileCacheData tiles[MAX_LAYERS];
             memset(tiles, 0, sizeof(tiles));
-            int ntiles = rasterizeTileLayers(m_geom, x, y, cfg, tiles, MAX_LAYERS);  // This is where the tile is built
+            int ntiles = rasterizeTileLayers(m_geom, x, y, m_cfg, tiles, MAX_LAYERS);  // This is where the tile is built
 
             for (int i = 0; i < ntiles; ++i)
             {
                 TileCacheData* tile = &tiles[i];
-                status = m_tileCache->addTile(tile->data, tile->dataSize, DT_COMPRESSEDTILE_FREE_DATA, 0);  // Add tiles to tileCache
+                status = m_tileCache->addTile(tile->data, tile->dataSize, DT_COMPRESSEDTILE_FREE_DATA, 0);  // Add compressed tiles to tileCache
                 if (dtStatusFailed(status))
                 {
                     dtFree(tile->data);
@@ -195,7 +202,7 @@ bool OgreDetourTileCache::TileCacheBuild(std::vector<Ogre::Entity*> srcMeshes)
 
                 m_cacheLayerCount++;
                 m_cacheCompressedSize += tile->dataSize;
-                m_cacheRawSize += calcLayerBufferSize(tcparams.width, tcparams.height);
+                m_cacheRawSize += calcLayerBufferSize(m_tcparams.width, m_tcparams.height);
             }
         }
     }
@@ -204,9 +211,9 @@ bool OgreDetourTileCache::TileCacheBuild(std::vector<Ogre::Entity*> srcMeshes)
     // Builds detour compatible navmesh from all tiles.
     // A tile will have to be rebuilt if something changes, eg. a temporary obstacle is placed on it.
 //    ctx->startTimer(RC_TIMER_TOTAL);
-    for (int y = 0; y < th; ++y)
-        for (int x = 0; x < tw; ++x)
-            m_tileCache->buildNavMeshTilesAt(x,y, m_recast->m_navMesh);
+    for (int y = 0; y < m_th; ++y)
+        for (int x = 0; x < m_tw; ++x)
+            m_tileCache->buildNavMeshTilesAt(x,y, m_recast->m_navMesh); // This immediately builds the tile, without the need of a dtTileCache::update()
 //    ctx->stopTimer(RC_TIMER_TOTAL);
 
 //    m_cacheBuildTimeMs = ctx->getAccumulatedTime(RC_TIMER_TOTAL)/1000.0f;
@@ -226,8 +233,58 @@ bool OgreDetourTileCache::TileCacheBuild(std::vector<Ogre::Entity*> srcMeshes)
 
 
 //    printf("navmeshMemUsage = %.1f kB\n", navmeshMemUsage/1024.0f);
-    Ogre::LogManager::getSingletonPtr()->logMessage("navmeshMemUsage = "+ Ogre::StringConverter::toString(navmeshMemUsage/1024.0f) +" kB");
+    Ogre::LogManager::getSingletonPtr()->logMessage("Navmesh Mem Usage = "+ Ogre::StringConverter::toString(navmeshMemUsage/1024.0f) +" kB");
+    Ogre::LogManager::getSingletonPtr()->logMessage("Tilecache Mem Usage = " +Ogre::StringConverter::toString(m_cacheCompressedSize/1024.0f) +" kB");
 
+
+    return true;
+}
+
+
+bool OgreDetourTileCache::buildTile(const int tx, const int ty)
+{
+    if (tx < 0 || tx >= m_tw)
+        return false;
+
+    if (ty < 0 || ty >= m_th)
+        return false;
+
+//TODO maybe I want to keep these values up to date
+    /*
+    m_cacheLayerCount = 0;
+    m_cacheCompressedSize = 0;
+    m_cacheRawSize = 0;
+    */
+
+    TileCacheData tiles[MAX_LAYERS];
+    memset(tiles, 0, sizeof(tiles));
+    int ntiles = rasterizeTileLayers(m_geom, tx, ty, m_cfg, tiles, MAX_LAYERS);  // This is where the tile is built
+
+    dtStatus status;
+
+    // I don't know exactly why this can still be multiple tiles (??)
+    for (int i = 0; i < ntiles; ++i)
+    {
+        TileCacheData* tile = &tiles[i];
+        status = m_tileCache->addTile(tile->data, tile->dataSize, DT_COMPRESSEDTILE_FREE_DATA, 0);  // Add compressed tiles to tileCache
+        if (dtStatusFailed(status))
+        {
+            dtFree(tile->data);
+            tile->data = 0;
+            continue;       // TODO maybe return false here?
+        }
+
+        m_cacheLayerCount++;
+        m_cacheCompressedSize += tile->dataSize;
+        m_cacheRawSize += calcLayerBufferSize(m_tcparams.width, m_tcparams.height);
+    }
+
+//TODO add a deferred command for this?
+    // Build navmesh tile from cached tile
+    m_tileCache->buildNavMeshTilesAt(tx,ty, m_recast->m_navMesh); // This immediately builds the tile, without the need of a dtTileCache::update()
+
+//TODO update this value?
+    //m_cacheBuildMemUsage = m_talloc->high;
 
     return true;
 }
@@ -235,35 +292,36 @@ bool OgreDetourTileCache::TileCacheBuild(std::vector<Ogre::Entity*> srcMeshes)
 
 int OgreDetourTileCache::rasterizeTileLayers(InputGeom* geom, const int tx, const int ty, const rcConfig& cfg, TileCacheData* tiles, const int maxTiles)
 {
-    if(!m_recast->m_ctx)
-        m_recast->m_ctx=new rcContext(true);
-
-    rcContext *ctx = m_recast->m_ctx;
-
     if (!geom || geom->isEmpty() || !geom->getChunkyMesh()) {
-        ctx->log(RC_LOG_ERROR, "buildTile: Input mesh is not specified.");
+        m_ctx->log(RC_LOG_ERROR, "buildTile: Input mesh is not specified.");
         return 0;
     }
 
+//TODO make these member variables?
     FastLZCompressor comp;
     RasterizationContext rc;
 
     const float* verts = geom->getVerts();
     const int nverts = geom->getVertCount();
+
+    // The chunky tri mesh in the inputgeom is a simple spatial subdivision structure that allows to
+    // process the vertices in the geometry relevant to this part of the tile.
+    // The chunky tri mesh is a grid of axis aligned boxes that store indices to the vertices in verts
+    // that are positioned in that box.
     const rcChunkyTriMesh* chunkyMesh = geom->getChunkyMesh();
 
     // Tile bounds.
     const float tcs = m_tileSize * m_cellSize;
 
     rcConfig tcfg;
-    memcpy(&tcfg, &cfg, sizeof(tcfg));
+    memcpy(&tcfg, &m_cfg, sizeof(tcfg));
 
-    tcfg.bmin[0] = cfg.bmin[0] + tx*tcs;
-    tcfg.bmin[1] = cfg.bmin[1];
-    tcfg.bmin[2] = cfg.bmin[2] + ty*tcs;
-    tcfg.bmax[0] = cfg.bmin[0] + (tx+1)*tcs;
-    tcfg.bmax[1] = cfg.bmax[1];
-    tcfg.bmax[2] = cfg.bmin[2] + (ty+1)*tcs;
+    tcfg.bmin[0] = m_cfg.bmin[0] + tx*tcs;
+    tcfg.bmin[1] = m_cfg.bmin[1];
+    tcfg.bmin[2] = m_cfg.bmin[2] + ty*tcs;
+    tcfg.bmax[0] = m_cfg.bmin[0] + (tx+1)*tcs;
+    tcfg.bmax[1] = m_cfg.bmax[1];
+    tcfg.bmax[2] = m_cfg.bmin[2] + (ty+1)*tcs;
     tcfg.bmin[0] -= tcfg.borderSize*tcfg.cs;
     tcfg.bmin[2] -= tcfg.borderSize*tcfg.cs;
     tcfg.bmax[0] += tcfg.borderSize*tcfg.cs;
@@ -278,22 +336,22 @@ int OgreDetourTileCache::rasterizeTileLayers(InputGeom* geom, const int tx, cons
     rc.solid = rcAllocHeightfield();
     if (!rc.solid)
     {
-        ctx->log(RC_LOG_ERROR, "buildNavigation: Out of memory 'solid'.");
+        m_ctx->log(RC_LOG_ERROR, "buildNavigation: Out of memory 'solid'.");
         return 0;
     }
-    if (!rcCreateHeightfield(ctx, *rc.solid, tcfg.width, tcfg.height, tcfg.bmin, tcfg.bmax, tcfg.cs, tcfg.ch))
+    if (!rcCreateHeightfield(m_ctx, *rc.solid, tcfg.width, tcfg.height, tcfg.bmin, tcfg.bmax, tcfg.cs, tcfg.ch))
     {
-        ctx->log(RC_LOG_ERROR, "buildNavigation: Could not create solid heightfield.");
+        m_ctx->log(RC_LOG_ERROR, "buildNavigation: Could not create solid heightfield.");
         return 0;
     }
 
     // Allocate array that can hold triangle flags.
     // If you have multiple meshes you need to process, allocate
-    // and array which can hold the max number of triangles you need to process.
+    // an array which can hold the max number of triangles you need to process.
     rc.triareas = new unsigned char[chunkyMesh->maxTrisPerChunk];
     if (!rc.triareas)
     {
-        ctx->log(RC_LOG_ERROR, "buildNavigation: Out of memory 'm_triareas' (%d).", chunkyMesh->maxTrisPerChunk);
+        m_ctx->log(RC_LOG_ERROR, "buildNavigation: Out of memory 'm_triareas' (%d).", chunkyMesh->maxTrisPerChunk);
         return 0;
     }
 
@@ -316,46 +374,46 @@ int OgreDetourTileCache::rasterizeTileLayers(InputGeom* geom, const int tx, cons
         const int ntris = node.n;
 
         memset(rc.triareas, 0, ntris*sizeof(unsigned char));
-        rcMarkWalkableTriangles(ctx, tcfg.walkableSlopeAngle,
+        rcMarkWalkableTriangles(m_ctx, tcfg.walkableSlopeAngle,
                                 verts, nverts, tris, ntris, rc.triareas);
 
-        rcRasterizeTriangles(ctx, verts, nverts, tris, rc.triareas, ntris, *rc.solid, tcfg.walkableClimb);
+        rcRasterizeTriangles(m_ctx, verts, nverts, tris, rc.triareas, ntris, *rc.solid, tcfg.walkableClimb);
     }
 
     // Once all geometry is rasterized, we do initial pass of filtering to
     // remove unwanted overhangs caused by the conservative rasterization
     // as well as filter spans where the character cannot possibly stand.
-    rcFilterLowHangingWalkableObstacles(ctx, tcfg.walkableClimb, *rc.solid);
-    rcFilterLedgeSpans(ctx, tcfg.walkableHeight, tcfg.walkableClimb, *rc.solid);
-    rcFilterWalkableLowHeightSpans(ctx, tcfg.walkableHeight, *rc.solid);
+    rcFilterLowHangingWalkableObstacles(m_ctx, tcfg.walkableClimb, *rc.solid);
+    rcFilterLedgeSpans(m_ctx, tcfg.walkableHeight, tcfg.walkableClimb, *rc.solid);
+    rcFilterWalkableLowHeightSpans(m_ctx, tcfg.walkableHeight, *rc.solid);
 
 
     rc.chf = rcAllocCompactHeightfield();
     if (!rc.chf)
     {
-        ctx->log(RC_LOG_ERROR, "buildNavigation: Out of memory 'chf'.");
+        m_ctx->log(RC_LOG_ERROR, "buildNavigation: Out of memory 'chf'.");
         return 0;
     }
-    if (!rcBuildCompactHeightfield(ctx, tcfg.walkableHeight, tcfg.walkableClimb, *rc.solid, *rc.chf))
+    if (!rcBuildCompactHeightfield(m_ctx, tcfg.walkableHeight, tcfg.walkableClimb, *rc.solid, *rc.chf))
     {
-        ctx->log(RC_LOG_ERROR, "buildNavigation: Could not build compact data.");
+        m_ctx->log(RC_LOG_ERROR, "buildNavigation: Could not build compact data.");
         return 0;
     }
 
     // Erode the walkable area by agent radius.
-    if (!rcErodeWalkableArea(ctx, tcfg.walkableRadius, *rc.chf))
+    if (!rcErodeWalkableArea(m_ctx, tcfg.walkableRadius, *rc.chf))
     {
-        ctx->log(RC_LOG_ERROR, "buildNavigation: Could not erode.");
+        m_ctx->log(RC_LOG_ERROR, "buildNavigation: Could not erode.");
         return 0;
     }
 
-    // (Optional) Mark areas.
-    const ConvexVolume* vols = geom->getConvexVolumes();
+    // Mark areas of dynamically added convex polygons
+    const ConvexVolume* const* vols = geom->getConvexVolumes();
     for (int i  = 0; i < geom->getConvexVolumeCount(); ++i)
     {
-        rcMarkConvexPolyArea(ctx, vols[i].verts, vols[i].nverts,
-                             vols[i].hmin, vols[i].hmax,
-                             (unsigned char)vols[i].area, *rc.chf);
+        rcMarkConvexPolyArea(m_ctx, vols[i]->verts, vols[i]->nverts,
+                             vols[i]->hmin, vols[i]->hmax,
+                             (unsigned char)vols[i]->area, *rc.chf);
     }
 
 
@@ -366,12 +424,12 @@ int OgreDetourTileCache::rasterizeTileLayers(InputGeom* geom, const int tx, cons
     rc.lset = rcAllocHeightfieldLayerSet();
     if (!rc.lset)
     {
-        ctx->log(RC_LOG_ERROR, "buildNavigation: Out of memory 'lset'.");
+        m_ctx->log(RC_LOG_ERROR, "buildNavigation: Out of memory 'lset'.");
         return 0;
     }
-    if (!rcBuildHeightfieldLayers(ctx, *rc.chf, tcfg.borderSize, tcfg.walkableHeight, *rc.lset))
+    if (!rcBuildHeightfieldLayers(m_ctx, *rc.chf, tcfg.borderSize, tcfg.walkableHeight, *rc.lset))
     {
-        ctx->log(RC_LOG_ERROR, "buildNavigation: Could not build heighfield layers.");
+        m_ctx->log(RC_LOG_ERROR, "buildNavigation: Could not build heightfield layers.");
         return 0;
     }
 
@@ -432,6 +490,16 @@ void OgreDetourTileCache::handleUpdate(const float dt)
     if (!m_tileCache)
         return;
 
+// TODO deferred rebuilding of tiles when adding or removing convex shape obstacles
+/*
+    // Update convex shapes
+    if (mChangedConvexVolumesCount >0) {
+        for(int i=0; i < mChangedConvexVolumesCount; i++) {
+            m_tileCache->get
+        }
+    }
+*/
+
     m_tileCache->update(dt, m_recast->m_navMesh);
 }
 
@@ -445,19 +513,6 @@ void OgreDetourTileCache::getTilePos(const float* pos, int& tx, int& ty)
     const float ts = m_tileSize*m_cellSize;
     tx = (int)((pos[0] - bmin[0]) / ts);
     ty = (int)((pos[2] - bmin[2]) / ts);
-}
-
-
-void OgreDetourTileCache::handleMeshChanged(class InputGeom* geom)
-{
-    //    Sample::handleMeshChanged(geom);
-
-    dtFreeTileCache(m_tileCache);
-    m_tileCache = 0;
-
-    dtFreeNavMesh(m_recast->m_navMesh);
-    m_recast->m_navMesh = 0;
-
 }
 
 
@@ -578,6 +633,8 @@ dtObstacleRef OgreDetourTileCache::hitTestObstacle(const dtTileCache* tc, const 
     return tc->getObstacleRef(obmin);
 }
 
+
+// TODO unused??
 void drawObstacles(const dtTileCache* tc)
 {
         // Draw obstacles
@@ -663,6 +720,7 @@ void OgreDetourTileCache::drawDetail(const int tx, const int ty)
         if (dtStatusFailed(status))
             return;
 
+//TODO this part is replicated from navmesh tile building in DetourTileCache. Maybe that can be reused.
         bc.lcset = dtAllocTileCacheContourSet(talloc);
         if (!bc.lcset)
             return;
@@ -705,4 +763,74 @@ void OgreDetourTileCache::drawPolyMesh(const struct dtTileCachePolyMesh &mesh, c
             m_recast->CreateRecastPolyMesh(verts, nverts, polys, npolys, areas, maxpolys, regions, nvp, cs, ch, orig, colorRegions);
 
             delete[] regions;
+}
+
+
+// TODO I need to redraw the changed tiles!!
+int OgreDetourTileCache::addConvexShapeObstacle(ConvexVolume *obstacle)
+{
+    // Add convex shape to input geometry
+    int result = m_geom->addConvexVolume(obstacle);
+    if (result == -1)
+        return result;
+
+// TODO use these vars for deferring addConvexShape actions
+    mChangedConvexVolumes[mChangedConvexVolumesCount] = obstacle;
+    mChangedConvexVolumesCount++;
+
+    // Determine which navmesh tiles have to be updated
+         // Borrowed from detourTileCache::update()
+            // Find touched tiles using obstacle bounds.
+    int ntouched = 0;
+    dtCompressedTileRef touched[DT_MAX_TOUCHED_TILES];
+    m_tileCache->queryTiles(obstacle->bmin, obstacle->bmax, touched, &ntouched, DT_MAX_TOUCHED_TILES);
+
+    // Rebuild affected tiles
+// TODO maybe defer this and timeslice it, like happend in dtTileCache with tempObstacle updates
+    for (int i = 0; i < ntouched; ++i)
+    {
+// TODO when you do deffered commands, make sure you issue a rebuild for a tile only once per update, so remove doubles from the request queue (this is what contains() is for in dtTileCache)
+        // Retrieve coordinates of tile that has to be rebuilt
+        const dtCompressedTile* tile = m_tileCache->getTileByRef(touched[i]);
+        int tx = tile->header->tx;
+        int ty = tile->header->ty;
+        // Issue full rebuild from inputGeom, including convex shapes, for this tile
+        buildTile(tx, ty);
+
+        drawDetail(tx, ty);     // TODO draw navmesh here?
+    }
+
+
+    return result;
+}
+
+bool OgreDetourTileCache::removeConvexShapeObstacle(int obstacleIndex)
+{
+    ConvexVolume* obstacle;
+    if(! m_geom->deleteConvexVolume(obstacleIndex, &obstacle))
+        return false;
+
+// TODO use these vars for deferring addConvexShape actions
+    mChangedConvexVolumes[mChangedConvexVolumesCount] = obstacle;
+    mChangedConvexVolumesCount++;
+
+//TODO For removing a convex volume again, store a reference to the impacted tiles in the convex volume so they can be found quickly
+    int ntouched = 0;
+    dtCompressedTileRef touched[DT_MAX_TOUCHED_TILES];
+    m_tileCache->queryTiles(obstacle->bmin, obstacle->bmax, touched, &ntouched, DT_MAX_TOUCHED_TILES);
+
+    // Rebuild affected tiles
+// TODO maybe defer this and timeslice it, like happens in dtTileCache with tempObstacle updates
+    for (int i = 0; i < ntouched; ++i)
+    {
+// TODO when you do deffered commands, make sure you issue a rebuild for a tile only once per update, so remove doubles from the request queue (this is what contains() is for in dtTileCache)
+        // Retrieve coordinates of tile that has to be rebuilt
+        const dtCompressedTile* tile = m_tileCache->getTileByRef(touched[i]);
+        int tx = tile->header->tx;
+        int ty = tile->header->ty;
+        // Issue full rebuild from inputGeom, with the specified convex shape removed, for this tile
+        buildTile(tx, ty);
+    }
+
+    return true;
 }

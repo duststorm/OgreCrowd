@@ -71,6 +71,8 @@ void OgreRecast::configure()
     // cellsize (1.5, 1.0) was the most accurate at finding all the places we could go, but was also slow to generate.
     // Might be suitable for pre-generated meshes. Though it also produces a lot more polygons.
 
+    m_ctx=new rcContext(true);
+
     // TODO clean this up, put in some more clear place, allow config file
     m_cellSize = /*9.0 ;//*/0.3;         //*
     m_cellHeight = /*6.0 ;//*/0.2;       //*
@@ -136,10 +138,6 @@ bool OgreRecast::NavMeshBuild(std::vector<Ogre::Entity*> srcMeshes)
 
 
    m_pLog->logMessage("NavMeshBuild Start");
-
-   m_ctx=new rcContext(true) ;
-
-
 
 
    //

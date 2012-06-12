@@ -11,6 +11,19 @@
 const float TEMP_OBSTACLE_RADIUS = 1.0f;
 const float TEMP_OBSTACLE_HEIGHT = 2.0f;
 
+
+struct ogredtTileCacheConvexObstacle
+{
+    ConvexVolume *obstacle;
+    dtCompressedTileRef touched[DT_MAX_TOUCHED_TILES];
+    dtCompressedTileRef pending[DT_MAX_TOUCHED_TILES];
+    unsigned short salt;
+    unsigned char state;
+    unsigned char ntouched;
+    unsigned char npending;
+    ogredtTileCacheConvexObstacle* next;    // Single linked list
+};
+
 struct MeshProcess : public dtTileCacheMeshProcess
 {
     InputGeom* m_geom;
@@ -234,6 +247,8 @@ public:
     OgreDetourTileCache(OgreRecast *recast);
     ~OgreDetourTileCache(void);
 
+    bool configure(std::vector<Ogre::Entity*> srcMeshes);
+
     /**
       * This is an Ogre adaptation of Sample_TempObstacles::handleBuild()
       * First init the OgreRecast module like you would construct a simple single
@@ -244,6 +259,13 @@ public:
       * The resulting navmesh will be created in the OgreRecast module, at OgreRecast::m_navMesh;
       **/
     bool TileCacheBuild(std::vector<Ogre::Entity*> srcMeshes);
+
+    /**
+      * Build or rebuild a cache tile or tiles at the specified index.
+      * At the moment this will issue an immediate update of the navmesh at the
+      * corresponding tiles.
+      **/
+    bool buildTile(const int tx, const int ty);
 
     /**
       * Build the 2D navigation grid divided in layers that is the intermediary format stored in the tilecache.
@@ -260,15 +282,25 @@ public:
       **/
     void getTilePos(const float* pos, int& tx, int& ty);
 
+    /**
+      * Update (tick) the tilecache.
+      * You must call this method in your render loop continuously to dynamically
+      * update the navmesh when obstacles are added or removed.
+      * Navmesh rebuilding happens per tile and only where needed. Tile rebuilding is
+      * timesliced.
+      **/
     void handleUpdate(const float dt);
-
-    void handleMeshChanged(class InputGeom* geom);
 
     void clearAllTempObstacles(void);
 
     dtObstacleRef addTempObstacle(Ogre::Vector3 pos);
 
     dtObstacleRef removeTempObstacle(Ogre::Vector3 raySource, Ogre::Vector3 rayHit);
+
+//TODO by adding deferred tasking to add and removeConvexShapeObstacle one can add multiple shapes at once to the same tile without it being rebuilt multiple times
+    int addConvexShapeObstacle(ConvexVolume *obstacle);
+
+    bool removeConvexShapeObstacle(int obstacleIndex);
 
     bool removeTempObstacle(dtObstacleRef obstacleRef);
 
@@ -300,6 +332,10 @@ protected:
     struct MeshProcess *m_tmproc;
     class dtTileCache *m_tileCache;
 
+    rcConfig m_cfg;
+    dtTileCacheParams m_tcparams;
+    rcContext *m_ctx;
+
     float m_cacheBuildTimeMs;
     int m_cacheCompressedSize;
     int m_cacheRawSize;
@@ -314,6 +350,9 @@ protected:
 
     int m_tw;
     int m_th;
+
+    ConvexVolume* mChangedConvexVolumes[InputGeom::MAX_VOLUMES];
+    int mChangedConvexVolumesCount;
 };
 
 #endif // OGREDETOURTILECACHE_H

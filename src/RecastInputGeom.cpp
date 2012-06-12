@@ -1,5 +1,6 @@
 #include "RecastInputGeom.h"
 #include "OgreRecast.h"
+#include <float.h>
 
 InputGeom::InputGeom(std::vector<Ogre::Entity*> srcMeshes)
     : mSrcMeshes(srcMeshes),
@@ -43,6 +44,16 @@ InputGeom::InputGeom(std::vector<Ogre::Entity*> srcMeshes)
         return;
     }
 }
+
+// TODO
+/*
+InputGeom::InputGeom(Ogre::Entity* srcMesh)
+{
+    std::vector<Ogre::Entity*> input;
+    input.push_back(srcMesh);
+    InputGeom(srcMesh);
+}
+*/
 
 InputGeom::~InputGeom()
 {
@@ -474,23 +485,119 @@ void InputGeom::deleteOffMeshConnection(int i)
         m_offMeshConFlags[i] = m_offMeshConFlags[m_offMeshConCount];
 }
 
-void InputGeom::addConvexVolume(const float* verts, const int nverts,
-                                                                const float minh, const float maxh, unsigned char area)
+// Returns true if 'a' is more lower-left than 'b'.
+static inline bool cmppt(const float* a, const float* b)
 {
-        if (m_volumeCount >= MAX_VOLUMES) return;
-        ConvexVolume* vol = &m_volumes[m_volumeCount++];
-        memset(vol, 0, sizeof(ConvexVolume));
-        memcpy(vol->verts, verts, sizeof(float)*3*nverts);
-        vol->hmin = minh;
-        vol->hmax = maxh;
-        vol->nverts = nverts;
-        vol->area = area;
+    if (a[0] < b[0]) return true;
+    if (a[0] > b[0]) return false;
+    if (a[2] < b[2]) return true;
+    if (a[2] > b[2]) return false;
+    return false;
 }
 
-void InputGeom::deleteConvexVolume(int i)
+// Returns true if 'c' is left of line 'a'-'b'.
+static inline bool left(const float* a, const float* b, const float* c)
 {
-        m_volumeCount--;
-        m_volumes[i] = m_volumes[m_volumeCount];
+    const float u1 = b[0] - a[0];
+    const float v1 = b[2] - a[2];
+    const float u2 = c[0] - a[0];
+    const float v2 = c[2] - a[2];
+    return u1 * v2 - v1 * u2 < 0;
+}
+
+// Calculates convex hull on xz-plane of points on 'pts',
+// stores the indices of the resulting hull in 'out' and
+// returns number of points on hull.
+int InputGeom::convexhull(const float* pts, int npts, int* out)
+{
+    // Find lower-leftmost point.
+    int hull = 0;
+    for (int i = 1; i < npts; ++i)
+        if (cmppt(&pts[i*3], &pts[hull*3]))
+            hull = i;
+    // Gift wrap hull.
+    int endpt = 0;
+    int i = 0;
+    do
+    {
+        out[i++] = hull;
+        endpt = 0;
+        for (int j = 1; j < npts; ++j)
+            if (hull == endpt || left(&pts[hull*3], &pts[endpt*3], &pts[j*3]))
+                endpt = j;
+        hull = endpt;
+    }
+    while (endpt != out[0]);
+
+    return i;
+}
+
+// TODO who manages created convexVolume objects, and maybe better return pointer
+ConvexVolume* InputGeom::getConvexHull(Ogre::Real offset)
+{
+    ConvexVolume* hull = new ConvexVolume();
+    int hullVertIndices[MAX_CONVEXVOL_PTS];
+    int nbHullVerts = convexhull(verts, nverts, hullVertIndices);
+    if (nbHullVerts < 3)
+        return hull;
+
+    // Copy geometry vertices to convex hull
+    for (int i = 0; i < nbHullVerts; i++) {
+        rcVcopy(&hull->verts[i*3], &verts[hullVertIndices[i]*3]);
+    }
+    hull->nverts = nbHullVerts;
+    hull->area = SAMPLE_POLYAREA_DOOR;   // You can choose whatever flag you assing to the poly area
+
+    // Find min and max height of convex hull
+    hull->hmin = FLT_MAX; hull->hmax = 0;
+    for (int i = 0; i < nbHullVerts; ++i)
+        hull->hmin = rcMin(hull->hmin, hull->verts[i*3+1]);
+// TODO set descent and height (see demo for details)
+//    hull.hmin -= m_boxDescent;
+//    hull.hmax = hull.hmin + m_boxHeight;
+    // 3D mesh min and max bounds
+    rcVcopy(hull->bmin, bmin);
+    rcVcopy(hull->bmax, bmax);
+
+    // Offset convex hull if needed
+    if(offset > 0.01f) {
+        float offsetVerts[2*MAX_CONVEXVOL_PTS * 3]; // An offset hull is allowed twice the number of vertices
+
+        int nOffsetVerts = rcOffsetPoly(hull->verts, hull->nverts, offset, offsetVerts, MAX_CONVEXVOL_PTS*2);
+
+        if (nOffsetVerts <= 0)
+            return hull;
+
+//TODO fix difference in max_pts for offset and non-offset hull
+        for(int i = 0; i < nOffsetVerts; i++)
+            rcVcopy(&hull->verts[i*3], &offsetVerts[i*3]);
+    }
+
+    return hull;
+}
+
+int InputGeom::addConvexVolume(ConvexVolume *vol)
+{
+        if (m_volumeCount >= MAX_VOLUMES)
+            return -1;
+
+        m_volumes[m_volumeCount] = vol;
+        m_volumeCount++;
+
+        return m_volumeCount-1; // Return index of created volume
+}
+
+bool InputGeom::deleteConvexVolume(int i, ConvexVolume** removedVolume)
+{
+    if(i >= m_volumeCount)
+        return false;
+
+
+    *removedVolume = m_volumes[i];
+    m_volumeCount--;
+    m_volumes[i] = m_volumes[m_volumeCount];
+
+    return true;
 }
 
 static bool isectSegAABB(const float* sp, const float* sq,

@@ -42,6 +42,9 @@ const bool OgreRecastApplication::RAYCAST_SCENE = false;
 // Set to true to use a temp obstacle in the agent steering demo instead of an agent with velocity (only works when SINGLE_NAVMESH is false)
 const bool OgreRecastApplication::TEMP_OBSTACLE_STEERING = true;
 
+// Set to true to place boxes as convex obstacles on the navmesh instead of the cylindrical temporary obstacles
+const bool OgreRecastApplication::COMPLEX_OBSTACLES = false;    // Warning: doesn't work yet!
+
 //-------------------------------------------------------------------------------------
 
 
@@ -467,17 +470,45 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
         Ogre::Vector3 rayHitPoint;
         Ogre::MovableObject *rayHitObject;
         if (rayQueryPointInScene(cursorRay, NAVMESH_MASK, rayHitPoint, &rayHitObject)) {
-            dtObstacleRef oRef = mDetourTileCache->addTempObstacle(rayHitPoint);
-            if (oRef) {
-                // Add visualization of temp obstacle
-                Ogre::SceneNode *obstacleMarker = getOrCreateMarker("TempObstacle"+Ogre::StringConverter::toString(oRef));
-                obstacleMarker->setPosition(rayHitPoint);
-                obstacleMarker->setVisible(mDebugDraw);
-                obstacleMarker->setScale(TEMP_OBSTACLE_RADIUS, TEMP_OBSTACLE_HEIGHT, TEMP_OBSTACLE_RADIUS);
-                Ogre::Entity *obstacleEnt = (Ogre::Entity*)obstacleMarker->getAttachedObject(0);
-                obstacleEnt->setQueryFlags(DEFAULT_MASK);  // exclude from navmesh queries
-                mDebugEntities.push_back(obstacleEnt);
+
+            if(COMPLEX_OBSTACLES) {
+                // Place a box as obstacle
+// TODO
+                Ogre::SceneNode* node = mSceneMgr->getRootSceneNode()->createChildSceneNode("BoxNode");
+                Ogre::Entity* ent = mSceneMgr->createEntity("Box", "Box.mesh");
+                node->attachObject(ent);
+                node->setPosition(rayHitPoint);
+
+                std::vector<Ogre::Entity*> ents;
+                ents.push_back(ent);
+                // TODO I want to use the other constructor for one entity here!!
+                InputGeom boxGeom(ents);
+//TODO WARNING: memory leak!
+                mDetourTileCache->addConvexShapeObstacle(boxGeom.getConvexHull(0.3));   // Create convex hull 0.3 offset around the object
+/*
+                int nHullVerts = convexhull(pts, nPts, hull);
+                int nOffsetVerts = rcOffsetPoly();
+                int volumeIdx = mGeom->addConvexVolume(hull);
+
+
+//                mDetourTileCache->
+*/
+            } else {
+                // Place simple cylindrical temporary obstacles
+
+                dtObstacleRef oRef = mDetourTileCache->addTempObstacle(rayHitPoint);
+                if (oRef) {
+                    // Add visualization of temp obstacle
+                    Ogre::SceneNode *obstacleMarker = getOrCreateMarker("TempObstacle"+Ogre::StringConverter::toString(oRef));
+                    obstacleMarker->setPosition(rayHitPoint);
+                    obstacleMarker->setVisible(mDebugDraw);
+                    obstacleMarker->setScale(TEMP_OBSTACLE_RADIUS, TEMP_OBSTACLE_HEIGHT, TEMP_OBSTACLE_RADIUS);
+                    Ogre::Entity *obstacleEnt = (Ogre::Entity*)obstacleMarker->getAttachedObject(0);
+                    obstacleEnt->setQueryFlags(DEFAULT_MASK);  // exclude from navmesh queries
+                    mDebugEntities.push_back(obstacleEnt);
+                }
             }
+
         }
     }
 

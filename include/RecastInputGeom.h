@@ -2,12 +2,26 @@
 #define RECASTINPUTGEOM_H
 
 #include <Ogre.h>
+#include "RecastConvexHull.h"
 
+/**
+  * The maximum amount of points that a convex hull
+  * used for dynamic obstacles on a navmesh can consist of.
+  * For performance reasons this cannot be too high.
+  **/
 static const int MAX_CONVEXVOL_PTS = 12;
+
+/**
+  * Volume describing a convex hull around
+  * geometry. Can be used as a collision mesh
+  * for dynamic obstacles.
+  **/
+// TODO also calculate and store height above the navmesh (boxDescent) and use boxHeight for hmax
 struct ConvexVolume
 {
         float verts[MAX_CONVEXVOL_PTS*3];
         float hmin, hmax;
+        float bmin[3], bmax[3];
         int nverts;
         int area;
 };
@@ -61,6 +75,7 @@ class InputGeom
 {
 public:
     InputGeom(std::vector<Ogre::Entity*> srcMeshes);
+    InputGeom(Ogre::Entity* srcMesh);
     ~InputGeom();
 
     float* getVerts(void);
@@ -75,6 +90,8 @@ public:
     bool isEmpty(void);
 
     void debugMesh(void);
+
+    static const int MAX_VOLUMES = 256;
 
 
     /**
@@ -129,12 +146,40 @@ public:
     /// @name Box Volumes.
     ///@{
     int getConvexVolumeCount() const { return m_volumeCount; }
-    const ConvexVolume* getConvexVolumes() const { return m_volumes; }
-    void addConvexVolume(const float* verts, const int nverts,
-                         const float minh, const float maxh, unsigned char area);
-    void deleteConvexVolume(int i);
+    const ConvexVolume* const* getConvexVolumes() const { return m_volumes; }
+    int addConvexVolume(ConvexVolume *vol);
+    bool deleteConvexVolume(int i, ConvexVolume** = NULL);
     void drawConvexVolumes(struct duDebugDraw* dd, bool hilight = false);
     ///@}
+
+    /**
+      * Create a convex hull in 2D space (on the xz plane) from
+      * the specified points.
+      * pts is a set of input 3D points.
+      * npts is the number of pts (pts should be 3*npts in size)
+      * The resulting vertices are written to out, returns the
+      * number of vertices written to out.
+      **/
+    static int convexhull(const float* pts, int npts, int* out);
+
+    /**
+      * Create a convex hull that fits around the points
+      * in this geometry.
+      * This type of convex hull is in fact a 2D shape on the
+      * xz plane (on the ground) and with a certain height, and
+      * at a certain distance above the ground (min 0, which means
+      * on the ground).
+      *
+      * Offset determines the offset of the hull from the
+      * geometry. 0 offset means the convex hull wraps
+      * tightly around the mesh.
+      *
+      * Convex hulls can be used as temporary or dynamic obstacles
+      * on a navmesh.
+      * You probably only want to create convex hulls from single
+      * entities or a few entities that are close together.
+      **/
+    ConvexVolume* getConvexHull(Ogre::Real offset = 0.0f);
 
 private:
     /**
@@ -179,10 +224,9 @@ private:
     int m_offMeshConCount;
     ///@}
 
-    /// @name Convex Volumes.
+    /// @name Convex Volumes (temporary) added to this geometry.
     ///@{
-    static const int MAX_VOLUMES = 256;
-    ConvexVolume m_volumes[MAX_VOLUMES];
+    ConvexVolume* m_volumes[MAX_VOLUMES];
     int m_volumeCount;
     ///@}
 };

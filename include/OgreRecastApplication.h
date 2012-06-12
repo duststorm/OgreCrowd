@@ -94,6 +94,14 @@ public:
     static const bool TEMP_OBSTACLE_STEERING;
 
     /**
+      * Determines whether the temporary obstacle placing demo places convex shapes
+      * on the navmesh.
+      * Set to true to place boxes, set to false to place standard temporary obstacles
+      * (simple cylinders).
+      **/
+    static const bool COMPLEX_OBSTACLES;
+
+    /**
       * Sets recast visual debugging geometry in the scene to visible (true) or hide
       * it (false).
       **/

@@ -111,8 +111,17 @@ public:
 	
 	dtStatus update(const float /*dt*/, class dtNavMesh* navmesh);
 	
+    /**
+      * Build or rebuild navmesh tile or tiles around specified position.
+      * The corresponding tile in the navmesh will be rebuilt from the
+      * (modified) compressed tile in the cache.
+      **/
 	dtStatus buildNavMeshTilesAt(const int tx, const int ty, class dtNavMesh* navmesh);
 	
+    /**
+      * Build or rebuild navmesh tile from compressed tile in the cache with specified ref.
+      * The corresponding tile in the navmesh will be rebuilt.
+      **/
 	dtStatus buildNavMeshTile(const dtCompressedTileRef ref, class dtNavMesh* navmesh);
 	
 	void calcTightTileBounds(const struct dtTileCacheLayerHeader* header, float* bmin, float* bmax) const;
@@ -198,6 +207,10 @@ private:
 	ObstacleRequest m_reqs[MAX_REQUESTS];
 	int m_nreqs;
 	
+    /**
+      * Maximum number of tile updates that will be effected
+      * in one tick.
+      **/
 	static const int MAX_UPDATE = 64;
 	dtCompressedTileRef m_update[MAX_UPDATE];
 	int m_nupdate;
