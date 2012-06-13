@@ -124,6 +124,8 @@ public:
                             const Ogre::Quaternion &orient = Ogre::Quaternion::IDENTITY,
                             const Ogre::Vector3 &scale = Ogre::Vector3::UNIT_SCALE);
 
+    static void drawConvexVolume(ConvexVolume *vol, Ogre::SceneManager* sceneMgr);
+
     inline const rcChunkyTriMesh* getChunkyMesh() const { return m_chunkyMesh; }
 
     bool raycastMesh(float* src, float* dst, float& tmin);

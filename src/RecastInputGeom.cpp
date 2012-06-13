@@ -544,21 +544,27 @@ ConvexVolume* InputGeom::getConvexHull(Ogre::Real offset)
     // Copy geometry vertices to convex hull
     for (int i = 0; i < nbHullVerts; i++) {
         rcVcopy(&hull->verts[i*3], &verts[hullVertIndices[i]*3]);
+//        Ogre::LogManager::getSingletonPtr()->logMessage(Ogre::StringConverter::toString(verts[i*3]));
     }
     hull->nverts = nbHullVerts;
     hull->area = SAMPLE_POLYAREA_DOOR;   // You can choose whatever flag you assing to the poly area
 
     // Find min and max height of convex hull
+    hull->hmin = bmin[1];
+    hull->hmax = bmax[1];
+/*
     hull->hmin = FLT_MAX; hull->hmax = 0;
     for (int i = 0; i < nbHullVerts; ++i)
         hull->hmin = rcMin(hull->hmin, hull->verts[i*3+1]);
 // TODO set descent and height (see demo for details)
 //    hull.hmin -= m_boxDescent;
 //    hull.hmax = hull.hmin + m_boxHeight;
+*/
     // 3D mesh min and max bounds
     rcVcopy(hull->bmin, bmin);
     rcVcopy(hull->bmax, bmax);
 
+//TODO offset is still broken for a lot of shapes! Fix this!
     // Offset convex hull if needed
     if(offset > 0.01f) {
         float offsetVerts[2*MAX_CONVEXVOL_PTS * 3]; // An offset hull is allowed twice the number of vertices
@@ -1049,4 +1055,65 @@ int rcGetChunksOverlappingSegment(const rcChunkyTriMesh* cm,
     }
 
     return n;
+}
+
+
+void InputGeom::drawConvexVolume(ConvexVolume *vol, Ogre::SceneManager* sceneMgr)
+{
+    // Define manualObject with convex volume faces
+    Ogre::ManualObject *manual = sceneMgr->createManualObject("ConvexVolume");
+    // Set material
+    manual->begin("recastdebug", Ogre::RenderOperation::OT_LINE_LIST) ;
+
+    // Vertex color: boring grey
+    Ogre::ColourValue color(0.5, 0.5, 0.5);
+
+    for (int i = 0, j = vol->nverts-1; i < vol->nverts; j = i++)
+    {
+        const float* vi = &vol->verts[j*3];
+        const float* vj = &vol->verts[i*3];
+
+        manual->position(vj[0], vol->hmin, vj[2]);  manual->colour(color);
+        manual->position(vi[0], vol->hmin, vi[2]);  manual->colour(color);
+        manual->position(vj[0], vol->hmax, vj[2]);  manual->colour(color);
+        manual->position(vi[0], vol->hmax, vi[2]);  manual->colour(color);
+        manual->position(vj[0], vol->hmin, vj[2]);  manual->colour(color);
+        manual->position(vj[0], vol->hmax, vj[2]);  manual->colour(color);
+    }
+/*
+    // Create triangles
+    for (int i = 0; i < vol->nverts-1; ++i) {   // Number of quads (is number of tris -1)
+        // We ignore the y component and just draw a box between min height and max height
+
+        // Triangle 1 of the quad
+        // Bottom vertex
+        manual->position(vol->verts[3*i], vol->hmin,vol->verts[3*i+2]);
+        manual->colour(color);
+
+        // Top vertex
+        manual->position(vol->verts[3*i], vol->hmax,vol->verts[3*i+2]);
+        manual->colour(color);
+
+        // Next bottom vertex
+        manual->position(vol->verts[3*i+3], vol->hmin,vol->verts[3*i+5]);
+        manual->colour(color);
+
+
+        // Triangle 2 of the quad
+        // Bottom vertex
+        manual->position(vol->verts[3*i], vol->hmin,vol->verts[3*i+2]);
+        manual->colour(color);
+
+        // Top vertex
+        manual->position(vol->verts[3*i], vol->hmax,vol->verts[3*i+2]);
+        manual->colour(color);
+
+        // Next Top vertex
+        manual->position(vol->verts[3*i+3], vol->hmax,vol->verts[3*i+5]);
+        manual->colour(color);
+    }
+*/
+
+    manual->end();
+    sceneMgr->getRootSceneNode()->attachObject(manual);
 }

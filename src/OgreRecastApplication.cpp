@@ -484,7 +484,10 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
                 // TODO I want to use the other constructor for one entity here!!
                 InputGeom boxGeom(ents);
 //TODO WARNING: memory leak!
-                mDetourTileCache->addConvexShapeObstacle(boxGeom.getConvexHull(0.3));   // Create convex hull 0.3 offset around the object
+                ConvexVolume *vol = boxGeom.getConvexHull(/*0.3*/);     // Create convex hull 0.3 offset around the object
+                mDetourTileCache->addConvexShapeObstacle(vol);
+                InputGeom::drawConvexVolume(vol, mSceneMgr);    // Debug convex volume
+                ent->setVisible(false);
 /*
                 int nHullVerts = convexhull(pts, nPts, hull);
                 int nOffsetVerts = rcOffsetPoly();
