@@ -881,6 +881,8 @@ bool OgreDetourTileCache::removeConvexShapeObstacle(int obstacleIndex, ConvexVol
         int tx = tile->header->tx;
         int ty = tile->header->ty;
         // Issue full rebuild from inputGeom, with the specified convex shape removed, for this tile
+        removeTile(touched[i]);     // Important: if a tile already exists at this position, first remove the old one or it will not be updated!
+
         buildTile(tx, ty);
     }
 
