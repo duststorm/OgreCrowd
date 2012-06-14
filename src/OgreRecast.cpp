@@ -643,6 +643,7 @@ void OgreRecast::CreateRecastPolyMesh(const Ogre::String name, const unsigned sh
     m_flDataY=nverts ;
 
    // When drawing regions choose different random colors for each region
+// TODO maybe cache generated colors so when rebuilding tiles the same colors can be reused? If possible
    Ogre::ColourValue* regionColors = NULL;
    if(colorRegions) {
        regionColors = new Ogre::ColourValue[maxpolys];
