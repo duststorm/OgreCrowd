@@ -29,7 +29,7 @@ ConvexVolume::ConvexVolume(InputGeom* geom, float offset)
                 endpt = j;
         hull = endpt;
     }
-    while (endpt != hullVertIndices[0]);
+    while (endpt != hullVertIndices[0] && i < MAX_CONVEXVOL_PTS);   // TODO: number of hull points is limited, but in a naive way. In large meshes the best candidate points for the hull might not be selected
 
     nverts = i;
 

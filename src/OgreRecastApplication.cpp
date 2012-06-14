@@ -519,13 +519,14 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
                 // Place a box as obstacle
                 Ogre::SceneNode* node = mSceneMgr->getRootSceneNode()->createChildSceneNode();
                 Ogre::Entity* ent;
-//                if (Ogre::Math::RangeRandom(0,2) < 1) {
+                if (Ogre::Math::RangeRandom(0,2) < 1.5) {
                     ent = mSceneMgr->createEntity("Box.mesh");
-//                } else
-// TODO convex hull building does not work yet with higher detail meshes
-//                    ent = mSceneMgr->createEntity("Pot.mesh");
-//                    node->setScale(0.3, 0.3, 0.3);
-//                }
+                } else {
+                    // For more complex entities, convex hull building will consider only MAX_CONVEXVOL_PTS vertices and the result can be sub-optimal.
+                    // A more robust convex hull building algorithm might be preferred.
+                    ent = mSceneMgr->createEntity("Pot.mesh");
+                    node->setScale(0.3, 0.3, 0.3);
+                }
                 mConvexObstacles.push_back(ent);
                 node->attachObject(ent);
                 node->setPosition(rayHitPoint);
@@ -535,13 +536,12 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
                 // TODO I want to use the other constructor for one entity here!!
                 InputGeom boxGeom(ents);
 //TODO WARNING: memory leak! No one manages convexVolume objects at the moment
-                ConvexVolume *vol = boxGeom.getConvexHull(0.3);     // Create convex hull 0.3 offset around the object
-// TODO find out whether I need these hacks
-//                vol->bmin[1] = -1;
-//                vol->hmin = -1;
+                // Create convex hull with agent radios offset around the object (this is important so agents don't walk through the edges of the obstacle!)
+                ConvexVolume *vol = boxGeom.getConvexHull(mDetourCrowd->getAgentRadius());
                 vol->area = RC_NULL_AREA;   // Set area described by convex polygon to "unwalkable"
 
                 InputGeom::drawConvexVolume(Ogre::StringConverter::toString(mConvexObstacles.size()-1), vol, mSceneMgr);    // Debug convex volume
+                Ogre::LogManager::getSingletonPtr()->logMessage("Adding obstacle ConvexVolume_"+Ogre::StringConverter::toString(mConvexObstacles.size()-1));
                 mDetourTileCache->addConvexShapeObstacle(vol);
 
                 //ent->setVisible(false);       // TODO maybe make boxes semi-transparent in debug draw mode
