@@ -358,7 +358,7 @@ protected:
     int m_tw;
     int m_th;
 
-    ConvexVolume* mChangedConvexVolumes[InputGeom::MAX_VOLUMES];
+    ConvexVolume* mChangedConvexVolumes[InputGeom::MAX_VOLUMES];    // TODO is this really MAX_VOLUMES? would be more like MAX_REQUESTS
     int mChangedConvexVolumesCount;
 };
 

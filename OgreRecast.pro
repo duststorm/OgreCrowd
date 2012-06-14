@@ -123,7 +123,10 @@ SOURCES += src/BaseApplication.cpp \
     src/OgreDetourTileCache.cpp \
     src/RecastContrib/fastlz/fastlz.c \
     src/RecastInputGeom.cpp \
-    src/RecastConvexHull.cpp
+    src/RecastConvexHull.cpp \
+    src/Obstacle.cpp \
+    src/CylinderObstacle.cpp \
+    src/ConvexShapeObstacle.cpp
 HEADERS += include/BaseApplication.h \
     include/OgreRecastApplication.h \
     include/OgreRecastDefinitions.h \
@@ -155,4 +158,7 @@ HEADERS += include/BaseApplication.h \
     include/OgreDetourTileCache.h \
     include/RecastContrib/fastlz/fastlz.h \
     include/RecastInputGeom.h \
-    include/RecastConvexHull.h
+    include/RecastConvexHull.h \
+    include/Obstacle.h \
+    include/CylinderObstacle.h \
+    include/ConvexShapeObstacle.h

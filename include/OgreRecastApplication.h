@@ -23,6 +23,7 @@ This source file is part of the
 #include "OgreDetourCrowd.h"
 #include "Character.h"
 #include "OgreDetourTileCache.h"
+#include "Obstacle.h"
 
 class OgreRecastApplication : public BaseApplication
 {
@@ -273,7 +274,7 @@ private:
 
     std::vector<Ogre::Entity*> mDebugEntities;
 
-    std::vector<Ogre::Entity*> mConvexObstacles;
+    std::vector<Obstacle*> mObstacles;
 };
 
 

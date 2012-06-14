@@ -20,6 +20,9 @@ This source file is part of the
 #include "AnimateableCharacter.h"
 #include "RecastInputGeom.h"
 #include <vector>
+#include "ConvexShapeObstacle.h"
+#include "CylinderObstacle.h"
+#include "RecastInputGeom.h"
 
 
 //--- SETTINGS ------------------------------------------------------------------------
@@ -516,51 +519,18 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
             Ogre::LogManager::getSingletonPtr()->logMessage("Adding obstacle on point "+Ogre::StringConverter::toString(rayHitPoint));
 
             if(COMPLEX_OBSTACLES) {
-                // Place a box as obstacle
-                Ogre::SceneNode* node = mSceneMgr->getRootSceneNode()->createChildSceneNode();
-                Ogre::Entity* ent;
-                if (Ogre::Math::RangeRandom(0,2) < 1.5) {
-                    ent = mSceneMgr->createEntity("Box.mesh");
-                } else {
-                    // For more complex entities, convex hull building will consider only MAX_CONVEXVOL_PTS vertices and the result can be sub-optimal.
-                    // A more robust convex hull building algorithm might be preferred.
-                    ent = mSceneMgr->createEntity("Pot.mesh");
-                    node->setScale(0.3, 0.3, 0.3);
-                }
-                mConvexObstacles.push_back(ent);
-                node->attachObject(ent);
-                node->setPosition(rayHitPoint);
+                // Place a convex hull obstacle on the navmesh
 
-                std::vector<Ogre::Entity*> ents;
-                ents.push_back(ent);
-                // TODO I want to use the other constructor for one entity here!!
-                InputGeom boxGeom(ents);
-//TODO WARNING: memory leak! No one manages convexVolume objects at the moment
-                // Create convex hull with agent radios offset around the object (this is important so agents don't walk through the edges of the obstacle!)
-                ConvexVolume *vol = boxGeom.getConvexHull(mDetourCrowd->getAgentRadius());
-                vol->area = RC_NULL_AREA;   // Set area described by convex polygon to "unwalkable"
-
-                InputGeom::drawConvexVolume(Ogre::StringConverter::toString(mConvexObstacles.size()-1), vol, mSceneMgr);    // Debug convex volume
-                Ogre::LogManager::getSingletonPtr()->logMessage("Adding obstacle ConvexVolume_"+Ogre::StringConverter::toString(mConvexObstacles.size()-1));
-                mDetourTileCache->addConvexShapeObstacle(vol);
-
-                //ent->setVisible(false);       // TODO maybe make boxes semi-transparent in debug draw mode
+                // First check whether not too many convex obstacles were created already
+                if(mObstacles.size() < InputGeom::MAX_VOLUMES)
+                    mObstacles.push_back(new ConvexShapeObstacle(rayHitPoint, mDetourCrowd->getAgentRadius(), mDetourTileCache));
+                        // Create convex hull with agent radios offset around the object (this is important so agents don't walk through the edges of the obstacle!)
             } else {
                 // Place simple cylindrical temporary obstacles
 
-                dtObstacleRef oRef = mDetourTileCache->addTempObstacle(rayHitPoint);
-                if (oRef) {
-                    // Add visualization of temp obstacle
-                    Ogre::SceneNode *obstacleMarker = getOrCreateMarker("TempObstacle"+Ogre::StringConverter::toString(oRef));
-                    obstacleMarker->setPosition(rayHitPoint);
-                    obstacleMarker->setVisible(mDebugDraw);
-                    obstacleMarker->setScale(TEMP_OBSTACLE_RADIUS, TEMP_OBSTACLE_HEIGHT, TEMP_OBSTACLE_RADIUS);
-                    Ogre::Entity *obstacleEnt = (Ogre::Entity*)obstacleMarker->getAttachedObject(0);
-                    obstacleEnt->setQueryFlags(DEFAULT_MASK);  // exclude from navmesh queries
-                    mDebugEntities.push_back(obstacleEnt);
-                }
+                // There is no limit on the number of cylindrical temp obstacles, only a limit on the number add/remove requests per time period (MAX_REQUESTS)
+                mObstacles.push_back(new CylinderObstacle(rayHitPoint, mDetourTileCache));
             }
-
         }
     }
 
@@ -580,39 +550,48 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
             }
 
             if(COMPLEX_OBSTACLES) {
+                // Remove convex obstacle from detourTileCache, we use ray picking of obstacles supplied by OgreDetourTileCache
                 int convexVolumeIdx = mDetourTileCache->removeConvexShapeObstacle(cursorRay.getOrigin(), rayHitPoint);
                 if(convexVolumeIdx != -1) {
                     // Remove box obstacle
-// TODO: This is quite dirty: we rely on the fact that the indexes of mConvexObstacles is the same as the internal ones of mDetourTileCache->inputGeom. Better create an obstacle class to manage the entity
-                    Ogre::Entity *obstacleEnt = mConvexObstacles[convexVolumeIdx];
-                    if (convexVolumeIdx == mConvexObstacles.size()-1) {
-                        mConvexObstacles.pop_back();
+// TODO: This is quite dirty: we rely on the fact that the indexes of mObstacles are the same as the internal ones of mDetourTileCache->inputGeom.
+                    Obstacle *mObstacle = mObstacles[convexVolumeIdx];
+                    if (convexVolumeIdx == mObstacles.size()-1) {
+                        mObstacles.pop_back();
                     } else {
-                        mConvexObstacles[convexVolumeIdx] = mConvexObstacles[mConvexObstacles.size()-1];
-                        mConvexObstacles.pop_back();
+                        mObstacles[convexVolumeIdx] = mObstacles[mObstacles.size()-1];
+                        mObstacles.pop_back();
                     }
-                    Ogre::SceneNode *parentNode = obstacleEnt->getParentSceneNode();
-                    obstacleEnt->detachFromParent();
-                    mSceneMgr->destroyEntity(obstacleEnt);
-                    mSceneMgr->destroySceneNode(parentNode);
-                    Ogre::ManualObject *convexEnt = mSceneMgr->getManualObject("ConvexVolume_"+ Ogre::StringConverter::toString(convexVolumeIdx));
-                    convexEnt->detachFromParent();
-                    mSceneMgr->destroyManualObject(convexEnt);
-                    convexEnt = NULL;
-// TODO remove convex mesh debug lines, rebuild and redraw tile
-// TODO grey lines around boxes should disappear when disabling debug drawing
+
+                    // Call destructor on obstacle
+                    delete mObstacle;
                 }
+
 
             } else {
                 dtObstacleRef oRef = mDetourTileCache->removeTempObstacle(cursorRay.getOrigin(), rayHitPoint);
                 if (oRef) {
-                    // Remove visualization of temp obstacle
-                    Ogre::SceneNode *obstacleMarker = getOrCreateMarker("TempObstacle"+Ogre::StringConverter::toString(oRef));
-                    Ogre::Entity *obstacleEnt = (Ogre::Entity*)obstacleMarker->getAttachedObject(0);
+                    // Remove matching temp obstacle
+                    for(std::vector<Obstacle*>::iterator iter = mObstacles.begin(); iter != mObstacles.end(); iter++) {
+                        CylinderObstacle *obst = (CylinderObstacle*) (*iter);
+                        if (obst->getObstacleRef() == oRef) {
+                            // Remove obstacle from obstacles list
+                            mObstacles.erase(remove(mObstacles.begin(), mObstacles.end(), obst), mObstacles.end());
+
+                            // Call destructor for obstacle
+                            delete obst;
+
+                            break; // After the remove operation we cannot use our iterator anymore!
+                        }
+                    }
+
+// TODO add these markers to debugEntities list?
+                    /*
                     // Remove debug entity
                     mDebugEntities.erase(remove(mDebugEntities.begin(), mDebugEntities.end(), obstacleEnt), mDebugEntities.end());
                     obstacleEnt->detachFromParent();
                     mSceneMgr->destroyEntity(obstacleEnt);
+                    */
                 }
             }
         }

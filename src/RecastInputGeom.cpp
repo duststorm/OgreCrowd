@@ -494,13 +494,15 @@ ConvexVolume* InputGeom::getConvexHull(Ogre::Real offset)
 
 int InputGeom::addConvexVolume(ConvexVolume *vol)
 {
-        if (m_volumeCount >= MAX_VOLUMES)
-            return -1;
+    // The maximum number of convex volumes that can be added to the navmesh equals the max amount
+    // of volumes that can be added to the inputGeom it is built from.
+    if (m_volumeCount >= InputGeom::MAX_VOLUMES)
+        return -1;
 
-        m_volumes[m_volumeCount] = vol;
-        m_volumeCount++;
+    m_volumes[m_volumeCount] = vol;
+    m_volumeCount++;
 
-        return m_volumeCount-1; // Return index of created volume
+    return m_volumeCount-1; // Return index of created volume
 }
 
 bool InputGeom::deleteConvexVolume(int i, ConvexVolume** removedVolume)
@@ -998,7 +1000,7 @@ int rcGetChunksOverlappingSegment(const rcChunkyTriMesh* cm,
 }
 
 
-void InputGeom::drawConvexVolume(Ogre::String name, ConvexVolume *vol, Ogre::SceneManager* sceneMgr)
+Ogre::ManualObject* InputGeom::drawConvexVolume(Ogre::String name, ConvexVolume *vol, Ogre::SceneManager* sceneMgr)
 {
     // Define manualObject with convex volume faces
     Ogre::ManualObject *manual = sceneMgr->createManualObject("ConvexVolume_"+name);
@@ -1055,6 +1057,7 @@ void InputGeom::drawConvexVolume(Ogre::String name, ConvexVolume *vol, Ogre::Sce
 */
 
     manual->end();
-    sceneMgr->getRootSceneNode()->attachObject(manual);
+    sceneMgr->getRootSceneNode()->attachObject(manual); // Just attach it to root scenenode since its coordinates are in world-space
+    return manual;
 }
 
