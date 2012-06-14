@@ -4,36 +4,6 @@
 #include <Ogre.h>
 #include "RecastConvexHull.h"
 
-/**
-  * The maximum amount of points that a convex hull
-  * used for dynamic obstacles on a navmesh can consist of.
-  * For performance reasons this cannot be too high.
-  **/
-static const int MAX_CONVEXVOL_PTS = 12;
-
-class InputGeom;
-
-/**
-  * Volume describing a convex hull around
-  * geometry. Can be used as a collision mesh
-  * for dynamic obstacles.
-  **/
-// TODO also calculate and store height above the navmesh (boxDescent) and use boxHeight for hmax
-class ConvexVolume
-{
-public:
-    ConvexVolume(InputGeom *geom, float offset = 0.0f);
-
-    float verts[MAX_CONVEXVOL_PTS*3];
-    float hmin, hmax;
-    float bmin[3], bmax[3];
-    int nverts;
-    int area;
-
-private:
-    static inline bool cmppt(const float* a, const float* b);
-    static inline bool left(const float* a, const float* b, const float* c);
-};
 
 struct rcChunkyTriMeshNode
 {
@@ -52,6 +22,7 @@ struct rcChunkyTriMesh
         int ntris;
         int maxTrisPerChunk;
 };
+
 
 /// Creates partitioned triangle mesh (AABB tree),
 /// where each node contains at max trisPerChunk triangles.
@@ -171,15 +142,6 @@ public:
     void drawConvexVolumes(struct duDebugDraw* dd, bool hilight = false);
     ///@}
 
-    /**
-      * Create a convex hull in 2D space (on the xz plane) from
-      * the specified points.
-      * pts is a set of input 3D points.
-      * npts is the number of pts (pts should be 3*npts in size)
-      * The resulting vertices are written to out, returns the
-      * number of vertices written to out.
-      **/
-    static int convexhull(const float* pts, int npts, int* out);
 
     /**
       * Create a convex hull that fits around the points
