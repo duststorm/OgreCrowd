@@ -489,7 +489,7 @@ void InputGeom::deleteOffMeshConnection(int i)
 ConvexVolume* InputGeom::getConvexHull(Ogre::Real offset)
 {
 // TODO who manages created convexVolume objects, and maybe better return pointer
-    return new ConvexVolume(this);
+    return new ConvexVolume(this, offset);
 }
 
 int InputGeom::addConvexVolume(ConvexVolume *vol)
