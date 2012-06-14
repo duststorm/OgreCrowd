@@ -1,7 +1,7 @@
 This is a test project for integrating the Recast navigation library (http://code.google.com/p/recastnavigation) with Ogre3D (http://www.ogre3d.org).
-By Duststorm, thanks to the snippets from mkultra333 (http://www.ogre3d.org/forums/viewtopic.php?f=5&t=62079).
+By Duststorm, thanks to the snippets from mkultra333 (http://www.ogre3d.org/forums/viewtopic.php?f=5&t=62079) and Paul Wilson (http://www.ogre3d.org/forums/viewtopic.php?f=11&t=57487).
 
-Using Ogre 1.7.3 and Recast 1.4 (svn revision 335)
+Using Ogre 1.7.3 or 1.8 and Recast 1.4 (svn revision 345)
 
 
 More information:
@@ -17,3 +17,7 @@ http://code.google.com/p/recastnavigation
 
 Recast developers blog:
 http://digestingduck.blogspot.com
+
+
+Ogre3D forum thread for more info:
+http://www.ogre3d.org/forums/viewtopic.php?f=11&t=69781
