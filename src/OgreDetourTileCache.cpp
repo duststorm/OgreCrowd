@@ -286,6 +286,11 @@ bool OgreDetourTileCache::buildTile(const int tx, const int ty)
 //TODO update this value?
     //m_cacheBuildMemUsage = m_talloc->high;
 
+
+// TODO extract debug drawing to a separate class
+    drawDetail(tx, ty);
+
+
     return true;
 }
 
@@ -737,13 +742,17 @@ void OgreDetourTileCache::drawDetail(const int tx, const int ty)
             return;
 
         // Draw navmesh
-//        duDebugDrawTileCachePolyMesh(dd, *bc.lmesh, tile->header->bmin, params->cs, params->ch);
-        drawPolyMesh(*bc.lmesh, tile->header->bmin, params->cs, params->ch, *bc.layer);
+        Ogre::String tileName = Ogre::StringConverter::toString(tiles[i]);
+        Ogre::LogManager::getSingletonPtr()->logMessage("Drawing tile: "+tileName);
+// TODO this is a dirty quickfix that should be gone as soon as there is a rebuildTile(tileref) method
+        if(m_recast->m_pSceneMgr->hasManualObject("RecastMOWalk_"+tileName))
+            return;
+        drawPolyMesh(tileName, *bc.lmesh, tile->header->bmin, params->cs, params->ch, *bc.layer);
 
     }
 }
 
-void OgreDetourTileCache::drawPolyMesh(const struct dtTileCachePolyMesh &mesh, const float *orig, const float cs, const float ch, const struct dtTileCacheLayer &regionLayers, bool colorRegions)
+void OgreDetourTileCache::drawPolyMesh(const Ogre::String tileName, const struct dtTileCachePolyMesh &mesh, const float *orig, const float cs, const float ch, const struct dtTileCacheLayer &regionLayers, bool colorRegions)
 {
             const int nvp = mesh.nvp;
 
@@ -760,7 +769,7 @@ void OgreDetourTileCache::drawPolyMesh(const struct dtTileCachePolyMesh &mesh, c
                 regions[i] = (const unsigned short)regs[i];
             }
 
-            m_recast->CreateRecastPolyMesh(verts, nverts, polys, npolys, areas, maxpolys, regions, nvp, cs, ch, orig, colorRegions);
+            m_recast->CreateRecastPolyMesh(tileName, verts, nverts, polys, npolys, areas, maxpolys, regions, nvp, cs, ch, orig, colorRegions);
 
             delete[] regions;
 }
@@ -794,21 +803,64 @@ int OgreDetourTileCache::addConvexShapeObstacle(ConvexVolume *obstacle)
         const dtCompressedTile* tile = m_tileCache->getTileByRef(touched[i]);
         int tx = tile->header->tx;
         int ty = tile->header->ty;
-        // Issue full rebuild from inputGeom, including convex shapes, for this tile
-        buildTile(tx, ty);
+        tile = NULL;
 
-        drawDetail(tx, ty);     // TODO draw navmesh here?
+        // Issue full rebuild from inputGeom, including convex shapes, for this tile
+        removeTile(touched[i]);     // Important: if a tile already exists at this position, first remove the old one or it will not be updated!
+
+// TODO we actually want a buildTile method with a tileRef as input param. As this method does a bounding box intersection with tiles again, which might result in multiple tiles being rebuilt (which will lead to nothing because only one tile is removed..), and we determined which tiles to bebuild already, anyway (using queryTiles)
+        buildTile(tx, ty);
     }
 
 
     return result;
 }
 
-bool OgreDetourTileCache::removeConvexShapeObstacle(int obstacleIndex)
+bool OgreDetourTileCache::removeTile(dtTileRef tileRef)
+{
+    Ogre::LogManager::getSingletonPtr()->logMessage("Removed tile "+Ogre::StringConverter::toString(tileRef));
+
+    dtStatus status = m_tileCache->removeTile(tileRef, NULL, NULL);
+        // RemoveTile also returns the data of the removed tile if you supply the second and third parameter
+
+    if (status != DT_SUCCESS)
+        return false;
+
+// TODO extract debug drawing into separate class
+    /*
+    if (m_debugDrawing)
+        m_debugDrawing->removeTile();
+    */
+
+
+    // Remove debug geometry that belongs to this tile from scene
+    Ogre::String entName = "RecastMOWalk_"+Ogre::StringConverter::toString(tileRef);
+    Ogre::LogManager::getSingletonPtr()->logMessage("Removing tile: "+entName);
+    Ogre::MovableObject *o = m_recast->m_pRecastSN->getAttachedObject(entName);
+    o->detachFromParent();
+    m_recast->m_pSceneMgr->destroyManualObject(entName);
+
+    entName = "RecastMONeighbour_"+Ogre::StringConverter::toString(tileRef);
+    o = m_recast->m_pRecastSN->getAttachedObject(entName);
+    o->detachFromParent();
+    m_recast->m_pSceneMgr->destroyManualObject(entName);
+
+    entName = "RecastMOBoundary_"+Ogre::StringConverter::toString(tileRef);
+    o = m_recast->m_pRecastSN->getAttachedObject(entName);
+    o->detachFromParent();
+    m_recast->m_pSceneMgr->destroyManualObject(entName);
+
+    return true;
+}
+
+bool OgreDetourTileCache::removeConvexShapeObstacle(int obstacleIndex, ConvexVolume** removedVolume)
 {
     ConvexVolume* obstacle;
     if(! m_geom->deleteConvexVolume(obstacleIndex, &obstacle))
         return false;
+
+    if(removedVolume != NULL)
+        *removedVolume = obstacle;
 
 // TODO use these vars for deferring addConvexShape actions
     mChangedConvexVolumes[mChangedConvexVolumesCount] = obstacle;
@@ -833,4 +885,62 @@ bool OgreDetourTileCache::removeConvexShapeObstacle(int obstacleIndex)
     }
 
     return true;
+}
+
+int OgreDetourTileCache::removeConvexShapeObstacle(Ogre::Vector3 raySource, Ogre::Vector3 rayHit, ConvexVolume** removedVolume)
+{
+    float sp[3]; float sq[3];
+    OgreRecast::OgreVect3ToFloatA(raySource, sp);
+    OgreRecast::OgreVect3ToFloatA(rayHit, sq);
+
+    int shapeIdx = m_geom->hitTestConvexVolume(sp, sq);
+
+    if (shapeIdx == -1)
+        return -1;
+
+    removeConvexShapeObstacle(shapeIdx, removedVolume);
+    return shapeIdx;
+}
+
+
+std::vector<dtCompressedTileRef> OgreDetourTileCache::getTilesAroundPoint(Ogre::Vector3 point, Ogre::Real radius)
+{
+    std::vector<dtCompressedTileRef> result;
+
+    // calculate bounds
+    float bmin[3]; float bmax[3];
+    bmin[0] = point.x - radius;
+    bmin[1] = point.y - radius;
+    bmin[2] = point.z - radius;
+    bmax[0] = point.x + radius;
+    bmax[1] = point.y + radius;
+    bmax[2] = point.z + radius;
+
+    dtCompressedTileRef results[DT_MAX_TOUCHED_TILES];
+    int resultCount = 0;
+    m_tileCache->queryTiles(bmin, bmax, results, &resultCount, DT_MAX_TOUCHED_TILES);
+
+    if (resultCount > 0)
+        result.assign(results, results + resultCount);
+
+    return result;
+}
+
+std::vector<dtCompressedTileRef> OgreDetourTileCache::getTilesContainingBox(Ogre::Vector3 boxMin, Ogre::Vector3 boxMax)
+{
+    std::vector<dtCompressedTileRef> result;
+
+    // calculate bounds
+    float bmin[3]; float bmax[3];
+    OgreRecast::OgreVect3ToFloatA(boxMin, bmin);
+    OgreRecast::OgreVect3ToFloatA(boxMax, bmax);
+
+    dtCompressedTileRef results[DT_MAX_TOUCHED_TILES];
+    int resultCount = 0;
+    m_tileCache->queryTiles(bmin, bmax, results, &resultCount, DT_MAX_TOUCHED_TILES);
+
+    if (resultCount > 0)
+        result.assign(results, results + resultCount);
+
+    return result;
 }

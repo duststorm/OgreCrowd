@@ -5,8 +5,7 @@
 
 OgreRecast::OgreRecast(Ogre::SceneManager* sceneMgr)
     : m_pSceneMgr(sceneMgr),
-    m_pRecastSN(NULL),
-    m_manualOIndex(-1)
+    m_pRecastSN(NULL)
 {
    // Init recast stuff in a safe state
    
@@ -25,6 +24,8 @@ OgreRecast::OgreRecast(Ogre::SceneManager* sceneMgr)
 
    RecastCleanup() ; //?? don't know if I should do this prior to making any recast stuff, but the demo did.
    m_pRecastMOPath=NULL ;
+
+   m_pRecastSN=m_pSceneMgr->getRootSceneNode()->createChildSceneNode("RecastSN");
 
 
    m_pLog = Ogre::LogManager::getSingletonPtr();
@@ -631,12 +632,12 @@ void OgreRecast::drawPolyMesh(const struct rcPolyMesh &mesh, bool colorRegions)
     const int maxpolys = mesh.maxpolys;
 
 
-    CreateRecastPolyMesh(verts, nverts, polys, npolys, areas, maxpolys, regions, nvp, cs, ch, orig, colorRegions);
+    CreateRecastPolyMesh("SingleNavmesh", verts, nverts, polys, npolys, areas, maxpolys, regions, nvp, cs, ch, orig, colorRegions);
 }
 
 
-
-void OgreRecast::CreateRecastPolyMesh(const unsigned short *verts, const int nverts, const unsigned short *polys, const int npolys, const unsigned char *areas, const int maxpolys, const unsigned short *regions, const int nvp, const float cs, const float ch, const float *orig, bool colorRegions)
+// TODO make this only create an ogre entity, put the demo specific drawing in a separate DebugDrawing class to separate it from the reusable recast wrappers
+void OgreRecast::CreateRecastPolyMesh(const Ogre::String name, const unsigned short *verts, const int nverts, const unsigned short *polys, const int npolys, const unsigned char *areas, const int maxpolys, const unsigned short *regions, const int nvp, const float cs, const float ch, const float *orig, bool colorRegions)
 {
     m_flDataX=npolys ;
     m_flDataY=nverts ;
@@ -650,12 +651,6 @@ void OgreRecast::CreateRecastPolyMesh(const unsigned short *verts, const int nve
        }
    }
    
-   // create scenenodes
-   if(!m_pRecastSN)
-       m_pRecastSN=m_pSceneMgr->getRootSceneNode()->createChildSceneNode("RecastSN");
-
-   m_manualOIndex++;
-
    int nIndex=0 ;
    m_nAreaCount=npolys;
 
@@ -664,7 +659,7 @@ void OgreRecast::CreateRecastPolyMesh(const unsigned short *verts, const int nve
    {
 
       // start defining the manualObject with the navmesh planes
-      m_pRecastMOWalk = m_pSceneMgr->createManualObject("RecastMOWalk"+Ogre::StringConverter::toString(m_manualOIndex));
+      m_pRecastMOWalk = m_pSceneMgr->createManualObject("RecastMOWalk_"+name);
       m_pRecastMOWalk->begin("recastdebug", Ogre::RenderOperation::OT_TRIANGLE_LIST) ;
       for (int i = 0; i < npolys; ++i) {    // go through all polygons
          if (areas[i] == SAMPLE_POLYAREA_GROUND || areas[i] == DT_TILECACHE_WALKABLE_AREA)
@@ -707,7 +702,7 @@ void OgreRecast::CreateRecastPolyMesh(const unsigned short *verts, const int nve
 
 
       // Define manualObject with the navmesh edges between neighbouring polygons
-      m_pRecastMONeighbour = m_pSceneMgr->createManualObject("RecastMONeighbour"+Ogre::StringConverter::toString(m_manualOIndex));
+      m_pRecastMONeighbour = m_pSceneMgr->createManualObject("RecastMONeighbour_"+name);
       m_pRecastMONeighbour->begin("recastdebug", Ogre::RenderOperation::OT_LINE_LIST) ;
 
       for (int i = 0; i < npolys; ++i)
@@ -742,7 +737,7 @@ void OgreRecast::CreateRecastPolyMesh(const unsigned short *verts, const int nve
       
 
       // Define manualObject with navmesh outer edges (boundaries)
-      m_pRecastMOBoundary = m_pSceneMgr->createManualObject("RecastMOBoundary"+Ogre::StringConverter::toString(m_manualOIndex));
+      m_pRecastMOBoundary = m_pSceneMgr->createManualObject("RecastMOBoundary_"+name);
       m_pRecastMOBoundary->begin("recastdebug", Ogre::RenderOperation::OT_LINE_LIST) ;
 
       for (int i = 0; i < npolys; ++i)
@@ -783,7 +778,7 @@ void OgreRecast::CreateRecastPolyMesh(const unsigned short *verts, const int nve
    if(regionColors)
        delete[] regionColors;
 
-   Ogre::LogManager::getSingletonPtr()->logMessage("Added navmesh part "+Ogre::StringConverter::toString(m_manualOIndex)+" to the scene.");
+   Ogre::LogManager::getSingletonPtr()->logMessage("Added navmesh part "+name+" to the scene.");
 }
 
 void OgreRecast::CreateRecastPathLine(int nPathSlot)

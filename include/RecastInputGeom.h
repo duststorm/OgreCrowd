@@ -11,19 +11,28 @@
   **/
 static const int MAX_CONVEXVOL_PTS = 12;
 
+class InputGeom;
+
 /**
   * Volume describing a convex hull around
   * geometry. Can be used as a collision mesh
   * for dynamic obstacles.
   **/
 // TODO also calculate and store height above the navmesh (boxDescent) and use boxHeight for hmax
-struct ConvexVolume
+class ConvexVolume
 {
-        float verts[MAX_CONVEXVOL_PTS*3];
-        float hmin, hmax;
-        float bmin[3], bmax[3];
-        int nverts;
-        int area;
+public:
+    ConvexVolume(InputGeom *geom, float offset = 0.0f);
+
+    float verts[MAX_CONVEXVOL_PTS*3];
+    float hmin, hmax;
+    float bmin[3], bmax[3];
+    int nverts;
+    int area;
+
+private:
+    static inline bool cmppt(const float* a, const float* b);
+    static inline bool left(const float* a, const float* b, const float* c);
 };
 
 struct rcChunkyTriMeshNode
@@ -124,11 +133,19 @@ public:
                             const Ogre::Quaternion &orient = Ogre::Quaternion::IDENTITY,
                             const Ogre::Vector3 &scale = Ogre::Vector3::UNIT_SCALE);
 
-    static void drawConvexVolume(ConvexVolume *vol, Ogre::SceneManager* sceneMgr);
+    static void drawConvexVolume(Ogre::String name, ConvexVolume *vol, Ogre::SceneManager* sceneMgr);
 
     inline const rcChunkyTriMesh* getChunkyMesh() const { return m_chunkyMesh; }
 
     bool raycastMesh(float* src, float* dst, float& tmin);
+
+    /**
+      * See OgreDetourTileCache::hitTestObstacle, but here it serves for
+      * finding convexVolumes.
+      **/
+    int hitTestConvexVolume(const float* sp, const float* sq);
+
+    ConvexVolume* getConvexVolume(int volIdx);
 
 
     /// @name Off-Mesh connections.
@@ -231,6 +248,8 @@ private:
     ConvexVolume* m_volumes[MAX_VOLUMES];
     int m_volumeCount;
     ///@}
+
+    friend class ConvexVolume;
 };
 
 #endif // RECASTINPUTGEOM_H

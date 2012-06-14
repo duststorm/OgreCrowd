@@ -297,18 +297,25 @@ public:
 
     dtObstacleRef removeTempObstacle(Ogre::Vector3 raySource, Ogre::Vector3 rayHit);
 
+    std::vector<dtCompressedTileRef> getTilesContainingBox(Ogre::Vector3 boxMin, Ogre::Vector3 boxMax);
+
+    std::vector<dtCompressedTileRef> getTilesAroundPoint(Ogre::Vector3 point, Ogre::Real radius);
+
 //TODO by adding deferred tasking to add and removeConvexShapeObstacle one can add multiple shapes at once to the same tile without it being rebuilt multiple times
     int addConvexShapeObstacle(ConvexVolume *obstacle);
 
-    bool removeConvexShapeObstacle(int obstacleIndex);
+    bool removeConvexShapeObstacle(int obstacleIndex, ConvexVolume** removedObstacle = NULL);
+    int removeConvexShapeObstacle(Ogre::Vector3 raySource, Ogre::Vector3 rayHit, ConvexVolume** removedObstacle = NULL);
 
     bool removeTempObstacle(dtObstacleRef obstacleRef);
+
+    bool removeTile(dtTileRef tileRef);
 
     void drawDetail(const int tx, const int ty);
 
     void drawNavMesh(void);
 
-    void drawPolyMesh(const struct dtTileCachePolyMesh &mesh, const float *orig, const float cs, const float ch, const struct dtTileCacheLayer &regionLayers, bool colorRegions=true);
+    void drawPolyMesh(const Ogre::String tileName, const struct dtTileCachePolyMesh &mesh, const float *orig, const float cs, const float ch, const struct dtTileCacheLayer &regionLayers, bool colorRegions=true);
 
     dtObstacleRef hitTestObstacle(const dtTileCache* tc, const float* sp, const float* sq);
 

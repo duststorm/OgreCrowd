@@ -43,7 +43,7 @@ const bool OgreRecastApplication::RAYCAST_SCENE = false;
 const bool OgreRecastApplication::TEMP_OBSTACLE_STEERING = true;
 
 // Set to true to place boxes as convex obstacles on the navmesh instead of the cylindrical temporary obstacles
-const bool OgreRecastApplication::COMPLEX_OBSTACLES = false;    // Warning: doesn't work yet!
+const bool OgreRecastApplication::COMPLEX_OBSTACLES = true;    // Warning: still some bugs!
 
 //-------------------------------------------------------------------------------------
 
@@ -202,10 +202,11 @@ void OgreRecastApplication::createScene(void)
     // Used for mouse picking begin and end markers and determining the position to add new agents
     // Add navmesh to separate querying group that we will use
     mNavMeshNode = (Ogre::SceneNode*)mSceneMgr->getRootSceneNode()->getChild("RecastSN");
-    mNavMeshNode->getAttachedObject("RecastMOWalk0")->setQueryFlags(NAVMESH_MASK);  // TODO make sure that other added navmesh parts are given the proper query mask too!
+// TODO solve this problem when I have a custom debug drawing class, to give each tile its proper query mask whenever its (re)built
+//    mNavMeshNode->getAttachedObject("RecastMOWalk0")->setQueryFlags(NAVMESH_MASK);  // TODO make sure that other added navmesh parts are given the proper query mask too!
     // Exclude other meshes from navmesh queries
-    mNavMeshNode->getAttachedObject("RecastMONeighbour0")->setQueryFlags(DEFAULT_MASK);
-    mNavMeshNode->getAttachedObject("RecastMOBoundary0")->setQueryFlags(DEFAULT_MASK);
+//    mNavMeshNode->getAttachedObject("RecastMONeighbour0")->setQueryFlags(DEFAULT_MASK);
+//    mNavMeshNode->getAttachedObject("RecastMOBoundary0")->setQueryFlags(DEFAULT_MASK);
     if (!RAYCAST_SCENE)
         mapE->setQueryFlags(DEFAULT_MASK);
     potE->setQueryFlags(DEFAULT_MASK);
@@ -395,7 +396,15 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
         Ogre::Vector3 rayHitPoint;
         Ogre::MovableObject *rayHitObject;
         if (rayQueryPointInScene(cursorRay, NAVMESH_MASK, rayHitPoint, &rayHitObject)) {
-            //Ogre::LogManager::getSingletonPtr()->logMessage("Info: added agent at position "+Ogre::StringConverter::toString(rayHitPoint));
+            if ( Ogre::StringUtil::startsWith(rayHitObject->getName(), "recastmowalk", true) ) {
+                // Compensate for the fact that the ray-queried navmesh is drawn a little above the ground
+                rayHitPoint.y = rayHitPoint.y - mRecast->m_navMeshOffsetFromGround;
+            } else {
+                // Queried point was not on navmesh, find nearest point on the navmesh
+                mRecast->findNearestPointOnNavmesh(rayHitPoint, rayHitPoint);
+            }
+
+            Ogre::LogManager::getSingletonPtr()->logMessage("Info: added agent at position "+Ogre::StringConverter::toString(rayHitPoint));
 
             Character *character = createCharacter("Agent"+Ogre::StringConverter::toString(mCharacters.size()), rayHitPoint);
 
@@ -463,6 +472,31 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
         }
     }
 
+    // Debug function: test which navmesh tiles are near the queried point
+    if(!SINGLE_NAVMESH && arg.key == OIS::KC_X) {
+        Ogre::Ray cursorRay = mCamera->getCameraToViewportRay(0.5, 0.5);
+        Ogre::Vector3 rayHitPoint;
+        Ogre::MovableObject *rayHitObject;
+        if (rayQueryPointInScene(cursorRay, NAVMESH_MASK, rayHitPoint, &rayHitObject)) {
+
+            if ( Ogre::StringUtil::startsWith(rayHitObject->getName(), "recastmowalk", true) ) {
+                // Compensate for the fact that the ray-queried navmesh is drawn a little above the ground
+                rayHitPoint.y = rayHitPoint.y - mRecast->m_navMeshOffsetFromGround;
+            } else {
+                // Queried point was not on navmesh, find nearest point on the navmesh
+                mRecast->findNearestPointOnNavmesh(rayHitPoint, rayHitPoint);
+            }
+
+            std::vector<dtTileRef> tiles = mDetourTileCache->getTilesAroundPoint(rayHitPoint, 1);
+            Ogre::String strTiles = "";
+            for (std::vector<dtTileRef>::iterator iter = tiles.begin(); iter != tiles.end(); iter++) {
+                dtTileRef tile = *iter;
+                strTiles = strTiles + " " + Ogre::StringConverter::toString(tile);
+            }
+            Ogre::LogManager::getSingletonPtr()->logMessage("Found tiles for point "+Ogre::StringConverter::toString(rayHitPoint)+": "+ strTiles);
+        }
+    }
+
     // Backspace adds a temporary obstacle to the navmesh (in dtTileCache mode)
     if(!SINGLE_NAVMESH && mApplicationState != STEER_AGENT && arg.key == OIS::KC_BACK) {
         // Find position on navmesh pointed to by cursor in the middle of the screen
@@ -471,11 +505,28 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
         Ogre::MovableObject *rayHitObject;
         if (rayQueryPointInScene(cursorRay, NAVMESH_MASK, rayHitPoint, &rayHitObject)) {
 
+            if ( Ogre::StringUtil::startsWith(rayHitObject->getName(), "recastmowalk", true) ) {
+                // Compensate for the fact that the ray-queried navmesh is drawn a little above the ground
+                rayHitPoint.y = rayHitPoint.y - mRecast->m_navMeshOffsetFromGround;
+            } else {
+                // Queried point was not on navmesh, find nearest point on the navmesh
+                mRecast->findNearestPointOnNavmesh(rayHitPoint, rayHitPoint);
+            }
+
+            Ogre::LogManager::getSingletonPtr()->logMessage("Adding obstacle on point "+Ogre::StringConverter::toString(rayHitPoint));
+
             if(COMPLEX_OBSTACLES) {
                 // Place a box as obstacle
-// TODO
-                Ogre::SceneNode* node = mSceneMgr->getRootSceneNode()->createChildSceneNode("BoxNode");
-                Ogre::Entity* ent = mSceneMgr->createEntity("Box", "Box.mesh");
+                Ogre::SceneNode* node = mSceneMgr->getRootSceneNode()->createChildSceneNode();
+                Ogre::Entity* ent;
+//                if (Ogre::Math::RangeRandom(0,2) < 1) {
+                    ent = mSceneMgr->createEntity("Box.mesh");
+//                } else
+// TODO convex hull building does not work yet with higher detail meshes
+//                    ent = mSceneMgr->createEntity("Pot.mesh");
+//                    node->setScale(0.3, 0.3, 0.3);
+//                }
+                mConvexObstacles.push_back(ent);
                 node->attachObject(ent);
                 node->setPosition(rayHitPoint);
 
@@ -483,19 +534,17 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
                 ents.push_back(ent);
                 // TODO I want to use the other constructor for one entity here!!
                 InputGeom boxGeom(ents);
-//TODO WARNING: memory leak!
+//TODO WARNING: memory leak! No one manages convexVolume objects at the moment
                 ConvexVolume *vol = boxGeom.getConvexHull(/*0.3*/);     // Create convex hull 0.3 offset around the object
+// TODO find out whether I need these hacks
+//                vol->bmin[1] = -1;
+//                vol->hmin = -1;
+                vol->area = RC_NULL_AREA;   // Set area described by convex polygon to "unwalkable"
+
+                InputGeom::drawConvexVolume(Ogre::StringConverter::toString(mConvexObstacles.size()-1), vol, mSceneMgr);    // Debug convex volume
                 mDetourTileCache->addConvexShapeObstacle(vol);
-                InputGeom::drawConvexVolume(vol, mSceneMgr);    // Debug convex volume
-                ent->setVisible(false);
-/*
-                int nHullVerts = convexhull(pts, nPts, hull);
-                int nOffsetVerts = rcOffsetPoly();
-                int volumeIdx = mGeom->addConvexVolume(hull);
 
-
-//                mDetourTileCache->
-*/
+                //ent->setVisible(false);       // TODO maybe make boxes semi-transparent in debug draw mode
             } else {
                 // Place simple cylindrical temporary obstacles
 
@@ -522,15 +571,49 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
         Ogre::Vector3 rayHitPoint;
         Ogre::MovableObject *rayHitObject;
         if (rayQueryPointInScene(cursorRay, NAVMESH_MASK, rayHitPoint, &rayHitObject)) {
-            dtObstacleRef oRef = mDetourTileCache->removeTempObstacle(cursorRay.getOrigin(), rayHitPoint);
-            if (oRef) {
-                // Add visualization of temp obstacle
-                Ogre::SceneNode *obstacleMarker = getOrCreateMarker("TempObstacle"+Ogre::StringConverter::toString(oRef));
-                Ogre::Entity *obstacleEnt = (Ogre::Entity*)obstacleMarker->getAttachedObject(0);
-                // Remove debug entity
-                mDebugEntities.erase(remove(mDebugEntities.begin(), mDebugEntities.end(), obstacleEnt), mDebugEntities.end());
-                obstacleEnt->detachFromParent();
-                mSceneMgr->destroyEntity(obstacleEnt);
+            if ( Ogre::StringUtil::startsWith(rayHitObject->getName(), "recastmowalk", true) ) {
+                // Compensate for the fact that the ray-queried navmesh is drawn a little above the ground
+                rayHitPoint.y = rayHitPoint.y - mRecast->m_navMeshOffsetFromGround;
+            } else {
+                // Queried point was not on navmesh, find nearest point on the navmesh
+                mRecast->findNearestPointOnNavmesh(rayHitPoint, rayHitPoint);
+            }
+
+            if(COMPLEX_OBSTACLES) {
+                int convexVolumeIdx = mDetourTileCache->removeConvexShapeObstacle(cursorRay.getOrigin(), rayHitPoint);
+                if(convexVolumeIdx != -1) {
+                    // Remove box obstacle
+// TODO: This is quite dirty: we rely on the fact that the indexes of mConvexObstacles is the same as the internal ones of mDetourTileCache->inputGeom. Better create an obstacle class to manage the entity
+                    Ogre::Entity *obstacleEnt = mConvexObstacles[convexVolumeIdx];
+                    if (convexVolumeIdx == mConvexObstacles.size()-1) {
+                        mConvexObstacles.pop_back();
+                    } else {
+                        mConvexObstacles[convexVolumeIdx] = mConvexObstacles[mConvexObstacles.size()-1];
+                        mConvexObstacles.pop_back();
+                    }
+                    Ogre::SceneNode *parentNode = obstacleEnt->getParentSceneNode();
+                    obstacleEnt->detachFromParent();
+                    mSceneMgr->destroyEntity(obstacleEnt);
+                    mSceneMgr->destroySceneNode(parentNode);
+                    Ogre::ManualObject *convexEnt = mSceneMgr->getManualObject("ConvexVolume_"+ Ogre::StringConverter::toString(convexVolumeIdx));
+                    convexEnt->detachFromParent();
+                    mSceneMgr->destroyManualObject(convexEnt);
+                    convexEnt = NULL;
+// TODO remove convex mesh debug lines, rebuild and redraw tile
+// TODO grey lines around boxes should disappear when disabling debug drawing
+                }
+
+            } else {
+                dtObstacleRef oRef = mDetourTileCache->removeTempObstacle(cursorRay.getOrigin(), rayHitPoint);
+                if (oRef) {
+                    // Remove visualization of temp obstacle
+                    Ogre::SceneNode *obstacleMarker = getOrCreateMarker("TempObstacle"+Ogre::StringConverter::toString(oRef));
+                    Ogre::Entity *obstacleEnt = (Ogre::Entity*)obstacleMarker->getAttachedObject(0);
+                    // Remove debug entity
+                    mDebugEntities.erase(remove(mDebugEntities.begin(), mDebugEntities.end(), obstacleEnt), mDebugEntities.end());
+                    obstacleEnt->detachFromParent();
+                    mSceneMgr->destroyEntity(obstacleEnt);
+                }
             }
         }
     }
@@ -703,6 +786,7 @@ void OgreRecastApplication::setDestinationForAllAgents(Ogre::Vector3 destination
 
 bool OgreRecastApplication::rayQueryPointInScene(Ogre::Ray ray, unsigned long queryMask, Ogre::Vector3 &result, Ogre::MovableObject **foundMovable)
 {
+// TODO: destroy queries using scenemgr::destroyRayQuery or reuse one query object by storing it in a member variable
     mRayScnQuery = mSceneMgr->createRayQuery(Ogre::Ray(), queryMask);
 
     mRayScnQuery->setRay(ray);

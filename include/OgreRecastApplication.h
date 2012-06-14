@@ -32,6 +32,10 @@ public:
 
     /**
       * Calculate an intersection point of a ray with objects in the scene.
+      * ray is the ray which is intersected with the scene
+      * queryMask helps to include or exclude objects from the query
+      * result is the point in the scene that was hit, in world-space coordinates
+      * foundMovable is the entity or object that was hit
       **/
     bool rayQueryPointInScene(Ogre::Ray ray, unsigned long queryMask, Ogre::Vector3 &result, Ogre::MovableObject **foundMovable);
 
@@ -268,6 +272,8 @@ private:
     Ogre::SceneNode *mNavMeshNode;
 
     std::vector<Ogre::Entity*> mDebugEntities;
+
+    std::vector<Ogre::Entity*> mConvexObstacles;
 };
 
 
