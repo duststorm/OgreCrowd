@@ -140,13 +140,12 @@ diff -uN recastnavigation/Detour/Source/DetourCommon.cpp ogreRecast/src/Detour/D
  
  //////////////////////////////////////////////////////////////////////////////////////////
  
-diff -uN recastnavigation/Detour/Source/DetourNavMeshBuilder.cpp ogreRecast/src/Detour/DetourNavMeshBuilder.cpp
---- recastnavigation/Detour/Source/DetourNavMeshBuilder.cpp	2012-03-19 22:16:32.942849042 +0100
-+++ ogreRecast/src/Detour/DetourNavMeshBuilder.cpp	2012-03-29 01:48:18.707962975 +0200
-@@ -20,11 +20,11 @@
- #include <stdio.h>
+--- recastnavigation/Detour/Source/DetourNavMeshBuilder.cpp	2012-06-14 11:32:07.684521806 +0200
++++ ogreRecast/src/Detour/DetourNavMeshBuilder.cpp	2012-06-14 11:38:03.696526536 +0200
+@@ -21,11 +21,11 @@
  #include <stdlib.h>
  #include <string.h>
+ #include <float.h>
 -#include "DetourNavMesh.h"
 -#include "DetourCommon.h"
 -#include "DetourNavMeshBuilder.h"
