@@ -57,8 +57,8 @@ public:
       * All scene entities but the navmesh should be in the default group.
       **/
     enum QueryFlags {
-       DEFAULT_MASK = 0u,
-       NAVMESH_MASK = 5u,
+       DEFAULT_MASK = 1u<<0,
+       NAVMESH_MASK = 1u<<1
     };
 
     /**
@@ -275,6 +275,10 @@ private:
     std::vector<Ogre::Entity*> mDebugEntities;
 
     std::vector<Obstacle*> mObstacles;
+
+    std::vector<Ogre::Entity*> mWalkableObjects;
+
+    std::vector<Ogre::Entity*> mNavmeshEnts;
 };
 
 

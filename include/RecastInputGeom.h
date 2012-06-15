@@ -11,6 +11,12 @@ struct rcChunkyTriMeshNode
         int i, n;
 };
 
+/**
+  * Spatial subdivision structure that structures triangles
+  * in axis-aligned boxes of a fixed size.
+  * This allows to quickly retrieve the triangles in a specific box,
+  * at the cost of a small pre-process step and extra memory usage.
+  **/
 struct rcChunkyTriMesh
 {
         inline rcChunkyTriMesh() : nodes(0), tris(0) {};
@@ -56,6 +62,9 @@ class InputGeom
 public:
     InputGeom(std::vector<Ogre::Entity*> srcMeshes);
     InputGeom(Ogre::Entity* srcMesh);
+
+    InputGeom(std::vector<Ogre::Entity*> srcMeshes, const Ogre::AxisAlignedBox &tileBounds);
+
     ~InputGeom();
 
     float* getVerts(void);
@@ -104,7 +113,7 @@ public:
                             const Ogre::Quaternion &orient = Ogre::Quaternion::IDENTITY,
                             const Ogre::Vector3 &scale = Ogre::Vector3::UNIT_SCALE);
 
-    static Ogre::ManualObject* drawConvexVolume(Ogre::String name, ConvexVolume *vol, Ogre::SceneManager* sceneMgr);
+    static Ogre::ManualObject* drawConvexVolume(ConvexVolume *vol, Ogre::SceneManager* sceneMgr);
 
     inline const rcChunkyTriMesh* getChunkyMesh() const { return m_chunkyMesh; }
 
@@ -174,6 +183,8 @@ private:
       **/
     void convertOgreEntities(void);
 
+    void convertOgreEntities(Ogre::AxisAlignedBox &tileBounds);
+
     float* verts;
     int nverts;
     int* tris;
@@ -211,7 +222,6 @@ private:
     int m_volumeCount;
     ///@}
 
-    friend class ConvexVolume;
 };
 
 #endif // RECASTINPUTGEOM_H

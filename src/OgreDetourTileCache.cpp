@@ -241,7 +241,7 @@ bool OgreDetourTileCache::TileCacheBuild(std::vector<Ogre::Entity*> srcMeshes)
 }
 
 
-bool OgreDetourTileCache::buildTile(const int tx, const int ty)
+bool OgreDetourTileCache::buildTile(const int tx, const int ty, InputGeom *inputGeom)
 {
     if (tx < 0 || tx >= m_tw)
         return false;
@@ -258,7 +258,7 @@ bool OgreDetourTileCache::buildTile(const int tx, const int ty)
 
     TileCacheData tiles[MAX_LAYERS];
     memset(tiles, 0, sizeof(tiles));
-    int ntiles = rasterizeTileLayers(m_geom, tx, ty, m_cfg, tiles, MAX_LAYERS);  // This is where the tile is built
+    int ntiles = rasterizeTileLayers(inputGeom, tx, ty, m_cfg, tiles, MAX_LAYERS);  // This is where the tile is built
 
     dtStatus status;
 
@@ -725,7 +725,7 @@ void OgreDetourTileCache::drawDetail(const int tx, const int ty)
         if (dtStatusFailed(status))
             return;
 
-//TODO this part is replicated from navmesh tile building in DetourTileCache. Maybe that can be reused.
+//TODO this part is replicated from navmesh tile building in DetourTileCache. Maybe that can be reused. Also is it really necessary to do an extra navmesh rebuild from compressed tile just to draw it? Can't I just draw it somewhere where the navmesh is rebuilt?
         bc.lcset = dtAllocTileCacheContourSet(talloc);
         if (!bc.lcset)
             return;
@@ -809,11 +809,45 @@ int OgreDetourTileCache::addConvexShapeObstacle(ConvexVolume *obstacle)
         removeTile(touched[i]);     // Important: if a tile already exists at this position, first remove the old one or it will not be updated!
 
 // TODO we actually want a buildTile method with a tileRef as input param. As this method does a bounding box intersection with tiles again, which might result in multiple tiles being rebuilt (which will lead to nothing because only one tile is removed..), and we determined which tiles to bebuild already, anyway (using queryTiles)
-        buildTile(tx, ty);
+        buildTile(tx, ty, m_geom);
     }
 
 
     return result;
+}
+
+void OgreDetourTileCache::updateFromGeometry(std::vector<Ogre::Entity*> srcMeshes, const Ogre::AxisAlignedBox &areaToUpdate)
+{
+    // Build recast/detour input geometry only for the area to update
+    InputGeom geom = InputGeom(srcMeshes, areaToUpdate);
+        // TODO do I need geometry to extend a bit out of the bounds for navmesh tiles to always properly connect to the rest?
+
+    // Determine which navmesh tiles have to be updated
+    float bmin[3], bmax[3];
+    OgreRecast::OgreVect3ToFloatA(areaToUpdate.getMinimum(), bmin);
+    OgreRecast::OgreVect3ToFloatA(areaToUpdate.getMaximum(), bmax);
+    dtCompressedTileRef touched[DT_MAX_TOUCHED_TILES];
+    int ntouched = 0;
+    m_tileCache->queryTiles(bmin, bmax, touched, &ntouched, DT_MAX_TOUCHED_TILES);
+
+    // Rebuild affected tiles
+// TODO maybe defer this and timeslice it, like happend in dtTileCache with tempObstacle updates
+    for (int i = 0; i < ntouched; ++i)
+    {
+// TODO when you do deffered commands, make sure you issue a rebuild for a tile only once per update, so remove doubles from the request queue (this is what contains() is for in dtTileCache)
+        // Retrieve coordinates of tile that has to be rebuilt
+        const dtCompressedTile* tile = m_tileCache->getTileByRef(touched[i]);
+        int tx = tile->header->tx;
+        int ty = tile->header->ty;
+        tile = NULL;
+
+        // Issue full rebuild from inputGeom, including convex shapes, for this tile
+        removeTile(touched[i]);     // Important: if a tile already exists at this position, first remove the old one or it will not be updated!
+
+// TODO we actually want a buildTile method with a tileRef as input param. As this method does a bounding box intersection with tiles again, which might result in multiple tiles being rebuilt (which will lead to nothing because only one tile is removed..), and we determined which tiles to bebuild already, anyway (using queryTiles)
+        buildTile(tx, ty, &geom);
+    }
+
 }
 
 bool OgreDetourTileCache::removeTile(dtTileRef tileRef)
@@ -883,7 +917,7 @@ bool OgreDetourTileCache::removeConvexShapeObstacle(int obstacleIndex, ConvexVol
         // Issue full rebuild from inputGeom, with the specified convex shape removed, for this tile
         removeTile(touched[i]);     // Important: if a tile already exists at this position, first remove the old one or it will not be updated!
 
-        buildTile(tx, ty);
+        buildTile(tx, ty, m_geom);
     }
 
     return true;

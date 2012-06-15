@@ -82,11 +82,16 @@ void OgreRecastApplication::createScene(void)
     mCamera->setPosition(-46.3106, 62.3307, 40.7579);
     mCamera->setOrientation(Ogre::Quaternion(0.903189, -0.247085, - 0.338587, - 0.092626));
 
+    // Set the default ray query mask for any created scene object
+    Ogre::MovableObject::setDefaultQueryFlags(DEFAULT_MASK);
+
     // Create navigateable dungeon
     Ogre::Entity* mapE = mSceneMgr->createEntity("Map", "dungeon.mesh");
     mapE->setMaterialName("dungeon");
     Ogre::SceneNode* mapNode = mSceneMgr->getRootSceneNode()->createChildSceneNode("MapNode");
     mapNode->attachObject(mapE);
+    if(mapE->getQueryFlags() != DEFAULT_MASK)
+        Ogre::LogManager::getSingletonPtr()->logMessage("Error");
 
     // Add some obstacles
     Ogre::Entity* potE = NULL;
@@ -116,41 +121,23 @@ void OgreRecastApplication::createScene(void)
 
 
     // Create list of entities to build navmesh from
-    std::vector<Ogre::Entity*> navmeshEnts;
-    navmeshEnts.push_back(mapE);  // Add the map
+    mNavmeshEnts.push_back(mapE);  // Add the map
 
     // You should tweak your navmesh build max error and maxclimb parameter to properly detect smaller obstacles
     if (OBSTACLES) {
-        navmeshEnts.push_back(potE);  // Add obstacle
-        navmeshEnts.push_back(pot2ProxyE);  // Add proxy or collision mesh for obstacle
+        mNavmeshEnts.push_back(potE);  // Add obstacle
+        mNavmeshEnts.push_back(pot2ProxyE);  // Add proxy or collision mesh for obstacle
 
         // Create some additional obstacles
-        navmeshEnts.push_back( createObstacle("Pot3", Ogre::Vector3(44.2139, 10, -4.70583), Ogre::Vector3(0.3, 0.3, 0.3)) );
-        navmeshEnts.push_back( createObstacle("Pot4", Ogre::Vector3(40.3481, 10, 7.46006), Ogre::Vector3(0.3, 0.3, 0.3)) );
-        navmeshEnts.push_back( createObstacle("Pot5", Ogre::Vector3(37.9414, 10, 6.12506), Ogre::Vector3(0.3, 0.3, 0.3)) );
-        navmeshEnts.push_back( createObstacle("Pot6", Ogre::Vector3(2.98811, 10, -32.6629), Ogre::Vector3(0.3, 0.3, 0.3)) );
-        navmeshEnts.push_back( createObstacle("Pot7", Ogre::Vector3(-2.97011, 10, -33.819), Ogre::Vector3(0.3, 0.3, 0.3)) );
-        navmeshEnts.push_back( createObstacle("Pot8", Ogre::Vector3(-1.17544, 10, -37.0419), Ogre::Vector3(0.3, 0.3, 0.3)) );
-        navmeshEnts.push_back( createObstacle("Pot9", Ogre::Vector3(0.926607, 10, -37.7362), Ogre::Vector3(0.3, 0.3, 0.3)) );
-        navmeshEnts.push_back( createObstacle("Pot10", Ogre::Vector3(18.9451, 10.2355, 0.95), Ogre::Vector3(0.3, 0.3, 0.3)) );
-        navmeshEnts.push_back( createObstacle("Pot11", Ogre::Vector3(18.2158, 10.2355, 4), Ogre::Vector3(0.3, 0.3, 0.3)) );
-
-        // Just a little test: add two walkable pallets
-        Ogre::Entity* palletE =  mSceneMgr->createEntity("WoodenPallet1", "WoodPallet.mesh");
-        Ogre::SceneNode* palletN =  mSceneMgr->getRootSceneNode()->createChildSceneNode();
-        palletN->attachObject(palletE);
-        palletN->setPosition(0.0424851, 10.8, -18.907);
-        // Good care needs to be taken with the size of obstacles and the navmesh generation properties
-        // Note that in this case it would probably be better to create a simple bounding box shape for the pallet, to not have troube with the holes in the pallet.
-        palletN->setScale(0.4, 0.7, 0.4);
-        navmeshEnts.push_back(palletE);
-
-        palletE =  mSceneMgr->createEntity("WoodenPallet2", "WoodPallet.mesh");
-        palletN =  mSceneMgr->getRootSceneNode()->createChildSceneNode();
-        palletN->attachObject(palletE);
-        palletN->setPosition(0.224166, 11.5, -16.8332);
-        palletN->setScale(0.4, 0.7, 0.4);
-        navmeshEnts.push_back(palletE);
+        mNavmeshEnts.push_back( createObstacle("Pot3", Ogre::Vector3(44.2139, 10, -4.70583), Ogre::Vector3(0.3, 0.3, 0.3)) );
+        mNavmeshEnts.push_back( createObstacle("Pot4", Ogre::Vector3(40.3481, 10, 7.46006), Ogre::Vector3(0.3, 0.3, 0.3)) );
+        mNavmeshEnts.push_back( createObstacle("Pot5", Ogre::Vector3(37.9414, 10, 6.12506), Ogre::Vector3(0.3, 0.3, 0.3)) );
+        mNavmeshEnts.push_back( createObstacle("Pot6", Ogre::Vector3(2.98811, 10, -32.6629), Ogre::Vector3(0.3, 0.3, 0.3)) );
+        mNavmeshEnts.push_back( createObstacle("Pot7", Ogre::Vector3(-2.97011, 10, -33.819), Ogre::Vector3(0.3, 0.3, 0.3)) );
+        mNavmeshEnts.push_back( createObstacle("Pot8", Ogre::Vector3(-1.17544, 10, -37.0419), Ogre::Vector3(0.3, 0.3, 0.3)) );
+        mNavmeshEnts.push_back( createObstacle("Pot9", Ogre::Vector3(0.926607, 10, -37.7362), Ogre::Vector3(0.3, 0.3, 0.3)) );
+        mNavmeshEnts.push_back( createObstacle("Pot10", Ogre::Vector3(18.9451, 10.2355, 0.95), Ogre::Vector3(0.3, 0.3, 0.3)) );
+        mNavmeshEnts.push_back( createObstacle("Pot11", Ogre::Vector3(18.2158, 10.2355, 4), Ogre::Vector3(0.3, 0.3, 0.3)) );
     }
 
 
@@ -160,7 +147,7 @@ void OgreRecastApplication::createScene(void)
     if(SINGLE_NAVMESH) {
         // Simple recast navmesh build example
 
-        if(mRecast->NavMeshBuild(navmeshEnts)) {
+        if(mRecast->NavMeshBuild(mNavmeshEnts)) {
             mRecast->drawNavMesh();
         } else {
             Ogre::LogManager::getSingletonPtr()->logMessage("ERROR: could not generate useable navmesh from mesh.");
@@ -171,7 +158,7 @@ void OgreRecastApplication::createScene(void)
         // More advanced: use DetourTileCache to build a tiled and cached navmesh that can be updated with dynamic obstacles at runtime.
 
         mDetourTileCache = new OgreDetourTileCache(mRecast);
-        if(mDetourTileCache->TileCacheBuild(navmeshEnts)) {
+        if(mDetourTileCache->TileCacheBuild(mNavmeshEnts)) {
             mDetourTileCache->drawNavMesh();
         } else {
             Ogre::LogManager::getSingletonPtr()->logMessage("ERROR: could not generate useable navmesh from mesh using detourTileCache.");
@@ -218,19 +205,17 @@ void OgreRecastApplication::createScene(void)
     mCameraMan->setTopSpeed(80);
 
 
-    // SETUP RAY SCENE QUERYING
+    // SETUP RAY SCENE QUERYING AND DEBUG DRAWING
     // Used for mouse picking begin and end markers and determining the position to add new agents
     // Add navmesh to separate querying group that we will use
     mNavMeshNode = (Ogre::SceneNode*)mSceneMgr->getRootSceneNode()->getChild("RecastSN");
-// TODO solve this problem when I have a custom debug drawing class, to give each tile its proper query mask whenever its (re)built
-//    mNavMeshNode->getAttachedObject("RecastMOWalk0")->setQueryFlags(NAVMESH_MASK);  // TODO make sure that other added navmesh parts are given the proper query mask too!
-    // Exclude other meshes from navmesh queries
-//    mNavMeshNode->getAttachedObject("RecastMONeighbour0")->setQueryFlags(DEFAULT_MASK);
-//    mNavMeshNode->getAttachedObject("RecastMOBoundary0")->setQueryFlags(DEFAULT_MASK);
-    if (!RAYCAST_SCENE)
-        mapE->setQueryFlags(DEFAULT_MASK);
-    potE->setQueryFlags(DEFAULT_MASK);
-    pot2ProxyE->setQueryFlags(DEFAULT_MASK);
+    for (int i = 0; i < mNavMeshNode->numAttachedObjects(); i++) {
+        Ogre::MovableObject *obj = mNavMeshNode->getAttachedObject(i);
+        obj->setQueryFlags(NAVMESH_MASK);
+    }
+
+    if (RAYCAST_SCENE)
+        mapE->setQueryFlags(NAVMESH_MASK);
 
     if(!OgreRecastApplication::mDebugDraw)
         mNavMeshNode->setVisible(false); // Even though we make it invisible, we still keep the navmesh entity in the scene to do ray intersection tests
@@ -350,6 +335,12 @@ bool OgreRecastApplication::mousePressed( const OIS::MouseEvent &arg, OIS::Mouse
     if (mApplicationState == STEER_AGENT)
         return true;
 
+    // Make sure that any redrawn navmesh tiles have the proper query mask
+    for (int i = 0; i < mNavMeshNode->numAttachedObjects(); i++) {
+        Ogre::MovableObject *obj = mNavMeshNode->getAttachedObject(i);
+        obj->setQueryFlags(NAVMESH_MASK);
+    }
+
     // Do ray scene query
     //send a raycast straight out from the camera at the center position
     Ogre::Ray mouseRay = mCamera->getCameraToViewportRay(0.5, 0.5);
@@ -407,6 +398,12 @@ bool OgreRecastApplication::mouseMoved(const OIS::MouseEvent &arg)
 
 bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
 {
+    // Make sure that any redrawn navmesh tiles have the proper query mask
+    for (int i = 0; i < mNavMeshNode->numAttachedObjects(); i++) {
+        Ogre::MovableObject *obj = mNavMeshNode->getAttachedObject(i);
+        obj->setQueryFlags(NAVMESH_MASK);
+    }
+
     // SPACE places a new agent at cursor position
     if(arg.key == OIS::KC_SPACE
        && mApplicationState != STEER_AGENT  // no adding agents in steering mode (no mouse pointer)
@@ -551,12 +548,8 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
         }
     }
 
-    // K key adds a wooden pallet to the scene that can be climbed by agents
-    if(arg.key == OIS::KC_K && !SINGLE_NAVMESH) {
-
-    }
-
     // Delete removes a temporary obstacle from the navmesh (in dtTileCache mode)
+
     if(!SINGLE_NAVMESH && mApplicationState != STEER_AGENT && arg.key == OIS::KC_DELETE) {
         // Find position on navmesh pointed to by cursor in the middle of the screen
         Ogre::Ray cursorRay = mCamera->getCameraToViewportRay(0.5, 0.5);
@@ -615,6 +608,83 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
                     mSceneMgr->destroyEntity(obstacleEnt);
                     */
                 }
+            }
+        }
+    }
+
+    // K key adds a wooden pallet to the scene that can be climbed by agents
+    if(arg.key == OIS::KC_K && !SINGLE_NAVMESH) {
+        // Find position on any geometry pointed to by cursor in the middle of the screen
+        Ogre::Ray cursorRay = mCamera->getCameraToViewportRay(0.5, 0.5);
+        Ogre::Vector3 rayHitPoint;
+        Ogre::MovableObject *rayHitObject;
+        if (rayQueryPointInScene(cursorRay, DEFAULT_MASK, rayHitPoint, &rayHitObject)) {
+            if ( Ogre::StringUtil::startsWith(rayHitObject->getName(), "recastmowalk", true) )
+                // Compensate for the fact that the ray-queried navmesh is drawn a little above the ground
+                rayHitPoint.y = rayHitPoint.y - mRecast->m_navMeshOffsetFromGround;
+
+            // Create a little height offset for placing the obstacle
+            rayHitPoint.y += 0.3;
+
+            Ogre::Entity* palletE =  mSceneMgr->createEntity("WoodPallet.mesh");
+            Ogre::SceneNode* palletN =  mSceneMgr->getRootSceneNode()->createChildSceneNode();
+            palletN->attachObject(palletE);
+            palletN->setPosition(rayHitPoint);
+            // Good care needs to be taken with the size of obstacles and the navmesh generation properties
+            // Note that in this case it would probably be better to create a simple bounding box shape for the pallet, to not have troube with the holes in the pallet.
+            palletN->setScale(0.4, 0.7, 0.4);
+            mWalkableObjects.push_back(palletE);
+
+            // Create a list containing both navmesh entities and obstacles, as well as all created walkable objects
+            std::vector<Ogre::Entity*> detourInputGeometry;
+            detourInputGeometry.insert(detourInputGeometry.end(), mNavmeshEnts.begin(), mNavmeshEnts.end());
+            detourInputGeometry.insert(detourInputGeometry.end(), mWalkableObjects.begin(), mWalkableObjects.end());
+
+            // Rebuild the tiles overlapping the bounding box of the added object
+            Ogre::Matrix4 transform = mSceneMgr->getRootSceneNode()->_getFullTransform().inverse() * palletE->getParentSceneNode()->_getFullTransform();
+            Ogre::AxisAlignedBox bb = palletE->getBoundingBox();
+            bb.transform(transform);
+
+            // Extend the bounds a bit downwards, because they need to hit the navmesh surface in order to detect that the tile has to be rebuilt.
+            // In other words: 3 is the maximum height an obstacle can be above the ground.
+            bb.setMinimumY(bb.getMinimum().y - 3);
+            mDetourTileCache->updateFromGeometry(detourInputGeometry, bb);
+        }
+    }
+
+    // I key removes the wooden pallet that is pointed to by the cursor
+    if(arg.key == OIS::KC_I && !SINGLE_NAVMESH) {
+        // Find position on any geometry pointed to by cursor in the middle of the screen
+        Ogre::Ray cursorRay = mCamera->getCameraToViewportRay(0.5, 0.5);
+        Ogre::Vector3 rayHitPoint;
+        Ogre::MovableObject *rayHitObject;
+        if (rayQueryPointInScene(cursorRay, DEFAULT_MASK, rayHitPoint, &rayHitObject)) {
+            if ( Ogre::StringUtil::startsWith(rayHitObject->getName(), "recastmowalk", true) )
+                // Compensate for the fact that the ray-queried navmesh is drawn a little above the ground
+                rayHitPoint.y = rayHitPoint.y - mRecast->m_navMeshOffsetFromGround;
+
+            // If we hit a pallet, remove it
+            if( std::find(mWalkableObjects.begin(), mWalkableObjects.end(), rayHitObject) != mWalkableObjects.end() ) {
+                mWalkableObjects.erase(std::remove(mWalkableObjects.begin(), mWalkableObjects.end(), rayHitObject));
+
+                // Create a list containing both navmesh entities and obstacles, as well as all created walkable objects
+                std::vector<Ogre::Entity*> detourInputGeometry;
+                detourInputGeometry.insert(detourInputGeometry.end(), mNavmeshEnts.begin(), mNavmeshEnts.end());
+                detourInputGeometry.insert(detourInputGeometry.end(), mWalkableObjects.begin(), mWalkableObjects.end());
+                                            // the hit pallet is removed from this list
+
+                // Rebuild the tiles overlapping the bounding box, with the pallet removed
+                Ogre::Matrix4 transform = mSceneMgr->getRootSceneNode()->_getFullTransform().inverse() * rayHitObject->getParentSceneNode()->_getFullTransform();
+                Ogre::AxisAlignedBox bb = rayHitObject->getBoundingBox();
+                bb.transform(transform);
+
+                // For the same reasons as with adding, we need to extend the bounds a bit downwards.
+                bb.setMinimumY(bb.getMinimum().y - 3);
+                mDetourTileCache->updateFromGeometry(detourInputGeometry, bb);  // Update tile again, this time without the pallet
+
+                // Remove pallet entity from scene and destroy it
+                rayHitObject->getParentSceneNode()->detachObject(rayHitObject);
+                mSceneMgr->destroyEntity((Ogre::Entity*)rayHitObject);
             }
         }
     }

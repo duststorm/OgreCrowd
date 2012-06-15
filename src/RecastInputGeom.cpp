@@ -63,6 +63,56 @@ InputGeom::~InputGeom()
     delete[] tris;
 }
 
+// Used to query scene to get input geometry of a tile directly
+// TODO only bounds segmentation that happens at the moment is on entity bounding box, improve this
+// Tile bounds need to be in world space coordinates
+InputGeom::InputGeom(std::vector<Ogre::Entity*> srcMeshes, const Ogre::AxisAlignedBox &tileBounds)
+    : mSrcMeshes(srcMeshes),
+    nverts(0),
+    ntris(0),
+    mReferenceNode(0)
+{
+    if (srcMeshes.empty())
+        return;
+
+
+    // Convert Ogre::Entity source meshes to a format that recast understands
+
+    //set the reference node
+    Ogre::Entity* ent = srcMeshes[0];
+    mReferenceNode = ent->getParentSceneNode()->getCreator()->getRootSceneNode();
+
+
+    // Set the area where the navigation mesh will be build to the tileBounds parameter.
+    // TODO is this a good idea?
+    bmin = new float[3];
+    bmax = new float[3];
+    OgreRecast::OgreVect3ToFloatA(tileBounds.getMinimum(), bmin);
+    OgreRecast::OgreVect3ToFloatA(tileBounds.getMaximum(), bmax);
+
+
+    // Convert ogre geometry (vertices, triangles and normals)
+    convertOgreEntities();
+
+
+    m_offMeshConCount = 0;
+    m_volumeCount = 0;
+
+// TODO maybe I don't need this in single navmesh mode
+    m_chunkyMesh = new rcChunkyTriMesh;
+    if (!m_chunkyMesh)
+    {
+        Ogre::LogManager::getSingletonPtr()->logMessage("buildTiledNavigation: Out of memory 'm_chunkyMesh'.");
+        return;
+    }
+    if (!rcCreateChunkyTriMesh(getVerts(), getTris(), getTriCount(), 256, m_chunkyMesh))
+    {
+        Ogre::LogManager::getSingletonPtr()->logMessage("buildTiledNavigation: Failed to build chunky mesh.");
+        return;
+    }
+}
+
+
 void InputGeom::convertOgreEntities()
 {
     //Convert all vertices and triangles to recast format
@@ -76,6 +126,109 @@ void InputGeom::convertOgreEntities()
     ntris = 0;
     size_t i = 0;
     for(std::vector<Ogre::Entity*>::iterator iter = mSrcMeshes.begin(); iter != mSrcMeshes.end(); iter++) {
+        getMeshInformation((*iter)->getMesh(), meshVertexCount[i], meshVertices[i], meshIndexCount[i], meshIndices[i]);
+        //total number of verts
+        nverts += meshVertexCount[i];
+        //total number of indices
+        ntris += meshIndexCount[i];
+
+        i++;
+    }
+
+    // DECLARE RECAST DATA BUFFERS USING THE INFO WE GRABBED ABOVE
+    verts = new float[nverts*3];// *3 as verts holds x,y,&z for each verts in the array
+    tris = new int[ntris];// tris in recast is really indices like ogre
+
+    //convert index count into tri count
+    ntris = ntris/3; //although the tris array are indices the ntris is actual number of triangles, eg. indices/3;
+
+    //copy all meshes verticies into single buffer and transform to world space relative to parentNode
+    int vertsIndex = 0;
+    int prevVerticiesCount = 0;
+    int prevIndexCountTotal = 0;
+    i = 0;
+    for (std::vector<Ogre::Entity*>::iterator iter = mSrcMeshes.begin(); iter != mSrcMeshes.end(); iter++) {
+        Ogre::Entity *ent = *iter;
+        //find the transform between the reference node and this node
+        Ogre::Matrix4 transform = mReferenceNode->_getFullTransform().inverse() * ent->getParentSceneNode()->_getFullTransform();
+        Ogre::Vector3 vertexPos;
+        for (uint j = 0 ; j < meshVertexCount[i] ; j++)
+        {
+            vertexPos = transform*meshVertices[i][j];
+            verts[vertsIndex] = vertexPos.x;
+            verts[vertsIndex+1] = vertexPos.y;
+            verts[vertsIndex+2] = vertexPos.z;
+            vertsIndex+=3;
+        }
+
+        for (uint j = 0 ; j < meshIndexCount[i] ; j++)
+        {
+            tris[prevIndexCountTotal+j] = meshIndices[i][j]+prevVerticiesCount;
+        }
+        prevIndexCountTotal += meshIndexCount[i];
+        prevVerticiesCount += meshVertexCount[i];
+
+        i++;
+    }
+
+    //delete tempory arrays
+    //TODO These probably could member varibles, this would increase performance slightly
+    delete[] meshVertices;
+    delete[] meshIndices;
+
+    // calculate normals data for Recast - im not 100% sure where this is required
+    // but it is used, Ogre handles its own Normal data for rendering, this is not related
+    // to Ogre at all ( its also not correct lol )
+    // TODO : fix this
+    normals = new float[ntris*3];
+    for (int i = 0; i < ntris*3; i += 3)
+    {
+        const float* v0 = &verts[tris[i]*3];
+        const float* v1 = &verts[tris[i+1]*3];
+        const float* v2 = &verts[tris[i+2]*3];
+        float e0[3], e1[3];
+        for (int j = 0; j < 3; ++j)
+        {
+            e0[j] = (v1[j] - v0[j]);
+            e1[j] = (v2[j] - v0[j]);
+        }
+        float* n = &normals[i];
+        n[0] = ((e0[1]*e1[2]) - (e0[2]*e1[1]));
+        n[1] = ((e0[2]*e1[0]) - (e0[0]*e1[2]));
+        n[2] = ((e0[0]*e1[1]) - (e0[1]*e1[0]));
+
+        float d = sqrtf(n[0]*n[0] + n[1]*n[1] + n[2]*n[2]);
+        if (d > 0)
+        {
+            d = 1.0f/d;
+            n[0] *= d;
+            n[1] *= d;
+            n[2] *= d;
+        }
+    }
+}
+
+void InputGeom::convertOgreEntities(Ogre::AxisAlignedBox &tileBounds)
+{
+    //Convert all vertices and triangles to recast format
+    const int numNodes = mSrcMeshes.size();
+    size_t *meshVertexCount = new size_t[numNodes];
+    size_t *meshIndexCount = new size_t[numNodes];
+    Ogre::Vector3 **meshVertices = new Ogre::Vector3*[numNodes];
+    unsigned long **meshIndices = new unsigned long*[numNodes];
+
+    nverts = 0;
+    ntris = 0;
+    size_t i = 0;
+    Ogre::AxisAlignedBox bb;
+    Ogre::Matrix4 transform;
+    for(std::vector<Ogre::Entity*>::iterator iter = mSrcMeshes.begin(); iter != mSrcMeshes.end(); iter++) {
+        transform = mReferenceNode->_getFullTransform().inverse() * (*iter)->getParentSceneNode()->_getFullTransform();
+        bb = (*iter)->getBoundingBox();
+        bb.transform(transform);    // Transform to world coordinates
+        if( ! bb.intersects(tileBounds) )
+            continue;
+
         getMeshInformation((*iter)->getMesh(), meshVertexCount[i], meshVertices[i], meshIndexCount[i], meshIndices[i]);
         //total number of verts
         nverts += meshVertexCount[i];
@@ -1000,10 +1153,10 @@ int rcGetChunksOverlappingSegment(const rcChunkyTriMesh* cm,
 }
 
 
-Ogre::ManualObject* InputGeom::drawConvexVolume(Ogre::String name, ConvexVolume *vol, Ogre::SceneManager* sceneMgr)
+Ogre::ManualObject* InputGeom::drawConvexVolume(ConvexVolume *vol, Ogre::SceneManager* sceneMgr)
 {
     // Define manualObject with convex volume faces
-    Ogre::ManualObject *manual = sceneMgr->createManualObject("ConvexVolume_"+name);
+    Ogre::ManualObject *manual = sceneMgr->createManualObject();
     // Set material
     manual->begin("recastdebug", Ogre::RenderOperation::OT_LINE_LIST) ;
 

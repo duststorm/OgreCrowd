@@ -264,8 +264,14 @@ public:
       * Build or rebuild a cache tile or tiles at the specified index.
       * At the moment this will issue an immediate update of the navmesh at the
       * corresponding tiles.
+      * By default the input geometry stored in this tilecache will be used (the one initially
+      * used to build the navmesh), but you can specify a different one if you want to rebuild
+      * tiles from a changed scene.
       **/
-    bool buildTile(const int tx, const int ty);
+    // TODO maybe in the future I don't want to store inputgeom anymore, at the moment it's only used for adding convex shapes (what really should be done from compressed tiles instead of rebuilding from input geom) The whole navmesh can be stored as compressed tiles, the input geom does not need to be stored.
+    bool buildTile(const int tx, const int ty, InputGeom *inputGeom);
+
+    void updateFromGeometry(std::vector<Ogre::Entity*> srcMeshes, const Ogre::AxisAlignedBox &areaToUpdate);
 
     /**
       * Build the 2D navigation grid divided in layers that is the intermediary format stored in the tilecache.

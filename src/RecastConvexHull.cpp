@@ -9,8 +9,8 @@ ConvexVolume::ConvexVolume(InputGeom* geom, float offset)
 // TODO protect against too many vectors!
 
     int hullVertIndices[MAX_CONVEXVOL_PTS];
-    float* pts = geom->verts;
-    int npts = geom->nverts;
+    float* pts = geom->getVerts();
+    int npts = geom->getVertCount();
 
     // Find lower-leftmost point.
     int hull = 0;
@@ -36,15 +36,15 @@ ConvexVolume::ConvexVolume(InputGeom* geom, float offset)
 
     // Copy geometry vertices to convex hull
     for (int i = 0; i < nverts; i++)
-        rcVcopy(&verts[i*3], &geom->verts[hullVertIndices[i]*3]);
+        rcVcopy(&verts[i*3], &pts[hullVertIndices[i]*3]);
 
 
 
     area = SAMPLE_POLYAREA_DOOR;   // You can choose whatever flag you assing to the poly area
 
     // Find min and max height of convex hull
-    hmin = geom->bmin[1];
-    hmax = geom->bmax[1];
+    hmin = geom->getMeshBoundsMin()[1];
+    hmax = geom->getMeshBoundsMax()[1];
 /*
     hull->hmin = FLT_MAX; hull->hmax = 0;
     for (int i = 0; i < nbHullVerts; ++i)
@@ -54,8 +54,8 @@ ConvexVolume::ConvexVolume(InputGeom* geom, float offset)
 //    hull.hmax = hull.hmin + m_boxHeight;
 */
     // 3D mesh min and max bounds
-    rcVcopy(bmin, geom->bmin);
-    rcVcopy(bmax, geom->bmax);
+    rcVcopy(bmin, geom->getMeshBoundsMin());
+    rcVcopy(bmax, geom->getMeshBoundsMax());
 
 //TODO offset is still broken for a lot of shapes! Fix this!
     // Offset convex hull if needed

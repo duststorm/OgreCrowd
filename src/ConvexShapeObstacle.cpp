@@ -42,7 +42,7 @@ ConvexShapeObstacle::ConvexShapeObstacle(Ogre::Vector3 position, Ogre::Real offs
 
     // Debug draw convex hull
 // TODO add debug flag, grey lines around boxes should disappear when disabling debug drawing
-    mConvexHullDebug = InputGeom::drawConvexVolume(mName, mConvexHull, mSceneMgr);    // Debug convex volume
+    mConvexHullDebug = InputGeom::drawConvexVolume(mConvexHull, mSceneMgr);    // Debug convex volume
     Ogre::LogManager::getSingletonPtr()->logMessage("Adding obstacle "+mName);
 
     //if(mObstacleId == -1)
