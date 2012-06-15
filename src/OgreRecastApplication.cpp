@@ -134,6 +134,23 @@ void OgreRecastApplication::createScene(void)
         navmeshEnts.push_back( createObstacle("Pot9", Ogre::Vector3(0.926607, 10, -37.7362), Ogre::Vector3(0.3, 0.3, 0.3)) );
         navmeshEnts.push_back( createObstacle("Pot10", Ogre::Vector3(18.9451, 10.2355, 0.95), Ogre::Vector3(0.3, 0.3, 0.3)) );
         navmeshEnts.push_back( createObstacle("Pot11", Ogre::Vector3(18.2158, 10.2355, 4), Ogre::Vector3(0.3, 0.3, 0.3)) );
+
+        // Just a little test: add two walkable pallets
+        Ogre::Entity* palletE =  mSceneMgr->createEntity("WoodenPallet1", "WoodPallet.mesh");
+        Ogre::SceneNode* palletN =  mSceneMgr->getRootSceneNode()->createChildSceneNode();
+        palletN->attachObject(palletE);
+        palletN->setPosition(0.0424851, 10.8, -18.907);
+        // Good care needs to be taken with the size of obstacles and the navmesh generation properties
+        // Note that in this case it would probably be better to create a simple bounding box shape for the pallet, to not have troube with the holes in the pallet.
+        palletN->setScale(0.4, 0.7, 0.4);
+        navmeshEnts.push_back(palletE);
+
+        palletE =  mSceneMgr->createEntity("WoodenPallet2", "WoodPallet.mesh");
+        palletN =  mSceneMgr->getRootSceneNode()->createChildSceneNode();
+        palletN->attachObject(palletE);
+        palletN->setPosition(0.224166, 11.5, -16.8332);
+        palletN->setScale(0.4, 0.7, 0.4);
+        navmeshEnts.push_back(palletE);
     }
 
 
@@ -532,6 +549,11 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
                 mObstacles.push_back(new CylinderObstacle(rayHitPoint, mDetourTileCache));
             }
         }
+    }
+
+    // K key adds a wooden pallet to the scene that can be climbed by agents
+    if(arg.key == OIS::KC_K && !SINGLE_NAVMESH) {
+
     }
 
     // Delete removes a temporary obstacle from the navmesh (in dtTileCache mode)

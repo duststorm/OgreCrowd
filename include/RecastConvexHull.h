@@ -7,8 +7,10 @@ class InputGeom;
   * The maximum amount of points that a convex hull
   * used for dynamic obstacles on a navmesh can consist of.
   * For performance reasons this cannot be too high.
+  * But has to have at least twice the number of vertices that
+  * the input has!!!
   **/
-static const int MAX_CONVEXVOL_PTS = 12;
+static const int MAX_CONVEXVOL_PTS = 12;    // TODO increase? or find better convex hull algorithm
 
 /**
   * Volume describing a convex hull around
