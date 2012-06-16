@@ -29,7 +29,8 @@ ConvexVolume::ConvexVolume(InputGeom* geom, float offset)
                 endpt = j;
         hull = endpt;
     }
-    while (endpt != hullVertIndices[0] && i < MAX_CONVEXVOL_PTS);   // TODO: number of hull points is limited, but in a naive way. In large meshes the best candidate points for the hull might not be selected
+    while (endpt != hullVertIndices[0] && i < MAX_CONVEXVOL_PTS/2);   // TODO: number of hull points is limited, but in a naive way. In large meshes the best candidate points for the hull might not be selected
+                                            // Leave the other half of the points for expanding the hull
 
     nverts = i;
 
@@ -60,8 +61,8 @@ ConvexVolume::ConvexVolume(InputGeom* geom, float offset)
 //TODO offset is still broken for a lot of shapes! Fix this!
     // Offset convex hull if needed
     if(offset > 0.01f) {
-        float offsetVerts[2*MAX_CONVEXVOL_PTS * 3]; // An offset hull is allowed twice the number of vertices
-        int nOffsetVerts = rcOffsetPoly(verts, nverts, offset, offsetVerts, MAX_CONVEXVOL_PTS*2);
+        float offsetVerts[MAX_CONVEXVOL_PTS * 3]; // An offset hull is allowed twice the number of vertices
+        int nOffsetVerts = rcOffsetPoly(verts, nverts, offset, offsetVerts, MAX_CONVEXVOL_PTS);
 
         if (nOffsetVerts <= 0)
             return;
@@ -69,6 +70,8 @@ ConvexVolume::ConvexVolume(InputGeom* geom, float offset)
 //TODO fix difference in max_pts for offset and non-offset hull
         for(int i = 0; i < nOffsetVerts; i++)
             rcVcopy(&verts[i*3], &offsetVerts[i*3]);
+
+        nverts = nOffsetVerts;
     }
 
 

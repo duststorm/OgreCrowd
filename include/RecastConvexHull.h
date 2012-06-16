@@ -10,7 +10,7 @@ class InputGeom;
   * But has to have at least twice the number of vertices that
   * the input has!!!
   **/
-static const int MAX_CONVEXVOL_PTS = 12;    // TODO increase? or find better convex hull algorithm
+static const int MAX_CONVEXVOL_PTS = 90;    // TODO increase? or find better convex hull algorithm
 
 /**
   * Volume describing a convex hull around
