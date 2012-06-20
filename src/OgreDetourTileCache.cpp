@@ -266,6 +266,7 @@ bool OgreDetourTileCache::buildTile(const int tx, const int ty, InputGeom *input
     for (int i = 0; i < ntiles; ++i)
     {
         TileCacheData* tile = &tiles[i];
+// TODO remove tile here if it exists?
         status = m_tileCache->addTile(tile->data, tile->dataSize, DT_COMPRESSEDTILE_FREE_DATA, 0);  // Add compressed tiles to tileCache
         if (dtStatusFailed(status))
         {
@@ -980,3 +981,4 @@ std::vector<dtCompressedTileRef> OgreDetourTileCache::getTilesContainingBox(Ogre
 
     return result;
 }
+

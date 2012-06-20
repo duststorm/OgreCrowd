@@ -65,6 +65,13 @@ public:
 
     InputGeom(std::vector<Ogre::Entity*> srcMeshes, const Ogre::AxisAlignedBox &tileBounds);
 
+    /**
+      * Convenience funtion to calculate the bounding box of an entity in
+      * world coordinates.
+      * Entity needs to be added to the scene before calling this function.
+      **/
+    static Ogre::AxisAlignedBox getWorldSpaceBoundingBox(Ogre::MovableObject *ent);
+
     ~InputGeom();
 
     float* getVerts(void);

@@ -1,6 +1,8 @@
 #ifndef RECASTCONVEXHULL_H
 #define RECASTCONVEXHULL_H
 
+#include <Ogre.h>
+
 class InputGeom;
 
 /**
@@ -26,6 +28,11 @@ public:
       * the specified 3D points.
       **/
     ConvexVolume(InputGeom *geom, float offset = 0.0f);
+
+    /**
+      * Create a convex hull from a bounding box
+      **/
+    ConvexVolume(Ogre::AxisAlignedBox boundingBox, float offset = 0.0f);
 
     float verts[MAX_CONVEXVOL_PTS*3];
     float hmin, hmax;

@@ -2,6 +2,7 @@
 #include "RecastInputGeom.h"
 #include "Recast/Recast.h"
 #include "OgreRecastDefinitions.h"
+#include "OgreRecast.h"
 
 // Calculates convex hull on xz-plane of points on 'pts'
 ConvexVolume::ConvexVolume(InputGeom* geom, float offset)
@@ -46,14 +47,7 @@ ConvexVolume::ConvexVolume(InputGeom* geom, float offset)
     // Find min and max height of convex hull
     hmin = geom->getMeshBoundsMin()[1];
     hmax = geom->getMeshBoundsMax()[1];
-/*
-    hull->hmin = FLT_MAX; hull->hmax = 0;
-    for (int i = 0; i < nbHullVerts; ++i)
-        hull->hmin = rcMin(hull->hmin, hull->verts[i*3+1]);
-// TODO set descent and height (see demo for details)
-//    hull.hmin -= m_boxDescent;
-//    hull.hmax = hull.hmin + m_boxHeight;
-*/
+
     // 3D mesh min and max bounds
     rcVcopy(bmin, geom->getMeshBoundsMin());
     rcVcopy(bmax, geom->getMeshBoundsMax());
@@ -67,13 +61,17 @@ ConvexVolume::ConvexVolume(InputGeom* geom, float offset)
         if (nOffsetVerts <= 0)
             return;
 
-//TODO fix difference in max_pts for offset and non-offset hull
         for(int i = 0; i < nOffsetVerts; i++)
             rcVcopy(&verts[i*3], &offsetVerts[i*3]);
 
         nverts = nOffsetVerts;
-    }
 
+        // Modify the bounds with offset (except height)
+        bmin[0] = bmin[0]-offset;
+        bmin[2] = bmin[2]-offset;
+        bmax[0] = bmax[0]+offset;
+        bmax[2] = bmax[2]+offset;
+    }
 
 }
 
@@ -96,4 +94,32 @@ bool ConvexVolume::left(const float* a, const float* b, const float* c)
     const float u2 = c[0] - a[0];
     const float v2 = c[2] - a[2];
     return u1 * v2 - v1 * u2 < 0;
+}
+
+
+ConvexVolume::ConvexVolume(Ogre::AxisAlignedBox boundingBox, float offset)
+{
+    Ogre::Vector3 max = boundingBox.getMaximum();
+    Ogre::Vector3 min = boundingBox.getMinimum();
+
+    // Offset bounding box (except height)
+    if(offset > 0.01f) {
+        max = max + offset*Ogre::Vector3(1,0,1);
+        min = min - offset*Ogre::Vector3(1,0,1);
+    }
+
+    // Create box verts (in clockwise fashion!!)
+    verts[0]= min.x; verts[1]= min.y; verts[2]= max.z;
+    verts[3]= max.x; verts[4]= max.y; verts[5]= max.z;
+    verts[6]= max.x; verts[7]= max.y; verts[8]= min.z;
+    verts[9]= min.x; verts[10]= min.y; verts[11]= min.z;
+    nverts = 4; // For rcMarkConvexPoly the verts of the shape need to be in clockwise order
+
+    // Set bounding box limits
+    OgreRecast::OgreVect3ToFloatA(min, bmin);
+    OgreRecast::OgreVect3ToFloatA(max, bmax);
+
+    // Set height limits
+    hmin = min.y;
+    hmax = max.y;
 }

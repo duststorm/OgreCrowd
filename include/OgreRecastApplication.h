@@ -279,6 +279,10 @@ private:
     std::vector<Ogre::Entity*> mWalkableObjects;
 
     std::vector<Ogre::Entity*> mNavmeshEnts;
+
+    Ogre::SceneNode *mGate;
+    ConvexVolume *mGateHull;
+    int mGateObstacleId;
 };
 
 

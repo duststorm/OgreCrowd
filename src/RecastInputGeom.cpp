@@ -1214,3 +1214,13 @@ Ogre::ManualObject* InputGeom::drawConvexVolume(ConvexVolume *vol, Ogre::SceneMa
     return manual;
 }
 
+
+Ogre::AxisAlignedBox InputGeom::getWorldSpaceBoundingBox(Ogre::MovableObject *ent) {
+    Ogre::SceneManager *sceneMgr = ent->getParentSceneNode()->getCreator();
+    Ogre::Matrix4 transform = sceneMgr->getRootSceneNode()->_getFullTransform().inverse() * ent->getParentSceneNode()->_getFullTransform();
+    Ogre::AxisAlignedBox bb = ent->getBoundingBox();
+    bb.transform(transform);
+
+    return bb;
+}
+

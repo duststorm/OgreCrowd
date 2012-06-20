@@ -65,7 +65,10 @@ OgreRecastApplication::OgreRecastApplication(void)
         mDebugDraw(DEBUG_DRAW),
         mNavMeshNode(NULL),
         mDebugEntities(),
-        mDetourTileCache(NULL)
+        mDetourTileCache(NULL),
+        mGateHull(0),
+        mGateObstacleId(-1),
+        mGate(0)
 {
 }
 
@@ -87,11 +90,17 @@ void OgreRecastApplication::createScene(void)
 
     // Create navigateable dungeon
     Ogre::Entity* mapE = mSceneMgr->createEntity("Map", "dungeon.mesh");
-    mapE->setMaterialName("dungeon");
     Ogre::SceneNode* mapNode = mSceneMgr->getRootSceneNode()->createChildSceneNode("MapNode");
     mapNode->attachObject(mapE);
-    if(mapE->getQueryFlags() != DEFAULT_MASK)
-        Ogre::LogManager::getSingletonPtr()->logMessage("Error");
+
+    // Add gate
+    Ogre::Entity *gateE = mSceneMgr->createEntity("Gate", "Gate.mesh");
+    mGate = mSceneMgr->getRootSceneNode()->createChildSceneNode("GateNode");
+    mGate->attachObject(gateE);
+    mGate->setPosition(-9.22, 0, 0);
+    if(SINGLE_NAVMESH)
+       // No temporary obstacles available, add gate to the navmesh input
+        mNavmeshEnts.push_back(gateE);
 
     // Add some obstacles
     Ogre::Entity* potE = NULL;
@@ -164,6 +173,11 @@ void OgreRecastApplication::createScene(void)
             Ogre::LogManager::getSingletonPtr()->logMessage("ERROR: could not generate useable navmesh from mesh using detourTileCache.");
             return;
         }
+
+        // Create a convex obstacle for the gate using its world-coordinate bounding box
+        mGateHull = new ConvexVolume(InputGeom::getWorldSpaceBoundingBox(gateE), mRecast->m_agentRadius);
+        mGateObstacleId = mDetourTileCache->addConvexShapeObstacle(mGateHull);
+        InputGeom::drawConvexVolume(mGateHull, mSceneMgr);
     }
 
 
@@ -641,9 +655,7 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
             detourInputGeometry.insert(detourInputGeometry.end(), mWalkableObjects.begin(), mWalkableObjects.end());
 
             // Rebuild the tiles overlapping the bounding box of the added object
-            Ogre::Matrix4 transform = mSceneMgr->getRootSceneNode()->_getFullTransform().inverse() * palletE->getParentSceneNode()->_getFullTransform();
-            Ogre::AxisAlignedBox bb = palletE->getBoundingBox();
-            bb.transform(transform);
+            Ogre::AxisAlignedBox bb = InputGeom::getWorldSpaceBoundingBox(palletE);
 
             // Extend the bounds a bit downwards, because they need to hit the navmesh surface in order to detect that the tile has to be rebuilt.
             // In other words: 3 is the maximum height an obstacle can be above the ground.
@@ -674,9 +686,7 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
                                             // the hit pallet is removed from this list
 
                 // Rebuild the tiles overlapping the bounding box, with the pallet removed
-                Ogre::Matrix4 transform = mSceneMgr->getRootSceneNode()->_getFullTransform().inverse() * rayHitObject->getParentSceneNode()->_getFullTransform();
-                Ogre::AxisAlignedBox bb = rayHitObject->getBoundingBox();
-                bb.transform(transform);
+                Ogre::AxisAlignedBox bb = InputGeom::getWorldSpaceBoundingBox(rayHitObject);
 
                 // For the same reasons as with adding, we need to extend the bounds a bit downwards.
                 bb.setMinimumY(bb.getMinimum().y - 3);
@@ -686,6 +696,24 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
                 rayHitObject->getParentSceneNode()->detachObject(rayHitObject);
                 mSceneMgr->destroyEntity((Ogre::Entity*)rayHitObject);
             }
+        }
+    }
+
+    // O key opens or closes the gate
+    if(arg.key == OIS::KC_O) {
+        if(mGateObstacleId >= 0) {
+            // Open gate
+            mDetourTileCache->removeConvexShapeObstacle(mGateObstacleId);
+            mGateObstacleId = -1;
+            Ogre::Vector3 pos = mGate->getPosition();
+            pos.y += mDetourCrowd->getAgentHeight()+ 0.3;
+            mGate->setPosition(pos);
+        } else {
+            // Close gate
+            mGateObstacleId = mDetourTileCache->addConvexShapeObstacle(mGateHull);
+            Ogre::Vector3 pos = mGate->getPosition();
+            pos.y -= mDetourCrowd->getAgentHeight() +0.3;
+            mGate->setPosition(pos);
         }
     }
 

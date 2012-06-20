@@ -26,13 +26,24 @@ ConvexShapeObstacle::ConvexShapeObstacle(Ogre::Vector3 position, Ogre::Real offs
 // TODO I want to use the other constructor for one entity here!!
     std::vector<Ogre::Entity*> ents;
     ents.push_back(mEnt);
-    // Note that it is important to first add your entity to the scene before creating an inputGeom from it.
-    // This is so that it can calculate the world space coordinates for the object, which are needed for recast.
-    mInputGeom = new InputGeom(ents);
 
-    // Create convex area obstacle in the detourTileCache
-    // Create convex hull with agent radios offset around the object (this is important so agents don't walk through the edges of the obstacle!)
-    mConvexHull = mInputGeom->getConvexHull(offset);
+    if(mEnt->getMesh()->getName() == "Pot.mesh") {
+        // Create a convex hull from the mesh geometry
+
+        // Note that it is important to first add your entity to the scene before creating an inputGeom from it.
+        // This is so that it can calculate the world space coordinates for the object, which are needed for recast.
+        mInputGeom = new InputGeom(ents);
+
+        // Create convex area obstacle in the detourTileCache
+        // Create convex hull with agent radios offset around the object (this is important so agents don't walk through the edges of the obstacle!)
+        mConvexHull = mInputGeom->getConvexHull(offset);
+    } else {
+        // Create a convex hull simply from the bounding box
+
+        // The bounding box has to be transformed into world-space coordinates
+        mConvexHull = new ConvexVolume(InputGeom::getWorldSpaceBoundingBox(mEnt), offset);
+    }
+
     // WARNING: Watch out for memory leaks here! ConvexVolume objects are not managed by any system (except this class).
     mConvexHull->area = RC_NULL_AREA;   // Set area described by convex polygon to "unwalkable"
     // Add convex hull to detourTileCache as obstacle
