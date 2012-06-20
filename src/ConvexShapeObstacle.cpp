@@ -1,11 +1,11 @@
-#include "include/ConvexShapeObstacle.h"
+#include "ConvexShapeObstacle.h"
+#include "OgreRecastApplication.h"
 
 ConvexShapeObstacle::ConvexShapeObstacle(Ogre::Vector3 position, Ogre::Real offset, OgreDetourTileCache *detourTileCache)
     : Obstacle(detourTileCache),
       mPosition(position),
       mEnt(0),
       mNode(0),
-      mObstacleId(-1),
       mConvexHullDebug(0),
       mInputGeom(0)
 {
@@ -21,6 +21,8 @@ ConvexShapeObstacle::ConvexShapeObstacle(Ogre::Vector3 position, Ogre::Real offs
     }
     mNode->attachObject(mEnt);
     mNode->setPosition(mPosition);
+
+    mEnt->setQueryFlags(OgreRecastApplication::OBSTACLE_MASK);  // add to query group for obstacles
 
     // Transfer entitiy geometry to recast compatible format
 // TODO I want to use the other constructor for one entity here!!
@@ -47,14 +49,11 @@ ConvexShapeObstacle::ConvexShapeObstacle(Ogre::Vector3 position, Ogre::Real offs
     // WARNING: Watch out for memory leaks here! ConvexVolume objects are not managed by any system (except this class).
     mConvexHull->area = RC_NULL_AREA;   // Set area described by convex polygon to "unwalkable"
     // Add convex hull to detourTileCache as obstacle
-    mObstacleId = mDetourTileCache->addConvexShapeObstacle(mConvexHull);
-
-    mName = "ConvexObstacle_"+ Ogre::StringConverter::toString(mObstacleId);
+    mDetourTileCache->addConvexShapeObstacle(mConvexHull);
 
     // Debug draw convex hull
 // TODO add debug flag, grey lines around boxes should disappear when disabling debug drawing
     mConvexHullDebug = InputGeom::drawConvexVolume(mConvexHull, mSceneMgr);    // Debug convex volume
-    Ogre::LogManager::getSingletonPtr()->logMessage("Adding obstacle "+mName);
 
     //if(mObstacleId == -1)
         // TODO exception when something goes wrong!
@@ -64,7 +63,8 @@ ConvexShapeObstacle::ConvexShapeObstacle(Ogre::Vector3 position, Ogre::Real offs
 
 ConvexShapeObstacle::~ConvexShapeObstacle()
 {
-    // Removing obstacle from DetourTileCache is done by the application class (maybe clean this up in the future)
+    // Remove obstacle from DetourTileCache
+    mDetourTileCache->removeConvexShapeObstacle(mDetourTileCache->getConvexShapeObstacleId(mConvexHull));
 
     mNode->removeAllChildren();
     mNode->getParentSceneNode()->removeChild(mNode);
@@ -85,4 +85,10 @@ ConvexShapeObstacle::~ConvexShapeObstacle()
 
 void ConvexShapeObstacle::update(long time)
 {
+}
+
+
+Ogre::Entity* ConvexShapeObstacle::getEntity()
+{
+    return mEnt;
 }

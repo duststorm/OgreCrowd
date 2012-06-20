@@ -58,7 +58,8 @@ public:
       **/
     enum QueryFlags {
        DEFAULT_MASK = 1u<<0,
-       NAVMESH_MASK = 1u<<1
+       NAVMESH_MASK = 1u<<1,
+       OBSTACLE_MASK= 1u<<2
     };
 
     /**
@@ -282,7 +283,7 @@ private:
 
     Ogre::SceneNode *mGate;
     ConvexVolume *mGateHull;
-    int mGateObstacleId;
+    bool mGateClosed;
 };
 
 

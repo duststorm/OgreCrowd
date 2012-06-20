@@ -156,6 +156,7 @@ public:
     int addConvexVolume(ConvexVolume *vol);
     bool deleteConvexVolume(int i, ConvexVolume** = NULL);
     void drawConvexVolumes(struct duDebugDraw* dd, bool hilight = false);
+    int getConvexVolumeId(ConvexVolume *convexHull);
     ///@}
 
 

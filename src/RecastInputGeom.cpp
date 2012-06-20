@@ -645,6 +645,16 @@ ConvexVolume* InputGeom::getConvexHull(Ogre::Real offset)
     return new ConvexVolume(this, offset);
 }
 
+int InputGeom::getConvexVolumeId(ConvexVolume *convexHull)
+{
+    for(int i = 0; i < m_volumeCount; i++) {
+        if(m_volumes[i] == convexHull)
+            return i;
+    }
+
+    return -1;
+}
+
 int InputGeom::addConvexVolume(ConvexVolume *vol)
 {
     // The maximum number of convex volumes that can be added to the navmesh equals the max amount

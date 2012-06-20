@@ -21,7 +21,7 @@ CylinderObstacle::CylinderObstacle(Ogre::Vector3 position, OgreDetourTileCache *
         mNode->setScale(TEMP_OBSTACLE_RADIUS, TEMP_OBSTACLE_HEIGHT, TEMP_OBSTACLE_RADIUS);
 
 //        mNode->setVisible(mDebugDraw);
-        mEnt->setQueryFlags(OgreRecastApplication::DEFAULT_MASK);  // exclude from navmesh queries
+        mEnt->setQueryFlags(OgreRecastApplication::OBSTACLE_MASK);  // add to query group for obstacles
     }
 
     // TODO have some way of notifying that obstacle creation failed? (exception maybe?)
@@ -29,6 +29,9 @@ CylinderObstacle::CylinderObstacle(Ogre::Vector3 position, OgreDetourTileCache *
 
 CylinderObstacle::~CylinderObstacle()
 {
+    // Remove obstacle from detour tilecache
+    mDetourTileCache->removeTempObstacle(mObstacleRef);
+
     mNode->removeAllChildren();
     mNode->getParentSceneNode()->removeChild(mNode);
     mSceneMgr->destroyEntity(mEnt);
@@ -46,4 +49,10 @@ void CylinderObstacle::update(long time)
 dtObstacleRef CylinderObstacle::getObstacleRef()
 {
     return mObstacleRef;
+}
+
+
+Ogre::Entity* CylinderObstacle::getEntity()
+{
+    return mEnt;
 }

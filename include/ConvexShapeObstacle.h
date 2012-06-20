@@ -12,6 +12,8 @@ public:
 
     virtual void update(long time);
 
+    virtual Ogre::Entity* getEntity(void);
+
 protected:
     Ogre::Vector3 mPosition;
 
@@ -21,7 +23,6 @@ protected:
 
     ConvexVolume *mConvexHull;
     InputGeom *mInputGeom;   // TODO or create pointer
-    int mObstacleId;
     Ogre::ManualObject *mConvexHullDebug;
 };
 

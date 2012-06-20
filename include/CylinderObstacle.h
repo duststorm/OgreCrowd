@@ -13,6 +13,8 @@ public:
 
     virtual dtObstacleRef getObstacleRef(void);
 
+    virtual Ogre::Entity* getEntity(void);
+
 protected:
     Ogre::Vector3 mPosition;
     dtObstacleRef mObstacleRef;

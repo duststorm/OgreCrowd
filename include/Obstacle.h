@@ -11,6 +11,8 @@ public:
 
     virtual void update(long time) = 0;
 
+    virtual Ogre::Entity* getEntity(void)=0;
+
 protected:
     OgreDetourTileCache *mDetourTileCache;
     Ogre::SceneManager *mSceneMgr;

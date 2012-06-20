@@ -67,8 +67,8 @@ OgreRecastApplication::OgreRecastApplication(void)
         mDebugEntities(),
         mDetourTileCache(NULL),
         mGateHull(0),
-        mGateObstacleId(-1),
-        mGate(0)
+        mGate(0),
+        mGateClosed(false)
 {
 }
 
@@ -98,6 +98,7 @@ void OgreRecastApplication::createScene(void)
     mGate = mSceneMgr->getRootSceneNode()->createChildSceneNode("GateNode");
     mGate->attachObject(gateE);
     mGate->setPosition(-9.22, 0, 0);
+    mGateClosed = true;
     if(SINGLE_NAVMESH)
        // No temporary obstacles available, add gate to the navmesh input
         mNavmeshEnts.push_back(gateE);
@@ -176,7 +177,8 @@ void OgreRecastApplication::createScene(void)
 
         // Create a convex obstacle for the gate using its world-coordinate bounding box
         mGateHull = new ConvexVolume(InputGeom::getWorldSpaceBoundingBox(gateE), mRecast->m_agentRadius);
-        mGateObstacleId = mDetourTileCache->addConvexShapeObstacle(mGateHull);
+        mGateHull->hmin = mGateHull->hmin - 0.3;    // Extend a bit downwards so it hits the ground (navmesh) for certain.
+        mDetourTileCache->addConvexShapeObstacle(mGateHull);
         InputGeom::drawConvexVolume(mGateHull, mSceneMgr);
     }
 
@@ -563,66 +565,27 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
     }
 
     // Delete removes a temporary obstacle from the navmesh (in dtTileCache mode)
-
     if(!SINGLE_NAVMESH && mApplicationState != STEER_AGENT && arg.key == OIS::KC_DELETE) {
         // Find position on navmesh pointed to by cursor in the middle of the screen
         Ogre::Ray cursorRay = mCamera->getCameraToViewportRay(0.5, 0.5);
         Ogre::Vector3 rayHitPoint;
         Ogre::MovableObject *rayHitObject;
-        if (rayQueryPointInScene(cursorRay, NAVMESH_MASK, rayHitPoint, &rayHitObject)) {
-            if ( Ogre::StringUtil::startsWith(rayHitObject->getName(), "recastmowalk", true) ) {
-                // Compensate for the fact that the ray-queried navmesh is drawn a little above the ground
-                rayHitPoint.y = rayHitPoint.y - mRecast->m_navMeshOffsetFromGround;
-            } else {
-                // Queried point was not on navmesh, find nearest point on the navmesh
-                mRecast->findNearestPointOnNavmesh(rayHitPoint, rayHitPoint);
-            }
+        if (rayQueryPointInScene(cursorRay, OBSTACLE_MASK, rayHitPoint, &rayHitObject)) {
 
-            if(COMPLEX_OBSTACLES) {
-                // Remove convex obstacle from detourTileCache, we use ray picking of obstacles supplied by OgreDetourTileCache
-                int convexVolumeIdx = mDetourTileCache->removeConvexShapeObstacle(cursorRay.getOrigin(), rayHitPoint);
-                if(convexVolumeIdx != -1) {
-                    // Remove box obstacle
-// TODO: This is quite dirty: we rely on the fact that the indexes of mObstacles are the same as the internal ones of mDetourTileCache->inputGeom.
-                    Obstacle *mObstacle = mObstacles[convexVolumeIdx];
-                    if (convexVolumeIdx == mObstacles.size()-1) {
-                        mObstacles.pop_back();
-                    } else {
-                        mObstacles[convexVolumeIdx] = mObstacles[mObstacles.size()-1];
-                        mObstacles.pop_back();
-                    }
-
-                    // Call destructor on obstacle
-                    delete mObstacle;
-                }
-
-
-            } else {
-                dtObstacleRef oRef = mDetourTileCache->removeTempObstacle(cursorRay.getOrigin(), rayHitPoint);
-                if (oRef) {
-                    // Remove matching temp obstacle
-                    for(std::vector<Obstacle*>::iterator iter = mObstacles.begin(); iter != mObstacles.end(); iter++) {
-                        CylinderObstacle *obst = (CylinderObstacle*) (*iter);
-                        if (obst->getObstacleRef() == oRef) {
-                            // Remove obstacle from obstacles list
-                            mObstacles.erase(remove(mObstacles.begin(), mObstacles.end(), obst), mObstacles.end());
-
-                            // Call destructor for obstacle
-                            delete obst;
-
-                            break; // After the remove operation we cannot use our iterator anymore!
-                        }
-                    }
-
-// TODO add these markers to debugEntities list?
-                    /*
-                    // Remove debug entity
-                    mDebugEntities.erase(remove(mDebugEntities.begin(), mDebugEntities.end(), obstacleEnt), mDebugEntities.end());
-                    obstacleEnt->detachFromParent();
-                    mSceneMgr->destroyEntity(obstacleEnt);
-                    */
+            // Find the obstacle associated with the hit entity
+            Obstacle *obst = NULL;
+            for(std::vector<Obstacle*>::iterator iter = mObstacles.begin(); iter != mObstacles.end(); iter++) {
+                if((*iter)->getEntity() == rayHitObject) {
+                    obst = *iter;
+                    break;
                 }
             }
+
+            // Remove obstacle from obstacles list
+            mObstacles.erase(remove(mObstacles.begin(), mObstacles.end(), obst), mObstacles.end());
+
+            // Call destructor on obstacle (will also remove it from tilecache)
+            delete obst;
         }
     }
 
@@ -701,19 +664,20 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
 
     // O key opens or closes the gate
     if(arg.key == OIS::KC_O) {
-        if(mGateObstacleId >= 0) {
+        if(mGateClosed) {
             // Open gate
-            mDetourTileCache->removeConvexShapeObstacle(mGateObstacleId);
-            mGateObstacleId = -1;
+            mDetourTileCache->removeConvexShapeObstacle(mGateHull);
             Ogre::Vector3 pos = mGate->getPosition();
             pos.y += mDetourCrowd->getAgentHeight()+ 0.3;
             mGate->setPosition(pos);
+            mGateClosed = false;
         } else {
             // Close gate
-            mGateObstacleId = mDetourTileCache->addConvexShapeObstacle(mGateHull);
+            mDetourTileCache->addConvexShapeObstacle(mGateHull);
             Ogre::Vector3 pos = mGate->getPosition();
             pos.y -= mDetourCrowd->getAgentHeight() +0.3;
             mGate->setPosition(pos);
+            mGateClosed = true;
         }
     }
 

@@ -266,7 +266,10 @@ bool OgreDetourTileCache::buildTile(const int tx, const int ty, InputGeom *input
     for (int i = 0; i < ntiles; ++i)
     {
         TileCacheData* tile = &tiles[i];
-// TODO remove tile here if it exists?
+
+        dtTileCacheLayerHeader* header = (dtTileCacheLayerHeader*)tile->data;
+        // Important: if a tile already exists at this position, first remove the old one or it will not be updated!
+        removeTile( m_tileCache->getTileRef(m_tileCache->getTileAt(header->tx, header->ty,header->tlayer)) );
         status = m_tileCache->addTile(tile->data, tile->dataSize, DT_COMPRESSEDTILE_FREE_DATA, 0);  // Add compressed tiles to tileCache
         if (dtStatusFailed(status))
         {
@@ -275,9 +278,12 @@ bool OgreDetourTileCache::buildTile(const int tx, const int ty, InputGeom *input
             continue;       // TODO maybe return false here?
         }
 
+// TODO this has to be recalculated differently when rebuilding a tile
+        /*
         m_cacheLayerCount++;
         m_cacheCompressedSize += tile->dataSize;
         m_cacheRawSize += calcLayerBufferSize(m_tcparams.width, m_tcparams.height);
+        */
     }
 
 //TODO add a deferred command for this?
@@ -785,8 +791,8 @@ int OgreDetourTileCache::addConvexShapeObstacle(ConvexVolume *obstacle)
         return result;
 
 // TODO use these vars for deferring addConvexShape actions
-    mChangedConvexVolumes[mChangedConvexVolumesCount] = obstacle;
-    mChangedConvexVolumesCount++;
+//    mChangedConvexVolumes[mChangedConvexVolumesCount] = obstacle;
+//    mChangedConvexVolumesCount++;
 
     // Determine which navmesh tiles have to be updated
          // Borrowed from detourTileCache::update()
@@ -802,15 +808,17 @@ int OgreDetourTileCache::addConvexShapeObstacle(ConvexVolume *obstacle)
 // TODO when you do deffered commands, make sure you issue a rebuild for a tile only once per update, so remove doubles from the request queue (this is what contains() is for in dtTileCache)
         // Retrieve coordinates of tile that has to be rebuilt
         const dtCompressedTile* tile = m_tileCache->getTileByRef(touched[i]);
-        int tx = tile->header->tx;
-        int ty = tile->header->ty;
-        tile = NULL;
 
-        // Issue full rebuild from inputGeom, including convex shapes, for this tile
-        removeTile(touched[i]);     // Important: if a tile already exists at this position, first remove the old one or it will not be updated!
+        // If it is null, tile is already rebuilt (and has a new ref ID)
+        if(tile) {
+            int tx = tile->header->tx;
+            int ty = tile->header->ty;
+            tile = NULL;
 
 // TODO we actually want a buildTile method with a tileRef as input param. As this method does a bounding box intersection with tiles again, which might result in multiple tiles being rebuilt (which will lead to nothing because only one tile is removed..), and we determined which tiles to bebuild already, anyway (using queryTiles)
-        buildTile(tx, ty, m_geom);
+            buildTile(tx, ty, m_geom);  // Might rebuild multiple tiles
+        }
+
     }
 
 
@@ -838,15 +846,17 @@ void OgreDetourTileCache::updateFromGeometry(std::vector<Ogre::Entity*> srcMeshe
 // TODO when you do deffered commands, make sure you issue a rebuild for a tile only once per update, so remove doubles from the request queue (this is what contains() is for in dtTileCache)
         // Retrieve coordinates of tile that has to be rebuilt
         const dtCompressedTile* tile = m_tileCache->getTileByRef(touched[i]);
-        int tx = tile->header->tx;
-        int ty = tile->header->ty;
-        tile = NULL;
 
-        // Issue full rebuild from inputGeom, including convex shapes, for this tile
-        removeTile(touched[i]);     // Important: if a tile already exists at this position, first remove the old one or it will not be updated!
+        // If it is null, tile is already rebuilt (and has a new ref ID)
+        if(tile) {
+            int tx = tile->header->tx;
+            int ty = tile->header->ty;
+            tile = NULL;
 
 // TODO we actually want a buildTile method with a tileRef as input param. As this method does a bounding box intersection with tiles again, which might result in multiple tiles being rebuilt (which will lead to nothing because only one tile is removed..), and we determined which tiles to bebuild already, anyway (using queryTiles)
-        buildTile(tx, ty, &geom);
+            buildTile(tx, ty, &geom);
+        }
+
     }
 
 }
@@ -888,6 +898,21 @@ bool OgreDetourTileCache::removeTile(dtTileRef tileRef)
     return true;
 }
 
+ConvexVolume* OgreDetourTileCache::getConvexShapeObstacle(int obstacleIndex)
+{
+    return m_geom->getConvexVolume(obstacleIndex);
+}
+
+int OgreDetourTileCache::getConvexShapeObstacleId(ConvexVolume *convexHull)
+{
+    m_geom->getConvexVolumeId(convexHull);
+}
+
+bool OgreDetourTileCache::removeConvexShapeObstacle(ConvexVolume* convexHull, ConvexVolume** removedVolume)
+{
+    return removeConvexShapeObstacle(getConvexShapeObstacleId(convexHull), removedVolume);
+}
+
 bool OgreDetourTileCache::removeConvexShapeObstacle(int obstacleIndex, ConvexVolume** removedVolume)
 {
     ConvexVolume* obstacle;
@@ -913,24 +938,35 @@ bool OgreDetourTileCache::removeConvexShapeObstacle(int obstacleIndex, ConvexVol
 // TODO when you do deffered commands, make sure you issue a rebuild for a tile only once per update, so remove doubles from the request queue (this is what contains() is for in dtTileCache)
         // Retrieve coordinates of tile that has to be rebuilt
         const dtCompressedTile* tile = m_tileCache->getTileByRef(touched[i]);
-        int tx = tile->header->tx;
-        int ty = tile->header->ty;
-        // Issue full rebuild from inputGeom, with the specified convex shape removed, for this tile
-        removeTile(touched[i]);     // Important: if a tile already exists at this position, first remove the old one or it will not be updated!
 
-        buildTile(tx, ty, m_geom);
+        // If it is null, tile is already rebuilt (and has a new ref ID)
+        if(tile) {
+            int tx = tile->header->tx;
+            int ty = tile->header->ty;
+            tile = NULL;
+
+            // Issue full rebuild from inputGeom, with the specified convex shape removed, for this tile
+            buildTile(tx, ty, m_geom);
+        }
     }
 
     return true;
 }
 
-int OgreDetourTileCache::removeConvexShapeObstacle(Ogre::Vector3 raySource, Ogre::Vector3 rayHit, ConvexVolume** removedVolume)
+int OgreDetourTileCache::hitTestConvexShapeObstacle(Ogre::Vector3 raySource, Ogre::Vector3 rayHit)
 {
     float sp[3]; float sq[3];
     OgreRecast::OgreVect3ToFloatA(raySource, sp);
     OgreRecast::OgreVect3ToFloatA(rayHit, sq);
 
     int shapeIdx = m_geom->hitTestConvexVolume(sp, sq);
+
+    return shapeIdx;
+}
+
+int OgreDetourTileCache::removeConvexShapeObstacle(Ogre::Vector3 raySource, Ogre::Vector3 rayHit, ConvexVolume** removedVolume)
+{
+    int shapeIdx = hitTestConvexShapeObstacle(raySource, rayHit);
 
     if (shapeIdx == -1)
         return -1;
