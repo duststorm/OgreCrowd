@@ -122,4 +122,6 @@ ConvexVolume::ConvexVolume(Ogre::AxisAlignedBox boundingBox, float offset)
     // Set height limits
     hmin = min.y;
     hmax = max.y;
+
+    area = SAMPLE_POLYAREA_DOOR;   // You can choose whatever flag you assing to the poly area
 }

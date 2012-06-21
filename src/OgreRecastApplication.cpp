@@ -177,7 +177,9 @@ void OgreRecastApplication::createScene(void)
 
         // Create a convex obstacle for the gate using its world-coordinate bounding box
         mGateHull = new ConvexVolume(InputGeom::getWorldSpaceBoundingBox(gateE), mRecast->m_agentRadius);
-        mGateHull->hmin = mGateHull->hmin - 0.3;    // Extend a bit downwards so it hits the ground (navmesh) for certain.
+        // Note: it's important to choose a proper area type you want to mark with the polygon! I just set it to "unwalkable"
+        mGateHull->area = RC_NULL_AREA;   // Set area described by convex polygon to "unwalkable"
+        mGateHull->hmin = mGateHull->hmin - 0.3;    // Extend a bit downwards so it hits the ground (navmesh) for certain. (Maybe this is not necessary)
         mDetourTileCache->addConvexShapeObstacle(mGateHull);
         InputGeom::drawConvexVolume(mGateHull, mSceneMgr);
     }
