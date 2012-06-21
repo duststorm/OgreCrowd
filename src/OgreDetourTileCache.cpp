@@ -908,12 +908,13 @@ int OgreDetourTileCache::getConvexShapeObstacleId(ConvexVolume *convexHull)
     m_geom->getConvexVolumeId(convexHull);
 }
 
-bool OgreDetourTileCache::removeConvexShapeObstacle(ConvexVolume* convexHull, ConvexVolume** removedVolume)
+bool OgreDetourTileCache::removeConvexShapeObstacle(ConvexVolume* convexHull)
 {
-    return removeConvexShapeObstacle(getConvexShapeObstacleId(convexHull), removedVolume);
+    int id = getConvexShapeObstacleId(convexHull);
+    return removeConvexShapeObstacleById(id);
 }
 
-bool OgreDetourTileCache::removeConvexShapeObstacle(int obstacleIndex, ConvexVolume** removedVolume)
+bool OgreDetourTileCache::removeConvexShapeObstacleById(int obstacleIndex, ConvexVolume** removedVolume)
 {
     ConvexVolume* obstacle;
     if(! m_geom->deleteConvexVolume(obstacleIndex, &obstacle))
@@ -971,7 +972,7 @@ int OgreDetourTileCache::removeConvexShapeObstacle(Ogre::Vector3 raySource, Ogre
     if (shapeIdx == -1)
         return -1;
 
-    removeConvexShapeObstacle(shapeIdx, removedVolume);
+    removeConvexShapeObstacleById(shapeIdx, removedVolume);
     return shapeIdx;
 }
 

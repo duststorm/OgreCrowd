@@ -670,7 +670,7 @@ int InputGeom::addConvexVolume(ConvexVolume *vol)
 
 bool InputGeom::deleteConvexVolume(int i, ConvexVolume** removedVolume)
 {
-    if(i >= m_volumeCount)
+    if(i >= m_volumeCount || i < 0)
         return false;
 
 

@@ -58,13 +58,13 @@ ConvexShapeObstacle::ConvexShapeObstacle(Ogre::Vector3 position, Ogre::Real offs
     //if(mObstacleId == -1)
         // TODO exception when something goes wrong!
 
-    //mEnt->setVisible(false);       // TODO maybe make boxes semi-transparent in debug draw mode
+    //mEnt->setVisible(false);       // TODO maybe make boxes semi-transparent in debug draw mode?
 }
 
 ConvexShapeObstacle::~ConvexShapeObstacle()
 {
     // Remove obstacle from DetourTileCache
-    mDetourTileCache->removeConvexShapeObstacle(mDetourTileCache->getConvexShapeObstacleId(mConvexHull));
+    mDetourTileCache->removeConvexShapeObstacle(mConvexHull);
 
     mNode->removeAllChildren();
     mNode->getParentSceneNode()->removeChild(mNode);

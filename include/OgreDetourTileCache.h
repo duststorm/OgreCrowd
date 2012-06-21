@@ -310,8 +310,8 @@ public:
 //TODO by adding deferred tasking to add and removeConvexShapeObstacle one can add multiple shapes at once to the same tile without it being rebuilt multiple times
     int addConvexShapeObstacle(ConvexVolume *obstacle);
 
-    bool removeConvexShapeObstacle(ConvexVolume* convexHull, ConvexVolume** removedVolume = NULL);
-    bool removeConvexShapeObstacle(int obstacleIndex, ConvexVolume** removedObstacle = NULL);
+    bool removeConvexShapeObstacle(ConvexVolume* convexHull);
+    bool removeConvexShapeObstacleById(int obstacleIndex, ConvexVolume** removedObstacle = NULL);
     int removeConvexShapeObstacle(Ogre::Vector3 raySource, Ogre::Vector3 rayHit, ConvexVolume** removedObstacle = NULL);
 
     int getConvexShapeObstacleId(ConvexVolume *convexHull);

@@ -581,6 +581,9 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
                 }
             }
 
+            if(!obst)
+                return true;
+
             // Remove obstacle from obstacles list
             mObstacles.erase(remove(mObstacles.begin(), mObstacles.end(), obst), mObstacles.end());
 
