@@ -621,6 +621,7 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
             std::vector<Ogre::Entity*> detourInputGeometry;
             detourInputGeometry.insert(detourInputGeometry.end(), mNavmeshEnts.begin(), mNavmeshEnts.end());
             detourInputGeometry.insert(detourInputGeometry.end(), mWalkableObjects.begin(), mWalkableObjects.end());
+// TODO I actually want this inputgeom to be reused also when adding a (convex) temp obstacle, but maybe the best way is adding a proper addConvexObstacle method to ogreDtTileCache
 
             // Rebuild the tiles overlapping the bounding box of the added object
             Ogre::AxisAlignedBox bb = InputGeom::getWorldSpaceBoundingBox(palletE);

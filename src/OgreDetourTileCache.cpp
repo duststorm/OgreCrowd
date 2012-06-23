@@ -905,7 +905,7 @@ ConvexVolume* OgreDetourTileCache::getConvexShapeObstacle(int obstacleIndex)
 
 int OgreDetourTileCache::getConvexShapeObstacleId(ConvexVolume *convexHull)
 {
-    m_geom->getConvexVolumeId(convexHull);
+    return m_geom->getConvexVolumeId(convexHull);
 }
 
 bool OgreDetourTileCache::removeConvexShapeObstacle(ConvexVolume* convexHull)
@@ -924,8 +924,8 @@ bool OgreDetourTileCache::removeConvexShapeObstacleById(int obstacleIndex, Conve
         *removedVolume = obstacle;
 
 // TODO use these vars for deferring addConvexShape actions
-    mChangedConvexVolumes[mChangedConvexVolumesCount] = obstacle;
-    mChangedConvexVolumesCount++;
+    //mChangedConvexVolumes[mChangedConvexVolumesCount] = obstacle;
+    //mChangedConvexVolumesCount++;
 
 //TODO For removing a convex volume again, store a reference to the impacted tiles in the convex volume so they can be found quickly
     int ntouched = 0;
