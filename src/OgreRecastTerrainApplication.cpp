@@ -70,16 +70,15 @@ void OgreRecastTerrainApplication::createScene()
     // RECAST (navmesh creation)
     // Create the navmesh and show it
     mRecast = new OgreRecast(mSceneMgr);
+    InputGeom *geom = new InputGeom(mTerrainGroup);
+    // Debug draw the recast bounding box around the terrain tile
+    ConvexVolume bb = ConvexVolume(geom->getBoundingBox());
+    InputGeom::drawConvexVolume(&bb, mSceneMgr);
+    // Verify rasterized terrain mesh
+//    geom->debugMesh(mSceneMgr);
     if(SINGLE_NAVMESH) {
         // Simple recast navmesh build example
 
-        InputGeom *geom = new InputGeom(mTerrainGroup);
-        // Debug draw the recast bounding box around the terrain tile
-        ConvexVolume *bb = new ConvexVolume(geom->getBoundingBox());
-        InputGeom::drawConvexVolume(bb, mSceneMgr);
-        // Verify rasterized terrain mesh
-//        geom->debugMesh(mSceneMgr);
-        delete bb;
         if(mRecast->NavMeshBuild(geom)) {
             mRecast->drawNavMesh();
         } else {
@@ -87,14 +86,12 @@ void OgreRecastTerrainApplication::createScene()
             return;
         }
 
-//        mSceneMgr->getSceneNode("RecastSN")->setPosition(0,300,0);
-
     // DetourTileCache navmesh creation
     } else {
         // More advanced: use DetourTileCache to build a tiled and cached navmesh that can be updated with dynamic obstacles at runtime.
 
         mDetourTileCache = new OgreDetourTileCache(mRecast);
-        if(mDetourTileCache->TileCacheBuild(mNavmeshEnts)) {
+        if(mDetourTileCache->TileCacheBuild(geom)) {
             mDetourTileCache->drawNavMesh();
         } else {
             Ogre::LogManager::getSingletonPtr()->logMessage("ERROR: could not generate useable navmesh from mesh using detourTileCache.");

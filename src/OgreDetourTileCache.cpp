@@ -35,16 +35,16 @@ OgreDetourTileCache::~OgreDetourTileCache()
     dtFreeTileCache(m_tileCache);
 }
 
-bool OgreDetourTileCache::configure(std::vector<Ogre::Entity*> srcMeshes)
+bool OgreDetourTileCache::configure(InputGeom *inputGeom)
 {
-    m_geom = new InputGeom(srcMeshes);
+    m_geom = inputGeom;
 
     m_recast->configure();  // Set recast params, we will reuse some of those
 
     m_ctx = m_recast->m_ctx;
 
     if (!m_geom || m_geom->isEmpty()) {
-        m_ctx->log(RC_LOG_ERROR, "buildTiledNavigation: No vertices and triangles.");
+        m_recast->m_pLog->logMessage("ERROR: buildTiledNavigation: No vertices and triangles.");
         return false;
     }
 
@@ -111,10 +111,15 @@ bool OgreDetourTileCache::configure(std::vector<Ogre::Entity*> srcMeshes)
     return true;
 }
 
-
 bool OgreDetourTileCache::TileCacheBuild(std::vector<Ogre::Entity*> srcMeshes)
 {
-    configure(srcMeshes);
+    InputGeom *inputGeom = new InputGeom(srcMeshes);
+    return TileCacheBuild(inputGeom);
+}
+
+bool OgreDetourTileCache::TileCacheBuild(InputGeom *inputGeom)
+{
+    configure(inputGeom);
 
     dtStatus status;
 
@@ -125,13 +130,13 @@ bool OgreDetourTileCache::TileCacheBuild(std::vector<Ogre::Entity*> srcMeshes)
     m_tileCache = dtAllocTileCache();
     if (!m_tileCache)
     {
-        m_ctx->log(RC_LOG_ERROR, "buildTiledNavigation: Could not allocate tile cache.");
+        m_recast->m_pLog->logMessage("ERROR: buildTiledNavigation: Could not allocate tile cache.");
         return false;
     }
     status = m_tileCache->init(&m_tcparams, m_talloc, m_tcomp, m_tmproc);
     if (dtStatusFailed(status))
     {
-        m_ctx->log(RC_LOG_ERROR, "buildTiledNavigation: Could not init tile cache.");
+        m_recast->m_pLog->logMessage("ERROR: buildTiledNavigation: Could not init tile cache.");
         return false;
     }
 
@@ -140,7 +145,7 @@ bool OgreDetourTileCache::TileCacheBuild(std::vector<Ogre::Entity*> srcMeshes)
     m_recast->m_navMesh = dtAllocNavMesh();
     if (!m_recast->m_navMesh)
     {
-        m_ctx->log(RC_LOG_ERROR, "buildTiledNavigation: Could not allocate navmesh.");
+        m_recast->m_pLog->logMessage("ERROR: buildTiledNavigation: Could not allocate navmesh.");
         return false;
     }
 
@@ -157,7 +162,7 @@ bool OgreDetourTileCache::TileCacheBuild(std::vector<Ogre::Entity*> srcMeshes)
     status = m_recast->m_navMesh->init(&params);
     if (dtStatusFailed(status))
     {
-        m_ctx->log(RC_LOG_ERROR, "buildTiledNavigation: Could not init navmesh.");
+        m_recast->m_pLog->logMessage("ERROR: buildTiledNavigation: Could not init navmesh.");
         return false;
     }
 
@@ -166,7 +171,7 @@ bool OgreDetourTileCache::TileCacheBuild(std::vector<Ogre::Entity*> srcMeshes)
     status = m_recast->m_navQuery->init(m_recast->m_navMesh, 2048);
     if (dtStatusFailed(status))
     {
-        m_ctx->log(RC_LOG_ERROR, "buildTiledNavigation: Could not init Detour navmesh query");
+        m_recast->m_pLog->logMessage("ERROR: buildTiledNavigation: Could not init Detour navmesh query");
         return false;
     }
 
@@ -304,8 +309,13 @@ bool OgreDetourTileCache::buildTile(const int tx, const int ty, InputGeom *input
 
 int OgreDetourTileCache::rasterizeTileLayers(InputGeom* geom, const int tx, const int ty, const rcConfig& cfg, TileCacheData* tiles, const int maxTiles)
 {
-    if (!geom || geom->isEmpty() || !geom->getChunkyMesh()) {
-        m_ctx->log(RC_LOG_ERROR, "buildTile: Input mesh is not specified.");
+    if (!geom || geom->isEmpty()) {
+        m_recast->m_pLog->logMessage("ERROR: buildTile: Input mesh is not specified.");
+        return 0;
+    }
+
+    if (!geom->getChunkyMesh()) {
+        m_recast->m_pLog->logMessage("ERROR: buildTile: Input mesh has no chunkyTriMesh built.");
         return 0;
     }
 
@@ -348,12 +358,12 @@ int OgreDetourTileCache::rasterizeTileLayers(InputGeom* geom, const int tx, cons
     rc.solid = rcAllocHeightfield();
     if (!rc.solid)
     {
-        m_ctx->log(RC_LOG_ERROR, "buildNavigation: Out of memory 'solid'.");
+        m_recast->m_pLog->logMessage("ERROR: buildNavigation: Out of memory 'solid'.");
         return 0;
     }
     if (!rcCreateHeightfield(m_ctx, *rc.solid, tcfg.width, tcfg.height, tcfg.bmin, tcfg.bmax, tcfg.cs, tcfg.ch))
     {
-        m_ctx->log(RC_LOG_ERROR, "buildNavigation: Could not create solid heightfield.");
+        m_recast->m_pLog->logMessage("ERROR: buildNavigation: Could not create solid heightfield.");
         return 0;
     }
 
@@ -363,7 +373,7 @@ int OgreDetourTileCache::rasterizeTileLayers(InputGeom* geom, const int tx, cons
     rc.triareas = new unsigned char[chunkyMesh->maxTrisPerChunk];
     if (!rc.triareas)
     {
-        m_ctx->log(RC_LOG_ERROR, "buildNavigation: Out of memory 'm_triareas' (%d).", chunkyMesh->maxTrisPerChunk);
+        m_recast->m_pLog->logMessage("ERROR: buildNavigation: Out of memory 'm_triareas' ("+Ogre::StringConverter::toString(chunkyMesh->maxTrisPerChunk)+").");
         return 0;
     }
 
@@ -403,19 +413,19 @@ int OgreDetourTileCache::rasterizeTileLayers(InputGeom* geom, const int tx, cons
     rc.chf = rcAllocCompactHeightfield();
     if (!rc.chf)
     {
-        m_ctx->log(RC_LOG_ERROR, "buildNavigation: Out of memory 'chf'.");
+        m_recast->m_pLog->logMessage("ERROR: buildNavigation: Out of memory 'chf'.");
         return 0;
     }
     if (!rcBuildCompactHeightfield(m_ctx, tcfg.walkableHeight, tcfg.walkableClimb, *rc.solid, *rc.chf))
     {
-        m_ctx->log(RC_LOG_ERROR, "buildNavigation: Could not build compact data.");
+        m_recast->m_pLog->logMessage("ERROR: buildNavigation: Could not build compact data.");
         return 0;
     }
 
     // Erode the walkable area by agent radius.
     if (!rcErodeWalkableArea(m_ctx, tcfg.walkableRadius, *rc.chf))
     {
-        m_ctx->log(RC_LOG_ERROR, "buildNavigation: Could not erode.");
+        m_recast->m_pLog->logMessage("ERROR: buildNavigation: Could not erode.");
         return 0;
     }
 
@@ -436,12 +446,12 @@ int OgreDetourTileCache::rasterizeTileLayers(InputGeom* geom, const int tx, cons
     rc.lset = rcAllocHeightfieldLayerSet();
     if (!rc.lset)
     {
-        m_ctx->log(RC_LOG_ERROR, "buildNavigation: Out of memory 'lset'.");
+        m_recast->m_pLog->logMessage("ERROR: buildNavigation: Out of memory 'lset'.");
         return 0;
     }
     if (!rcBuildHeightfieldLayers(m_ctx, *rc.chf, tcfg.borderSize, tcfg.walkableHeight, *rc.lset))
     {
-        m_ctx->log(RC_LOG_ERROR, "buildNavigation: Could not build heightfield layers.");
+        m_recast->m_pLog->logMessage("ERROR: buildNavigation: Could not build heightfield layers.");
         return 0;
     }
 

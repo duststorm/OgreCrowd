@@ -38,7 +38,7 @@ const bool OgreRecastApplication::HUMAN_CHARACTERS = true;
 const bool OgreRecastApplication::OBSTACLES = true;
 
 // Set to true to build simple single navmesh, set to false to build tiled navmesh using detourTileCache that supports temp obstacles
-const bool OgreRecastApplication::SINGLE_NAVMESH = true;
+const bool OgreRecastApplication::SINGLE_NAVMESH = false;
 
 // Set to true to also query dungeon mesh when clicking to set begin position or destination
 const bool OgreRecastApplication::RAYCAST_SCENE = false;

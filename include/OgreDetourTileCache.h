@@ -247,7 +247,7 @@ public:
     OgreDetourTileCache(OgreRecast *recast);
     ~OgreDetourTileCache(void);
 
-    bool configure(std::vector<Ogre::Entity*> srcMeshes);
+    bool configure(InputGeom *inputGeom);
 
     /**
       * This is an Ogre adaptation of Sample_TempObstacles::handleBuild()
@@ -259,6 +259,8 @@ public:
       * The resulting navmesh will be created in the OgreRecast module, at OgreRecast::m_navMesh;
       **/
     bool TileCacheBuild(std::vector<Ogre::Entity*> srcMeshes);
+
+    bool TileCacheBuild(InputGeom *inputGeom);
 
     /**
       * Build or rebuild a cache tile or tiles at the specified index.

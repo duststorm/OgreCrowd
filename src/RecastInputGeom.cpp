@@ -8,7 +8,9 @@ InputGeom::InputGeom(std::vector<Ogre::Entity*> srcMeshes)
     ntris(0),
     mReferenceNode(0),
       bmin(0),
-      bmax(0)
+      bmax(0),
+      m_offMeshConCount(0),
+      m_volumeCount(0)
 {
     if (srcMeshes.empty())
         return;
@@ -30,10 +32,9 @@ InputGeom::InputGeom(std::vector<Ogre::Entity*> srcMeshes)
     convertOgreEntities();
 
 
-    m_offMeshConCount = 0;
-    m_volumeCount = 0;
 
-// TODO maybe I don't need this in single navmesh mode
+
+// TODO You don't need to build this in single navmesh mode
     m_chunkyMesh = new rcChunkyTriMesh;
     if (!m_chunkyMesh)
     {
@@ -72,7 +73,9 @@ InputGeom::InputGeom(std::vector<Ogre::Entity*> srcMeshes, const Ogre::AxisAlign
     : mSrcMeshes(srcMeshes),
     nverts(0),
     ntris(0),
-    mReferenceNode(0)
+    mReferenceNode(0),
+      m_offMeshConCount(0),
+      m_volumeCount(0)
 {
     if (srcMeshes.empty())
         return;
@@ -100,7 +103,7 @@ InputGeom::InputGeom(std::vector<Ogre::Entity*> srcMeshes, const Ogre::AxisAlign
     m_offMeshConCount = 0;
     m_volumeCount = 0;
 
-// TODO maybe I don't need this in single navmesh mode
+// TODO You don't need to build this in single navmesh mode
     m_chunkyMesh = new rcChunkyTriMesh;
     if (!m_chunkyMesh)
     {
@@ -118,7 +121,9 @@ InputGeom::InputGeom(Ogre::TerrainGroup *terrainGroup, std::vector<Ogre::Entity*
     : mSrcMeshes(srcMeshes),
     nverts(0),
     ntris(0),
-    mReferenceNode(0)
+    mReferenceNode(0),
+      m_offMeshConCount(0),
+      m_volumeCount(0)
 {
 // TODO We are only creating a navmesh from terrain at the moment
 // TODO look at PW's loadhouses method for entities loading
@@ -455,6 +460,20 @@ InputGeom::InputGeom(Ogre::TerrainGroup *terrainGroup, std::vector<Ogre::Entity*
             n[1] *= d;
             n[2] *= d;
         }
+    }
+
+
+    // Build chunky tri mesh from triangles, used for tiled navmesh construction
+    m_chunkyMesh = new rcChunkyTriMesh;
+    if (!m_chunkyMesh)
+    {
+        Ogre::LogManager::getSingletonPtr()->logMessage("ERROR: buildTiledNavigation: Out of memory 'm_chunkyMesh'.");
+        return;
+    }
+    if (!rcCreateChunkyTriMesh(getVerts(), getTris(), getTriCount(), 256, m_chunkyMesh))
+    {
+        Ogre::LogManager::getSingletonPtr()->logMessage("ERROR: buildTiledNavigation: Failed to build chunky mesh.");
+        return;
     }
 
 }
