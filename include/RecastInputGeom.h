@@ -2,6 +2,8 @@
 #define RECASTINPUTGEOM_H
 
 #include <Ogre.h>
+#include <Terrain/OgreTerrain.h>
+#include <Terrain/OgreTerrainGroup.h>
 #include "RecastConvexHull.h"
 
 
@@ -65,6 +67,15 @@ public:
 
     InputGeom(std::vector<Ogre::Entity*> srcMeshes, const Ogre::AxisAlignedBox &tileBounds);
 
+//TODO
+    InputGeom(Ogre::TerrainGroup *terrainGroup, std::vector<Ogre::Entity*> srcMeshes = std::vector<Ogre::Entity*>());
+
+    /**
+      * Retrieve a bounding box for the entire inputGeom, in world space
+      * coordinates.
+      **/
+    Ogre::AxisAlignedBox getBoundingBox(void);
+
     /**
       * Convenience funtion to calculate the bounding box of an entity in
       * world coordinates.
@@ -85,7 +96,7 @@ public:
 
     bool isEmpty(void);
 
-    void debugMesh(void);
+    void debugMesh(Ogre::SceneManager *sceneMgr);
 
     static const int MAX_VOLUMES = 256;
 
@@ -120,7 +131,7 @@ public:
                             const Ogre::Quaternion &orient = Ogre::Quaternion::IDENTITY,
                             const Ogre::Vector3 &scale = Ogre::Vector3::UNIT_SCALE);
 
-    static Ogre::ManualObject* drawConvexVolume(ConvexVolume *vol, Ogre::SceneManager* sceneMgr);
+    static Ogre::ManualObject* drawConvexVolume(ConvexVolume *vol, Ogre::SceneManager* sceneMgr, Ogre::ColourValue color=Ogre::ColourValue(0.5, 0.5, 0.5));
 
     inline const rcChunkyTriMesh* getChunkyMesh() const { return m_chunkyMesh; }
 

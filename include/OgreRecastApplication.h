@@ -108,6 +108,12 @@ public:
     static const bool COMPLEX_OBSTACLES;
 
     /**
+      * Determines whether terrain demo will be shown or a demo in an interior dungeon
+      * scene.
+      **/
+    static const bool TERRAIN;
+
+    /**
       * Sets recast visual debugging geometry in the scene to visible (true) or hide
       * it (false).
       **/
@@ -134,7 +140,7 @@ protected:
     /**
       * Handle mouse movement.
       **/
-    bool mouseMoved(const OIS::MouseEvent &arg);
+    virtual bool mouseMoved(const OIS::MouseEvent &arg);
 
     /**
       * Handle keyboard input when keys are pressed.
@@ -144,7 +150,7 @@ protected:
     /**
       * Handle keyboard input when keys are released.
       **/
-    bool keyReleased(const OIS::KeyEvent &arg);
+    virtual bool keyReleased(const OIS::KeyEvent &arg);
 
     /**
       * Update state for rendering a new frame.
@@ -209,7 +215,6 @@ protected:
        STEER_AGENT          // Manually steer first agent, others wander
     } mApplicationState;
 
-private:
     /**
       * Ogre version of the code of the original Recast demo that comes with the recast distribution.
       **/

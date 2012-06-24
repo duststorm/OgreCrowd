@@ -21,7 +21,7 @@ void recastdebug_ps(
    out float4 Colour : COLOR
 ) 
 {
-    Colour = float4(InCol, 1);
+    Colour = float4(InCol, 0.5);
 }
 
 

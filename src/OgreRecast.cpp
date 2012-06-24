@@ -75,18 +75,18 @@ void OgreRecast::configure()
     m_ctx=new rcContext(true);
 
     // TODO clean this up, put in some more clear place, allow config file
-    m_cellSize = /*9.0 ;//*/0.3;         //*
-    m_cellHeight = /*6.0 ;//*/0.2;       //*
-    m_agentMaxSlope = /*45*/20;          //*
+    m_cellSize = /*9.0 ;//*/10;         //*
+    m_cellHeight = /*6.0 ;//*/6;       //*
+    m_agentMaxSlope = /*45*/45;          //*
     m_agentHeight = 2.5/*64.0;  1*/;        //*
-    m_agentMaxClimb = 1;                //*
+    m_agentMaxClimb = 15;                //*
     m_agentRadius = /*16;*/0.5;          //*
-    m_edgeMaxLen = 12/*512*/;
+    m_edgeMaxLen = 2/*512*/;
     m_edgeMaxError = 1.3;
     m_regionMinSize = 50;
     m_regionMergeSize = 20;
     m_vertsPerPoly = 6;
-    m_detailSampleDist = 6;
+    m_detailSampleDist = 1;
     m_detailSampleMaxError = 1;
     m_keepInterResults = false;
 
@@ -135,6 +135,11 @@ bool OgreRecast::NavMeshBuild(std::vector<Ogre::Entity*> srcMeshes)
         return false;
     }
 
+    return NavMeshBuild(new InputGeom(srcMeshes));
+}
+
+bool OgreRecast::NavMeshBuild(InputGeom* input)
+{
     // TODO: clean up unused variables
 
 
@@ -162,7 +167,7 @@ bool OgreRecast::NavMeshBuild(std::vector<Ogre::Entity*> srcMeshes)
    // Step 2. Rasterize input polygon soup.
    //
 
-   InputGeom *inputGeom = new InputGeom(srcMeshes);
+   InputGeom *inputGeom = input;
    rcVcopy(m_cfg.bmin, inputGeom->getMeshBoundsMin());
    rcVcopy(m_cfg.bmax, inputGeom->getMeshBoundsMax());
    rcCalcGridSize(m_cfg.bmin, m_cfg.bmax, m_cfg.cs, &m_cfg.width, &m_cfg.height);
@@ -183,12 +188,12 @@ bool OgreRecast::NavMeshBuild(std::vector<Ogre::Entity*> srcMeshes)
    m_solid = rcAllocHeightfield();
    if (!m_solid)
    {
-      m_ctx->log(RC_LOG_ERROR, "buildNavigation: Out of memory 'solid'.");
+      m_pLog->logMessage("ERROR: buildNavigation: Out of memory 'solid'.");
       return false;
    }
    if (!rcCreateHeightfield(m_ctx, *m_solid, m_cfg.width, m_cfg.height, m_cfg.bmin, m_cfg.bmax, m_cfg.cs, m_cfg.ch))
    {
-      m_ctx->log(RC_LOG_ERROR, "buildNavigation: Could not create solid heightfield.");
+      m_pLog->logMessage("ERROR: buildNavigation: Could not create solid heightfield. Possibly it requires too much memory, try setting a higher cellSize and cellHeight value.");
       return false;
    }
    
@@ -198,7 +203,7 @@ bool OgreRecast::NavMeshBuild(std::vector<Ogre::Entity*> srcMeshes)
    m_triareas = new unsigned char[ntris];
    if (!m_triareas)
    {
-      m_ctx->log(RC_LOG_ERROR, "buildNavigation: Out of memory 'm_triareas' (%d).", ntris);
+       m_pLog->logMessage("ERROR: buildNavigation: Out of memory 'm_triareas' ("+Ogre::StringConverter::toString(ntris)+").");
       return false;
    }
    
@@ -247,12 +252,12 @@ bool OgreRecast::NavMeshBuild(std::vector<Ogre::Entity*> srcMeshes)
    m_chf = rcAllocCompactHeightfield();
    if (!m_chf)
    {
-      m_ctx->log(RC_LOG_ERROR, "buildNavigation: Out of memory 'chf'.");
+      m_pLog->logMessage("ERROR: buildNavigation: Out of memory 'chf'.");
       return false;
    }
    if (!rcBuildCompactHeightfield(m_ctx, m_cfg.walkableHeight, m_cfg.walkableClimb, *m_solid, *m_chf))
    {
-      m_ctx->log(RC_LOG_ERROR, "buildNavigation: Could not build compact data.");
+      m_pLog->logMessage("ERROR: buildNavigation: Could not build compact data.");
       return false;
    }
    
@@ -266,7 +271,7 @@ bool OgreRecast::NavMeshBuild(std::vector<Ogre::Entity*> srcMeshes)
    // Erode the walkable area by agent radius.
    if (!rcErodeWalkableArea(m_ctx, m_cfg.walkableRadius, *m_chf))
    {
-      m_ctx->log(RC_LOG_ERROR, "buildNavigation: Could not erode.");
+      m_pLog->logMessage("ERROR: buildNavigation: Could not erode walkable areas.");
       return false;
    }
 
@@ -280,14 +285,14 @@ bool OgreRecast::NavMeshBuild(std::vector<Ogre::Entity*> srcMeshes)
    // Prepare for region partitioning, by calculating distance field along the walkable surface.
    if (!rcBuildDistanceField(m_ctx, *m_chf))
    {
-      m_ctx->log(RC_LOG_ERROR, "buildNavigation: Could not build distance field.");
+      m_pLog->logMessage("ERROR: buildNavigation: Could not build distance field.");
       return false;
    }
 
    // Partition the walkable surface into simple regions without holes.
    if (!rcBuildRegions(m_ctx, *m_chf, m_cfg.borderSize, m_cfg.minRegionArea, m_cfg.mergeRegionArea))
    {
-      m_ctx->log(RC_LOG_ERROR, "buildNavigation: Could not build regions.");
+      m_pLog->logMessage("ERROR: buildNavigation: Could not build regions.");
       return false;
    }
 
@@ -306,19 +311,19 @@ bool OgreRecast::NavMeshBuild(std::vector<Ogre::Entity*> srcMeshes)
    m_cset = rcAllocContourSet();
    if (!m_cset)
    {
-      m_ctx->log(RC_LOG_ERROR, "buildNavigation: Out of memory 'cset'.");
+      m_pLog->logMessage("ERROR: buildNavigation: Out of memory 'cset'.");
       return false;
    }
    if (!rcBuildContours(m_ctx, *m_chf, m_cfg.maxSimplificationError, m_cfg.maxEdgeLen, *m_cset))
    {
-      m_ctx->log(RC_LOG_ERROR, "buildNavigation: Could not create contours.");
+      m_pLog->logMessage("ERROR: buildNavigation: Could not create contours.");
       return false;
    }
 
    if (m_cset->nconts == 0)
    {
        // In case of errors see: http://groups.google.com/group/recastnavigation/browse_thread/thread/a6fbd509859a12c8
-       // You should probably tweak the parameters (at the top of this method)
+       // You should probably tweak the parameters
            m_pLog->logMessage("ERROR: No contours created (Recast)!");
     }
 
@@ -334,12 +339,13 @@ bool OgreRecast::NavMeshBuild(std::vector<Ogre::Entity*> srcMeshes)
    m_pmesh = rcAllocPolyMesh();
    if (!m_pmesh)
    {
-      m_ctx->log(RC_LOG_ERROR, "buildNavigation: Out of memory 'pmesh'.");
+      m_pLog->logMessage("ERROR: buildNavigation: Out of memory 'pmesh'.");
       return false;
    }
    if (!rcBuildPolyMesh(m_ctx, *m_cset, m_cfg.maxVertsPerPoly, *m_pmesh))
    {
-      m_ctx->log(RC_LOG_ERROR, "buildNavigation: Could not triangulate contours.");
+       // Try modifying the parameters. I experienced this error when setting agentMaxClimb too high.
+      m_pLog->logMessage("ERROR: buildNavigation: Could not triangulate contours.");
       return false;
    }
    
@@ -358,13 +364,13 @@ bool OgreRecast::NavMeshBuild(std::vector<Ogre::Entity*> srcMeshes)
    m_dmesh = rcAllocPolyMeshDetail();
    if (!m_dmesh)
    {
-      m_ctx->log(RC_LOG_ERROR, "buildNavigation: Out of memory 'pmdtl'.");
+      m_pLog->logMessage("ERROR: buildNavigation: Out of memory 'pmdtl'.");
       return false;
    }
 
    if (!rcBuildPolyMeshDetail(m_ctx, *m_pmesh, *m_chf, m_cfg.detailSampleDist, m_cfg.detailSampleMaxError, *m_dmesh))
    {
-      m_ctx->log(RC_LOG_ERROR, "buildNavigation: Could not build detail mesh.");
+      m_pLog->logMessage("ERROR: buildNavigation: Could not build detail mesh.");
       return false;
    }
 
@@ -452,7 +458,7 @@ bool OgreRecast::NavMeshBuild(std::vector<Ogre::Entity*> srcMeshes)
 
       if (!dtCreateNavMeshData(&params, &navData, &navDataSize))
       {
-         m_ctx->log(RC_LOG_ERROR, "Could not build Detour navmesh.");
+         m_pLog->logMessage("ERROR: Could not build Detour navmesh.");
          return false;
       }
 
@@ -462,7 +468,7 @@ bool OgreRecast::NavMeshBuild(std::vector<Ogre::Entity*> srcMeshes)
       if (!m_navMesh)
       {
          dtFree(navData);
-         m_ctx->log(RC_LOG_ERROR, "Could not create Detour navmesh");
+         m_pLog->logMessage("ERROR: Could not create Detour navmesh");
          return false;
       }
 
@@ -474,7 +480,7 @@ bool OgreRecast::NavMeshBuild(std::vector<Ogre::Entity*> srcMeshes)
       if (dtStatusFailed(status))
       {
          dtFree(navData);
-         m_ctx->log(RC_LOG_ERROR, "Could not init Detour navmesh");
+         m_pLog->logMessage("ERROR: Could not init Detour navmesh");
          return false;
       }
 
@@ -487,7 +493,7 @@ bool OgreRecast::NavMeshBuild(std::vector<Ogre::Entity*> srcMeshes)
 
       if (dtStatusFailed(status))
       {
-         m_ctx->log(RC_LOG_ERROR, "Could not init Detour navmesh query");
+         m_pLog->logMessage("ERROR: Could not init Detour navmesh query");
          return false;
       }
 
@@ -698,7 +704,7 @@ void OgreRecast::CreateRecastPolyMesh(const Ogre::String name, const unsigned sh
          }
      }
       m_pRecastMOWalk->end() ;
-      m_pRecastSN->attachObject(m_pRecastMOWalk) ;
+      m_pRecastSN->attachObject(m_pRecastMOWalk);
 
 
 

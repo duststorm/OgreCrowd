@@ -23,6 +23,7 @@ This source file is part of the
 #include "ConvexShapeObstacle.h"
 #include "CylinderObstacle.h"
 #include "RecastInputGeom.h"
+#include "OgreRecastTerrainApplication.h"
 
 
 //--- SETTINGS ------------------------------------------------------------------------
@@ -37,7 +38,7 @@ const bool OgreRecastApplication::HUMAN_CHARACTERS = true;
 const bool OgreRecastApplication::OBSTACLES = true;
 
 // Set to true to build simple single navmesh, set to false to build tiled navmesh using detourTileCache that supports temp obstacles
-const bool OgreRecastApplication::SINGLE_NAVMESH = false;
+const bool OgreRecastApplication::SINGLE_NAVMESH = true;
 
 // Set to true to also query dungeon mesh when clicking to set begin position or destination
 const bool OgreRecastApplication::RAYCAST_SCENE = false;
@@ -46,7 +47,10 @@ const bool OgreRecastApplication::RAYCAST_SCENE = false;
 const bool OgreRecastApplication::TEMP_OBSTACLE_STEERING = true;
 
 // Set to true to place boxes as convex obstacles on the navmesh instead of the cylindrical temporary obstacles
-const bool OgreRecastApplication::COMPLEX_OBSTACLES = true;    // Warning: still some bugs!
+const bool OgreRecastApplication::COMPLEX_OBSTACLES = true;
+
+// Set to true to demo navmesh on terrain
+const bool OgreRecastApplication::TERRAIN = true;
 
 //-------------------------------------------------------------------------------------
 
@@ -1024,10 +1028,15 @@ extern "C" {
 #endif
     {
         // Create application object
-        OgreRecastApplication app;
+        OgreRecastApplication *app = NULL;
+        if(OgreRecastApplication::TERRAIN) {
+            app = new OgreRecastTerrainApplication();
+        } else {
+            app = new OgreRecastApplication();
+        }
 
         try {
-            app.go();
+            app->go();
         } catch( Ogre::Exception& e ) {
 #if OGRE_PLATFORM == OGRE_PLATFORM_WIN32
             MessageBox( NULL, e.getFullDescription().c_str(), "An exception has occured!", MB_OK | MB_ICONERROR | MB_TASKMODAL);
@@ -1036,6 +1045,7 @@ extern "C" {
                 e.getFullDescription().c_str() << std::endl;
 #endif
         }
+        delete app;
 
         return 0;
     }

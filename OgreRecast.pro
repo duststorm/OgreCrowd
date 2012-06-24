@@ -15,13 +15,13 @@ unix {
     INCLUDEPATH += /usr/include/OGRE
     
     # Include Ogre Terrain
-    # INCLUDEPATH += /usr/include/OGRE/Terrain
-    # LIBS += -L/usr/lib/ \
-    # -lOgreTerrain
+    INCLUDEPATH += /usr/include/OGRE/Terrain
+    LIBS += -L/usr/lib/ \
+     -lOgreTerrain
     # Include Ogre Camera Control System addon (needs to be compiled and manually installed separately)
-    INCLUDEPATH += /usr/include/OIS
     
     # Include OIS
+    INCLUDEPATH += /usr/include/OIS
     LIBS += -L/usr/lib/ \
         -lOIS
     
@@ -126,7 +126,8 @@ SOURCES += src/BaseApplication.cpp \
     src/RecastConvexHull.cpp \
     src/Obstacle.cpp \
     src/CylinderObstacle.cpp \
-    src/ConvexShapeObstacle.cpp
+    src/ConvexShapeObstacle.cpp \
+    src/OgreRecastTerrainApplication.cpp
 HEADERS += include/BaseApplication.h \
     include/OgreRecastApplication.h \
     include/OgreRecastDefinitions.h \
@@ -161,4 +162,5 @@ HEADERS += include/BaseApplication.h \
     include/RecastConvexHull.h \
     include/Obstacle.h \
     include/CylinderObstacle.h \
-    include/ConvexShapeObstacle.h
+    include/ConvexShapeObstacle.h \
+    include/OgreRecastTerrainApplication.h

@@ -3,6 +3,7 @@
 
 #include "OgreRecastDefinitions.h"
 #include <Ogre.h>
+#include "RecastInputGeom.h"
 
 
 /**
@@ -38,6 +39,8 @@ public:
      * The most important parameters to set are cellsize, agentHeight and agentRadius.
      **/
    bool NavMeshBuild(std::vector<Ogre::Entity*> srcMeshesA);
+
+   bool NavMeshBuild(InputGeom* input);
 
    /**
     * Find a path beween start point and end point and, if possible, generates a list of lines in a path.

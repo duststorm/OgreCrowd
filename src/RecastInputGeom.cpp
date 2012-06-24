@@ -6,7 +6,9 @@ InputGeom::InputGeom(std::vector<Ogre::Entity*> srcMeshes)
     : mSrcMeshes(srcMeshes),
     nverts(0),
     ntris(0),
-    mReferenceNode(0)
+    mReferenceNode(0),
+      bmin(0),
+      bmax(0)
 {
     if (srcMeshes.empty())
         return;
@@ -111,6 +113,357 @@ InputGeom::InputGeom(std::vector<Ogre::Entity*> srcMeshes, const Ogre::AxisAlign
         return;
     }
 }
+
+InputGeom::InputGeom(Ogre::TerrainGroup *terrainGroup, std::vector<Ogre::Entity*> srcMeshes)
+    : mSrcMeshes(srcMeshes),
+    nverts(0),
+    ntris(0),
+    mReferenceNode(0)
+{
+// TODO We are only creating a navmesh from terrain at the moment
+// TODO look at PW's loadhouses method for entities loading
+
+
+// TODO check for no terrain
+//    if (srcMeshes.empty())
+//        return;
+
+    // PARTS OF THE FOLLOWING CODE WERE TAKEN AND MODIFIED FROM AN OGRE3D FORUM POST
+    const int numNodes = srcMeshes.size();
+    // TODO how to retrieve number of pages in terrain group? Hardcoded at the moment.
+    int pagesTotal = 1;
+    const int totalMeshes = pagesTotal /*+ numNodes*/;
+
+    nverts = 0;
+    ntris = 0;
+    size_t *meshVertexCount = new size_t[totalMeshes];
+    size_t *meshIndexCount = new size_t[totalMeshes];
+    Ogre::Vector3 **meshVertices = new Ogre::Vector3*[totalMeshes];
+    unsigned long **meshIndices = new unsigned long*[totalMeshes];
+
+    if(mSrcMeshes.size() > 0) {
+        // Calculate entity bounds
+        // Set the area where the navigation mesh will be build.
+        // Using bounding box of source mesh and specified cell size
+        calculateExtents();
+    } else {
+        bmin = new float[3]; bmin[0] = FLT_MAX; bmin[1] = FLT_MAX; bmin[2] = FLT_MAX;
+        bmax = new float[3]; bmax[0] = FLT_MIN; bmax[1] = FLT_MIN; bmax[2] = FLT_MIN;
+    }
+
+    // Calculate terrain bounds
+    // TODO extract calculateTerrainExtents() ?
+    Ogre::TerrainGroup::TerrainIterator ti = terrainGroup->getTerrainIterator();
+    Ogre::Terrain* trn;
+// TODO we could calculate terrain count here
+    size_t trnCount = 0;
+    while(ti.hasMoreElements())
+    {
+         trn = ti.getNext()->instance;
+         Ogre::AxisAlignedBox bb = trn->getAABB();
+         Ogre::Vector3 min = bb.getMinimum();
+         if(min.x < bmin[0])
+             bmin[0]= min.x;
+         if(min.y < bmin[1])
+             bmin[1]= min.y;
+         if(min.z < bmin[2])
+             bmin[2]= min.z;
+
+         Ogre::Vector3 max = bb.getMaximum();
+         if(max.x > bmax[0])
+             bmax[0]= max.x;
+         if(max.y > bmax[1])
+             bmax[1]= max.y;
+         if(max.z > bmax[2])
+             bmax[2]= max.z;
+
+         trnCount++;
+    }
+
+
+    //---------------------------------------------------------------------------------
+    // TERRAIN DATA BUILDING
+    ti = terrainGroup->getTerrainIterator();
+    trnCount = 0;
+    while(ti.hasMoreElements())
+    {
+         trn = ti.getNext()->instance;
+// TODO do we want to set a query mask here? or does default suffice?
+//         trn->setQueryFlags(GEOMETRY_QUERY_MASK);
+
+         // get height data, world size, map size
+         float *mapptr = trn->getHeightData();
+         float WorldSize = trn->getWorldSize();
+         int MapSize = trn->getSize();
+         // calculate where we need to move/place our vertices
+         float DeltaPos = (WorldSize / 2.0f);
+
+         float DeltaX = 0;
+         float DeltaZ = 0;
+     // TODO this hardcoded behaviour has to go! Supports only up to 4 terrain pages
+         switch(trnCount)
+         {
+         case 0:
+             DeltaX = -6000;
+             DeltaZ = 6000;
+             break;
+         case 1:
+             DeltaX = -6000;
+             DeltaZ = -6000;
+             break;
+         case 2:
+             DeltaX = 6000;
+             DeltaZ = 6000;
+             break;
+         case 3:
+             DeltaX = 6000;
+             DeltaZ = -6000;
+             break;
+         default:
+             DeltaX = 0;
+             DeltaZ = 0;
+         }
+
+
+         float Scale = WorldSize / (float)(MapSize - 1);
+
+         //////////////////////////////
+         // THIS CODE WAS TAKEN FROM
+         // AN OGRE FORUMS THREAD IN THE
+         // NEW TERRAIN SCREENSHOTS THREAD
+         // IN THE SHOWCASE FORUMS - I ONLY MODIFIED IT
+         // TO BE ABLE TO WORK FOR RECAST AND IN THE CONTEXT OF
+         // THIS DEMO APPLICATION
+
+         // build vertices
+         meshVertices[trnCount] = new Ogre::Vector3[(MapSize*MapSize)];
+
+         int i = 0;
+         int u = 0;
+         int max = MapSize; // i think i needed this for something before but now it's obviously redundant
+         int z = 0;
+         for(int x = 0;; ++x)
+         {
+             // if we've reached the right edge, start over on the next line
+             if(x == max)
+             {
+                 x = 0;
+                 ++z;
+             }
+             // if we reached the bottom/end, we're done
+             if(z == max)
+                 break;
+
+             // Calculate world coordinates for terrain tile vertex. Terrain vertices are defined in tile-local coordinates.
+             // add the vertex to the buffer
+             meshVertices[trnCount][u] = Ogre::Vector3((Scale * x) + DeltaX, mapptr[(MapSize * z) + x], (Scale * -z) + DeltaZ);
+
+             i += 3;
+             ++u;
+         }
+
+
+         size_t size = ((MapSize*MapSize)-(MapSize*2)) * 6;
+         meshIndices[trnCount] = new unsigned long[size];
+         // i will point to the 'indices' index to insert at, x points to the vertex # to use
+         i = 0;
+         for(int x = 0;;++x)
+         {
+             // skip rightmost vertices
+             if((x+1)%MapSize == 0)
+             {
+                 ++x;
+             }
+
+             // make a square of 2 triangles
+             meshIndices[trnCount][i] = x;
+             meshIndices[trnCount][i+1] = x + 1;
+             meshIndices[trnCount][i+2] = x + MapSize;
+
+             meshIndices[trnCount][i+3] = x + 1;
+             meshIndices[trnCount][i+4] = x + 1 + MapSize;
+             meshIndices[trnCount][i+5] = x + MapSize;
+
+             // if we just did the final square, we're done
+             if(x+1+MapSize == (MapSize*MapSize)-1)
+                 break;
+
+             i += 6;
+         }
+
+         meshVertexCount[trnCount] = trn->getSize()*trn->getSize();
+         meshIndexCount[trnCount] = size;
+
+         nverts += meshVertexCount[trnCount];
+         ntris += meshIndexCount[trnCount];
+
+         if(trnCount < pagesTotal)
+             ++trnCount;
+    }
+
+// TODO add entities
+/*
+    //-----------------------------------------------------------------------------------------
+    // ENTITY DATA BUILDING
+
+    for (uint i = 0 ; i < numNodes ; i++)
+    {
+        int ind = pagesTotal + i;
+        Ogre::Entity *ent = (Ogre::Entity*)SharedData::getSingleton().mNavNodeList[i]->getAttachedObject(0);
+        TemplateUtils::getMeshInformation(ent->getMesh(), meshVertexCount[ind], meshVertices[ind], meshIndexCount[ind], meshIndices[ind]);
+
+        //total number of verts
+        nverts += meshVertexCount[ind];
+        //total number of indices
+        ntris += meshIndexCount[ind];
+    }
+*/
+
+    //-----------------------------------------------------------------------------------------
+    // DECLARE RECAST DATA BUFFERS USING THE INFO WE GRABBED ABOVE
+
+    verts = new float[nverts*3];// *3 as verts holds x,y,&z for each verts in the array
+    tris = new int[ntris];// tris in recast is really indices like ogre
+
+    //convert index count into tri count
+    ntris = ntris/3; //although the tris array are indices the ntris is actual number of triangles, eg. indices/3;
+
+
+    //-----------------------------------------------------------------------------------------
+    // RECAST TERRAIN DATA BUILDING
+
+    //copy all meshes verticies into single buffer and transform to world space relative to parentNode
+    int vertsIndex = 0;
+    int prevVerticiesCount = 0;
+    int prevIndexCountTotal = 0;
+
+    for (uint i = 0 ; i < pagesTotal ; ++i)
+    {
+        //We don't need to transform terrain verts, they are already in world space!
+        Ogre::Vector3 vertexPos;
+        for (uint j = 0 ; j < meshVertexCount[i] ; ++j)
+        {
+            vertexPos = meshVertices[i][j];
+            verts[vertsIndex] = vertexPos.x;
+            verts[vertsIndex+1] = vertexPos.y;
+            verts[vertsIndex+2] = vertexPos.z;
+            vertsIndex+=3;
+        }
+
+        for (uint j = 0 ; j < meshIndexCount[i] ; j++)
+        {
+            tris[prevIndexCountTotal+j] = meshIndices[i][j]+prevVerticiesCount;
+        }
+        prevIndexCountTotal += meshIndexCount[i];
+        prevVerticiesCount += meshVertexCount[i];
+
+    }
+
+//TODO Add entities
+/*
+    //-----------------------------------------------------------------------------------------
+    // RECAST TERRAIN ENTITY DATA BUILDING
+
+    //copy all meshes verticies into single buffer and transform to world space relative to parentNode
+    // DO NOT RESET THESE VALUES
+    // we need to keep the vert/index offset we have from the terrain generation above to make sure
+    // we start referencing recast's buffers from the correct place, otherwise we just end up
+    // overwriting our terrain data, which really is a pain ;)
+
+    // int vertsIndex = 0;
+    // int prevVerticiesCount = 0;
+    // int prevIndexCountTotal = 0;
+
+    //set the reference node
+    Ogre::SceneNode *referenceNode;
+    referenceNode = SharedData::getSingleton().iSceneMgr->getRootSceneNode();
+
+    for (uint i = 0 ; i < SharedData::getSingleton().mNavNodeList.size() ; i++)
+    {
+        int ind = pagesTotal + i;
+        //find the transform between the reference node and this node
+        Ogre::Matrix4 transform = referenceNode->_getFullTransform().inverse() * SharedData::getSingleton().mNavNodeList[i]->_getFullTransform();
+        Ogre::Vector3 vertexPos;
+        for (uint j = 0 ; j < meshVertexCount[ind] ; j++)
+        {
+            vertexPos = transform * meshVertices[ind][j];
+            verts[vertsIndex] = vertexPos.x;
+            verts[vertsIndex+1] = vertexPos.y;
+            verts[vertsIndex+2] = vertexPos.z;
+            vertsIndex+=3;
+        }
+
+        for (uint j = 0 ; j < meshIndexCount[ind] ; j++)
+        {
+            tris[prevIndexCountTotal+j] = meshIndices[ind][j]+prevVerticiesCount;
+        }
+        prevIndexCountTotal += meshIndexCount[ind];
+        prevVerticiesCount += meshVertexCount[ind];
+    }
+*/
+
+// TODO Fix!!
+/*
+    //delete tempory arrays
+    //TODO These probably could member varibles, this would increase performance slightly
+    for(uint i = 0; i < totalMeshes; ++i)
+    {
+        delete [] meshVertices[i];
+
+    }
+
+    // first 4 were created differently, without getMeshInformation();
+    // throws an exception if we delete the first 4
+    // TODO - FIX THIS MEMORY LEAK - its only small, but its still not good
+    for(uint i  = pagesTotal; i < totalMeshes; ++i)
+    {
+        delete [] meshIndices[i];
+    }
+*/
+    delete [] meshVertices;
+    delete [] meshVertexCount;
+    delete [] meshIndices;
+    delete [] meshIndexCount;
+
+
+
+    //---------------------------------------------------------------------------------------------
+    // RECAST **ONLY** NORMAL CALCS ( These are not used anywhere other than internally by recast)
+
+    normals = new float[ntris*3];
+    for (int i = 0; i < ntris*3; i += 3)
+    {
+        const float* v0 = &verts[tris[i]*3];
+        const float* v1 = &verts[tris[i+1]*3];
+        const float* v2 = &verts[tris[i+2]*3];
+        float e0[3], e1[3];
+        for (int j = 0; j < 3; ++j)
+        {
+            e0[j] = (v1[j] - v0[j]);
+            e1[j] = (v2[j] - v0[j]);
+        }
+        float* n = &normals[i];
+        n[0] = ((e0[1]*e1[2]) - (e0[2]*e1[1]));
+        n[1] = ((e0[2]*e1[0]) - (e0[0]*e1[2]));
+        n[2] = ((e0[0]*e1[1]) - (e0[1]*e1[0]));
+
+        float d = sqrtf(n[0]*n[0] + n[1]*n[1] + n[2]*n[2]);
+        if (d > 0)
+        {
+            d = 1.0f/d;
+            n[0] *= d;
+            n[1] *= d;
+            n[2] *= d;
+        }
+    }
+
+}
+
+
+
+
+
+
 
 
 void InputGeom::convertOgreEntities()
@@ -344,6 +697,8 @@ void InputGeom::calculateExtents()
             max.z = max2.z;
     }
 
+    if(bmin) delete[] bmin;
+    if(bmax) delete[] bmax;
     bmin = new float[3];
     bmax = new float[3];
     OgreRecast::OgreVect3ToFloatA(min, bmin);
@@ -837,11 +1192,10 @@ bool InputGeom::raycastMesh(float* src, float* dst, float& tmin)
 
 
 
-void InputGeom::debugMesh()
+void InputGeom::debugMesh(Ogre::SceneManager *sceneMgr)
 {
     // Debug navmesh points
-    Ogre::SceneManager *sm = mSrcMeshes[0]->getParentSceneNode()->getCreator();
-    Ogre::ManualObject *manual = sm->createManualObject("InputGeomDebug");
+    Ogre::ManualObject *manual = sceneMgr->createManualObject("InputGeomDebug");
     manual->begin("dungeon", Ogre::RenderOperation::OT_POINT_LIST);
     for (int i = 0; i<nverts*3; i+=3) {
         manual->position(verts[i], verts[i+1], verts[i+2]);
@@ -852,7 +1206,7 @@ void InputGeom::debugMesh()
     }
 
     manual->end();
-    sm->getRootSceneNode()->createChildSceneNode()->attachObject(manual);
+    sceneMgr->getRootSceneNode()->createChildSceneNode()->attachObject(manual);
 }
 
 
@@ -1163,15 +1517,12 @@ int rcGetChunksOverlappingSegment(const rcChunkyTriMesh* cm,
 }
 
 
-Ogre::ManualObject* InputGeom::drawConvexVolume(ConvexVolume *vol, Ogre::SceneManager* sceneMgr)
+Ogre::ManualObject* InputGeom::drawConvexVolume(ConvexVolume *vol, Ogre::SceneManager* sceneMgr, Ogre::ColourValue color)
 {
     // Define manualObject with convex volume faces
     Ogre::ManualObject *manual = sceneMgr->createManualObject();
     // Set material
     manual->begin("recastdebug", Ogre::RenderOperation::OT_LINE_LIST) ;
-
-    // Vertex color: boring grey
-    Ogre::ColourValue color(0.5, 0.5, 0.5);
 
     for (int i = 0, j = vol->nverts-1; i < vol->nverts; j = i++)
     {
@@ -1234,3 +1585,16 @@ Ogre::AxisAlignedBox InputGeom::getWorldSpaceBoundingBox(Ogre::MovableObject *en
     return bb;
 }
 
+
+Ogre::AxisAlignedBox InputGeom::getBoundingBox()
+{
+    Ogre::AxisAlignedBox bb;
+    Ogre::Vector3 max;
+    Ogre::Vector3 min;
+    OgreRecast::FloatAToOgreVect3(bmin, min);
+    OgreRecast::FloatAToOgreVect3(bmax, max);
+    bb.setMaximum(max);
+    bb.setMinimum(min);
+
+    return bb;
+}
