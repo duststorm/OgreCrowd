@@ -574,7 +574,7 @@ void OgreDetourTileCache::clearAllTempObstacles()
     }
 }
 
-
+// TODO it's also possible, like with convex obstacles, to draw the changed navmesh (as cylindrical obstacles also involve re-rasterizing the navmesh tiles)
 dtObstacleRef OgreDetourTileCache::addTempObstacle(Ogre::Vector3 pos)
 {
     if (!m_tileCache)

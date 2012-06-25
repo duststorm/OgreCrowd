@@ -18,7 +18,11 @@ This source file is part of the
 
 
 // Set to true to avoid application grabbing the mouse when debugging
-const bool BaseApplication::DISABLE_MOUSE_GRAB = false;
+bool BaseApplication::DISABLE_MOUSE_GRAB = false;
+
+// Set to true to reload a previously saved ogre.cfg file if it is found.
+// Set to false to always show the config dialog.
+bool BaseApplication::RESTORE_CONFIG = true;
 
 
 //-------------------------------------------------------------------------------------
@@ -58,7 +62,7 @@ bool BaseApplication::configure(void)
     // Show the configuration dialog and initialise the system
     // You can skip this and use root.restoreConfig() to load configuration
     // settings if you were sure there are valid ones saved in ogre.cfg
-    if(mRoot->restoreConfig() || mRoot->showConfigDialog())
+    if(RESTORE_CONFIG && mRoot->restoreConfig() || mRoot->showConfigDialog())
     {
         // If returned true, user clicked OK so initialise
         // Here we choose to let the system create a default rendering window by passing 'true'

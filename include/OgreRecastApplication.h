@@ -32,6 +32,11 @@ public:
     virtual ~OgreRecastApplication(void);
 
     /**
+      * Load some application config parameters from a cfg file. (instead of defines in code)
+      **/
+    static void loadConfig(Ogre::String configFileName);
+
+    /**
       * Calculate an intersection point of a ray with objects in the scene.
       * ray is the ray which is intersected with the scene
       * queryMask helps to include or exclude objects from the query
@@ -65,24 +70,24 @@ public:
     /**
       * Set to true to draw visual debug clues related to Recast/Detour navigation
       **/
-    static const bool DEBUG_DRAW;
+    static bool DEBUG_DRAW;
 
     /**
       * Set to true to use animated human characters, otherwise test cylinders will
       * be used to represent agents.
       **/
-    static const bool HUMAN_CHARACTERS;
+    static bool HUMAN_CHARACTERS;
 
     /**
       * Place obstacles in the scene as separate meshes.
       **/
-    static const bool OBSTACLES;
+    static bool OBSTACLES;
 
     /**
       * Determines whether demo app will build simple single navmesh,
       * or build a tiled navmesh using detourTileCache that supports temp obstacles.
       **/
-    static const bool SINGLE_NAVMESH;
+    static bool SINGLE_NAVMESH;
 
     /**
       * Determines whether also dungeon mesh will be queried when clicking to set
@@ -90,14 +95,14 @@ public:
       * Nearest point to navmesh within certain bounds will be found.
       * Set to false to only query points exactly on the navmesh.
       **/
-    static const bool RAYCAST_SCENE;
+    static bool RAYCAST_SCENE;
 
     /**
       * Determines whether agent steering mode of the demo will use a temp obstacle.
       * Set to false to steer an agent in the crowd instead.
       * Setting to true only has effect when SINGLE_NAVMESH is false.
       **/
-    static const bool TEMP_OBSTACLE_STEERING;
+    static bool TEMP_OBSTACLE_STEERING;
 
     /**
       * Determines whether the temporary obstacle placing demo places convex shapes
@@ -105,13 +110,13 @@ public:
       * Set to true to place boxes, set to false to place standard temporary obstacles
       * (simple cylinders).
       **/
-    static const bool COMPLEX_OBSTACLES;
+    static bool COMPLEX_OBSTACLES;
 
     /**
       * Determines whether terrain demo will be shown or a demo in an interior dungeon
       * scene.
       **/
-    static const bool TERRAIN;
+    static bool TERRAIN;
 
     /**
       * Sets recast visual debugging geometry in the scene to visible (true) or hide

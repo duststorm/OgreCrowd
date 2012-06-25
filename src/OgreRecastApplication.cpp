@@ -24,34 +24,37 @@ This source file is part of the
 #include "CylinderObstacle.h"
 #include "RecastInputGeom.h"
 #include "OgreRecastTerrainApplication.h"
+#include "SettingsFileParser.h"
 
 
 //--- SETTINGS ------------------------------------------------------------------------
 
+// These are the default settings and can be overridden with a OgreRecast.cfg configuration file
+
 // Set to true to draw debug objects. This is only the initial state of mDebugDraw, you can toggle using V key.
-const bool OgreRecastApplication::DEBUG_DRAW = true;
+bool OgreRecastApplication::DEBUG_DRAW = true;
 
 // Set to true to show agents as animated human characters instead of cylinders
-const bool OgreRecastApplication::HUMAN_CHARACTERS = true;
+bool OgreRecastApplication::HUMAN_CHARACTERS = true;
 
-// Add extra obstacles (pots)
-const bool OgreRecastApplication::OBSTACLES = true;
+// Add extra obstacles to the scene (pots)
+bool OgreRecastApplication::OBSTACLES = true;
 
 // Set to true to build simple single navmesh, set to false to build tiled navmesh using detourTileCache that supports temp obstacles
 // Note that for terrain it's not a good idea to construct a single navmesh, as it's much slower
-const bool OgreRecastApplication::SINGLE_NAVMESH = false;
+bool OgreRecastApplication::SINGLE_NAVMESH = false;
 
 // Set to true to also query dungeon mesh when clicking to set begin position or destination
-const bool OgreRecastApplication::RAYCAST_SCENE = false;
+bool OgreRecastApplication::RAYCAST_SCENE = false;
 
 // Set to true to use a temp obstacle in the agent steering demo instead of an agent with velocity (only works when SINGLE_NAVMESH is false)
-const bool OgreRecastApplication::TEMP_OBSTACLE_STEERING = true;
+bool OgreRecastApplication::TEMP_OBSTACLE_STEERING = true;
 
 // Set to true to place boxes as convex obstacles on the navmesh instead of the cylindrical temporary obstacles
-const bool OgreRecastApplication::COMPLEX_OBSTACLES = true;
+bool OgreRecastApplication::COMPLEX_OBSTACLES = true;
 
 // Set to true to demo navmesh on terrain
-const bool OgreRecastApplication::TERRAIN = true;
+bool OgreRecastApplication::TERRAIN = false;
 
 //-------------------------------------------------------------------------------------
 
@@ -108,7 +111,7 @@ void OgreRecastApplication::createScene(void)
        // No temporary obstacles available, add gate to the navmesh input
         mNavmeshEnts.push_back(gateE);
 
-    // Add some obstacles
+    // Add some obstacles (demonstrates that you can build a navmesh from multiple entities)
     Ogre::Entity* potE = NULL;
     Ogre::Entity *pot2ProxyE = NULL;
     if (OBSTACLES) {
@@ -674,7 +677,7 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
     }
 
     // O key opens or closes the gate
-    if(arg.key == OIS::KC_O) {
+    if(arg.key == OIS::KC_O && !SINGLE_NAVMESH) {
         if(mGateClosed) {
             // Open gate
             mDetourTileCache->removeConvexShapeObstacle(mGateHull);
@@ -1012,6 +1015,31 @@ void OgreRecastApplication::setDebugVisibility(bool visible)
 }
 
 
+void OgreRecastApplication::loadConfig(Ogre::String configFileName)
+{
+    std::cout << "Loading settings from " << configFileName << std::endl;
+
+    try {
+        SettingsFileParser sfp = SettingsFileParser(configFileName);
+
+        BaseApplication::RESTORE_CONFIG = sfp.mRestoreConfig;
+        BaseApplication::DISABLE_MOUSE_GRAB = !sfp.mLockMouse;
+
+        OgreRecastApplication::DEBUG_DRAW = sfp.mDebugDraw;
+        OgreRecastApplication::HUMAN_CHARACTERS = sfp.mHumanChars;
+        OgreRecastApplication::OBSTACLES = sfp.mObstacles;
+        OgreRecastApplication::SINGLE_NAVMESH = sfp.mSingleNavmesh;
+        OgreRecastApplication::RAYCAST_SCENE = sfp.mRaycastScene;
+        OgreRecastApplication::TEMP_OBSTACLE_STEERING = sfp.mTempObstacleSteering;
+        OgreRecastApplication::COMPLEX_OBSTACLES = sfp.mComplexObstacles;
+        OgreRecastApplication::TERRAIN = sfp.mTerrain;
+    } catch (Ogre::Exception e) {
+        std::cout << "WARNING: Could not find file " << configFileName << ". Using default settings." << std::endl;
+    }
+
+}
+
+
 
 #if OGRE_PLATFORM == OGRE_PLATFORM_WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -1028,6 +1056,9 @@ extern "C" {
     int main(int argc, char *argv[])
 #endif
     {
+        // Load configuration settings from cfg file
+        OgreRecastApplication::loadConfig("OgreRecast.cfg");
+
         // Create application object
         OgreRecastApplication *app = NULL;
         if(OgreRecastApplication::TERRAIN) {

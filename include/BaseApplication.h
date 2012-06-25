@@ -46,7 +46,9 @@ public:
       * Set to true to prevent the application from locking/grabbing the mouse when stopping at breakpoints using
       * a debugger.
       **/
-    const static bool DISABLE_MOUSE_GRAB;
+    static bool DISABLE_MOUSE_GRAB;
+
+    static bool RESTORE_CONFIG;
 
 protected:
     virtual bool setup();
