@@ -313,48 +313,8 @@ bool OgreRecastTerrainApplication::keyPressed( const OIS::KeyEvent &arg )
         }
     }
 
+    // Resort to original recast demo functionality
     return OgreRecastApplication::keyPressed(arg);
-
-    // Make sure that any redrawn navmesh tiles have the proper query mask
-    for (int i = 0; i < mNavMeshNode->numAttachedObjects(); i++) {
-        Ogre::MovableObject *obj = mNavMeshNode->getAttachedObject(i);
-        obj->setQueryFlags(NAVMESH_MASK);
-    }
-
-    // SPACE places a new agent at cursor position
-    if(arg.key == OIS::KC_SPACE
-//       && mApplicationState != STEER_AGENT  // no adding agents in steering mode (no mouse pointer)
-       && mDetourCrowd->getNbAgents() < mDetourCrowd->getMaxNbAgents()) {
-        // Find position on navmesh pointed to by cursor in the middle of the screen
-        Ogre::Ray cursorRay = mCamera->getCameraToViewportRay(0.5, 0.5);
-        Ogre::Vector3 rayHitPoint;
-        Ogre::MovableObject *rayHitObject;
-        if (rayQueryPointInScene(cursorRay, NAVMESH_MASK, rayHitPoint, &rayHitObject)) {
-            if ( Ogre::StringUtil::startsWith(rayHitObject->getName(), "recastmowalk", true) ) {
-                // Compensate for the fact that the ray-queried navmesh is drawn a little above the ground
-                rayHitPoint.y = rayHitPoint.y - mRecast->m_navMeshOffsetFromGround;
-            } else {
-                // Queried point was not on navmesh, find nearest point on the navmesh
-                mRecast->findNearestPointOnNavmesh(rayHitPoint, rayHitPoint);
-            }
-
-            Ogre::LogManager::getSingletonPtr()->logMessage("Info: added agent at position "+Ogre::StringConverter::toString(rayHitPoint));
-
-            Character *character = createCharacter("Agent"+Ogre::StringConverter::toString(mCharacters.size()), rayHitPoint);
-
-            // If in wander mode, give a random destination to agent (otherwise it will take the destination of the previous agent automatically)
-            if(mApplicationState == CROWD_WANDER || mApplicationState == STEER_AGENT) {
-                character->updateDestination(mRecast->getRandomNavMeshPoint(), false);
-            }
-        }
-    }
-
-    return BaseApplication::keyPressed(arg);
-}
-
-bool OgreRecastTerrainApplication::keyReleased(const OIS::KeyEvent &arg)
-{
-    return BaseApplication::keyReleased(arg);
 }
 
 void OgreRecastTerrainApplication::destroyScene(void)

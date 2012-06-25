@@ -161,7 +161,7 @@ void OgreRecastApplication::createScene(void)
 
     // RECAST (navmesh creation)
     // Create the navmesh and show it
-    mRecast = new OgreRecast(mSceneMgr);
+    mRecast = new OgreRecast(mSceneMgr);    // Use default configuration
     if(SINGLE_NAVMESH) {
         // Simple recast navmesh build example
 

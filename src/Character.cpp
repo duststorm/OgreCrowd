@@ -137,19 +137,21 @@ void Character::clipToTerrainHeight()
         Ogre::Vector3 pos = getNode()->getPosition();
         pos.y = terrainHeight;
         getNode()->setPosition(pos);
+    } else {
+        // Try querying terrain above character
+        queryRay.setOrigin(getNode()->getPosition());
+        queryRay.setDirection(Ogre::Vector3::UNIT_Y);
+
+        // Perform scene query again
+        result = mClipTo->rayIntersects(queryRay);
+        if(result.hit) {
+            Ogre::Real terrainHeight = result.position.y;
+
+            Ogre::Vector3 pos = getNode()->getPosition();
+            pos.y = terrainHeight;
+            getNode()->setPosition(pos);
+        }
     }
-/*
-    Ogre::RaySceneQueryResult &result = mRaySceneQuery->execute();
-    Ogre::RaySceneQueryResult::iterator itr = result.begin();
-    // Get the results, find hit with terrain
-    while (itr != result.end() && !itr->worldFragment)
-    {
-        itr++;
-    }
-    if(itr != result.end() && itr->worldFragment) {
-        Ogre::Real terrainHeight = itr->worldFragment->singleIntersection.y;
-    }
-    */
 }
 
 

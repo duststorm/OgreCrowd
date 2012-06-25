@@ -28,11 +28,6 @@ protected:
     virtual bool keyPressed( const OIS::KeyEvent &arg );
 
     /**
-      * Handle keyboard input when keys are released.
-      **/
-    virtual bool keyReleased(const OIS::KeyEvent &arg);
-
-    /**
       * Handle mouse input.
       **/
     virtual bool mousePressed( const OIS::MouseEvent &arg, OIS::MouseButtonID id );
