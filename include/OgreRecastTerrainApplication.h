@@ -16,6 +16,8 @@ public:
 protected:
     virtual void createScene(void);
 
+    virtual Character* createCharacter(Ogre::String name, Ogre::Vector3 position);
+
 //    virtual void createFrameListener(void);
     virtual void destroyScene(void);
 //    virtual bool frameRenderingQueued(const Ogre::FrameEvent& evt);

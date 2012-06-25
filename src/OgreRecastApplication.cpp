@@ -404,7 +404,7 @@ bool OgreRecastApplication::mousePressed( const OIS::MouseEvent &arg, OIS::Mouse
         }
     }
 
-    BaseApplication::mousePressed(arg, id);
+    return BaseApplication::mousePressed(arg, id);
 }
 
 bool OgreRecastApplication::mouseMoved(const OIS::MouseEvent &arg)

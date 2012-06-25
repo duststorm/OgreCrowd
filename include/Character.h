@@ -174,6 +174,8 @@ public:
       **/
     void setDetourTileCache(OgreDetourTileCache* dtTileCache);
 
+    void clipToTerrain(Ogre::TerrainGroup *terrainGroup);
+
 protected:
     /**
       * Update current position of this character to the current position of its agent.
@@ -261,6 +263,12 @@ protected:
       * so that other agents in the crowd will not walk through it.
       **/
     dtTileRef mTempObstacle;
+
+
+    virtual void clipToTerrainHeight(void);
+
+    Ogre::TerrainGroup *mClipTo;
+    Ogre::RaySceneQuery *mRaySceneQuery;
 
 
     // Friend the application class to allow setDestinationForAllAgents to update character destination values

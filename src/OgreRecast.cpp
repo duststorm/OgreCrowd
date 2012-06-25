@@ -75,7 +75,7 @@ void OgreRecast::configure()
     m_ctx=new rcContext(true);
 
     // TODO clean this up, put in some more clear place, allow config file
-    m_cellSize = /*9.0 ;//*/10;         //*
+    m_cellSize = /*9.0 ;//*/50;         //*
     m_cellHeight = /*6.0 ;//*/6;       //*
     m_agentMaxSlope = /*45*/45;          //*
     m_agentHeight = 2.5/*64.0;  1*/;        //*
@@ -86,8 +86,8 @@ void OgreRecast::configure()
     m_regionMinSize = 50;
     m_regionMergeSize = 20;
     m_vertsPerPoly = 6;
-    m_detailSampleDist = 1;
-    m_detailSampleMaxError = 1;
+    m_detailSampleDist = 5;
+    m_detailSampleMaxError = 5;
     m_keepInterResults = false;
 
     // Init build configuration from GUI

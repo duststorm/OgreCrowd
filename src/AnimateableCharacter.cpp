@@ -57,6 +57,9 @@ void AnimateableCharacter::update(Ogre::Real timeSinceLastFrame)
 {
     updatePosition(timeSinceLastFrame);
 
+    if (mClipToTerrain)
+        clipToTerrainHeight();
+
     Ogre::Vector3 velocity = getVelocity(); // Current velocity of agent
     Ogre::Real speed = velocity.length();
 

@@ -19,7 +19,9 @@ Character::Character(Ogre::String name, Ogre::SceneManager *sceneMgr, OgreDetour
     mStopped(false),
     mAgentControlled(true),
     mDetourTileCache(NULL),
-    mTempObstacle(0)
+    mTempObstacle(0),
+    mClipTo(0),
+    mRaySceneQuery(0)
 {
     mAgentID = mDetourCrowd->addAgent(position);
     mAgent = mDetourCrowd->getAgent(mAgentID);
@@ -109,7 +111,47 @@ void Character::updatePosition(Ogre::Real timeSinceLastFrame)
         // TODO check whether this position is within navmesh
         mTempObstacle = mDetourTileCache->addTempObstacle(getPosition());   // Add new obstacle
     }
+
+    // Clip position to terrain height
+    if (mClipTo)
+        clipToTerrainHeight();
 }
+
+
+void Character::clipToTerrain(Ogre::TerrainGroup *terrainGroup)
+{
+    mClipTo = terrainGroup;
+}
+
+
+void Character::clipToTerrainHeight()
+{
+    // Setup the scene query
+    Ogre::Ray queryRay(getNode()->getPosition(), Ogre::Vector3::NEGATIVE_UNIT_Y);
+
+    // Perform the scene query
+    Ogre::TerrainGroup::RayResult result = mClipTo->rayIntersects(queryRay);
+    if(result.hit) {
+        Ogre::Real terrainHeight = result.position.y;
+
+        Ogre::Vector3 pos = getNode()->getPosition();
+        pos.y = terrainHeight;
+        getNode()->setPosition(pos);
+    }
+/*
+    Ogre::RaySceneQueryResult &result = mRaySceneQuery->execute();
+    Ogre::RaySceneQueryResult::iterator itr = result.begin();
+    // Get the results, find hit with terrain
+    while (itr != result.end() && !itr->worldFragment)
+    {
+        itr++;
+    }
+    if(itr != result.end() && itr->worldFragment) {
+        Ogre::Real terrainHeight = itr->worldFragment->singleIntersection.y;
+    }
+    */
+}
+
 
 bool Character::destinationReached()
 {

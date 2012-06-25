@@ -24,8 +24,8 @@ void OgreRecastTerrainApplication::createScene()
     light->setDiffuseColour(Ogre::ColourValue::White);
     light->setSpecularColour(Ogre::ColourValue(0.4, 0.4, 0.4));
     mSceneMgr->setAmbientLight(Ogre::ColourValue(0.2, 0.2, 0.2));
-    mCamera->setPosition(Ogre::Vector3(1683, 50, 2116));
-    mCamera->lookAt(Ogre::Vector3(1963, 50, 1660));
+    mCamera->setPosition(-3161.99, 866.029, -6214.35);
+    mCamera->setOrientation(Ogre::Quaternion(0.21886, -0.0417, -0.9576, -0.1826));
     mCamera->setNearClipDistance(0.1);
     mCamera->setFarClipDistance(50000);
     if (mRoot->getRenderSystem()->getCapabilities()->hasCapability(Ogre::RSC_INFINITE_FAR_PLANE))
@@ -132,7 +132,11 @@ void OgreRecastTerrainApplication::createScene()
 
 
     // ADJUST CAMERA MOVING SPEED (default is 150)
-    mCameraMan->setTopSpeed(1000);
+//    mCameraMan->setTopSpeed(1000);
+
+
+    mNavMeshNode = (Ogre::SceneNode*)mSceneMgr->getRootSceneNode()->getChild("RecastSN");
+
 /*
     //-------------------------------------------------
     // The rest of this method is specific to the demo
@@ -285,6 +289,17 @@ void OgreRecastTerrainApplication::initBlendMaps(Ogre::Terrain* terrain)
 
 bool OgreRecastTerrainApplication::keyPressed( const OIS::KeyEvent &arg )
 {
+    if(arg.key == OIS::KC_X) {
+        Ogre::Ray cursorRay = mCamera->getCameraToViewportRay(0.5, 0.5);
+
+        // Perform the scene query
+        Ogre::TerrainGroup::RayResult result = mTerrainGroup->rayIntersects(cursorRay);
+        if(result.hit) {
+            Ogre::Real terrainHeight = result.position.y;
+            Ogre::LogManager::getSingletonPtr()->logMessage("Terrain height: "+ Ogre::StringConverter::toString(terrainHeight));
+        }
+    }
+
     return BaseApplication::keyPressed(arg);
 }
 
@@ -301,5 +316,61 @@ void OgreRecastTerrainApplication::destroyScene(void)
 
 bool OgreRecastTerrainApplication::mousePressed( const OIS::MouseEvent &arg, OIS::MouseButtonID id )
 {
+    // Make sure that any redrawn navmesh tiles have the proper query mask
+    for (int i = 0; i < mNavMeshNode->numAttachedObjects(); i++) {
+        Ogre::MovableObject *obj = mNavMeshNode->getAttachedObject(i);
+        obj->setQueryFlags(NAVMESH_MASK);
+    }
+
+    // Do ray scene query
+    //send a raycast straight out from the camera at the center position
+    Ogre::Ray mouseRay = mCamera->getCameraToViewportRay(0.5, 0.5);
+
+    Ogre::Vector3 rayHitPoint;
+    Ogre::MovableObject *rayHitObject;
+    if (rayQueryPointInScene(mouseRay, NAVMESH_MASK, rayHitPoint, &rayHitObject)) {
+
+        if ( Ogre::StringUtil::startsWith(rayHitObject->getName(), "recastmowalk", true) ) {
+            // Compensate for the fact that the ray-queried navmesh is drawn a little above the ground
+            rayHitPoint.y = rayHitPoint.y - mRecast->m_navMeshOffsetFromGround;
+        } else {
+            // Queried point was not on navmesh, find nearest point on the navmesh
+            mRecast->findNearestPointOnNavmesh(rayHitPoint, rayHitPoint);
+        }
+
+        Ogre::SceneNode *markerNode = NULL;
+
+        if(id == OIS::MB_Left) {
+            markerNode = getOrCreateMarker("EndPos", "Cylinder/Wires/Brown");
+
+            if(mApplicationState != SIMPLE_PATHFIND)
+                mCharacters[0]->updateDestination(rayHitPoint, false);  // Update destination of first agent only
+        }
+
+        if(id == OIS::MB_Right && mApplicationState == SIMPLE_PATHFIND) {
+            markerNode = getOrCreateMarker("BeginPos", "Cylinder/Wires/DarkGreen");
+        }
+
+        if(markerNode != NULL) {
+            if(mDebugDraw)
+                rayHitPoint.y = rayHitPoint.y + mRecast->m_navMeshOffsetFromGround;
+            markerNode->setPosition(rayHitPoint);
+        }
+
+        if(mApplicationState == SIMPLE_PATHFIND) {
+            drawPathBetweenMarkers(1,1);    // Draw navigation path (in DRAW_DEBUG) and begin marker
+            UpdateAllAgentDestinations();   //Steer all agents to set destination
+        }
+    }
+
     return BaseApplication::mousePressed(arg, id);
+}
+
+
+Character* OgreRecastTerrainApplication::createCharacter(Ogre::String name, Ogre::Vector3 position)
+{
+    Character* character = OgreRecastApplication::createCharacter(name, position);
+    // Enable terrain clipping for character
+    character->clipToTerrain(mTerrainGroup);
+    return character;
 }

@@ -44,13 +44,13 @@ public:
       * Retrieve a marker with specified name and optional material (to override default material).
       * Creates the marker if it does not exist yet.
       **/
-    Ogre::SceneNode* getOrCreateMarker(Ogre::String name, Ogre::String materialName="");
+    virtual Ogre::SceneNode* getOrCreateMarker(Ogre::String name, Ogre::String materialName="");
 
     /**
       * Create a new character in the scene, backed with an agent in the crowd.
       * Character must have a unique name and will be positioned at specified position.
       **/
-    Character* createCharacter(Ogre::String name, Ogre::Vector3 position);
+    virtual Character* createCharacter(Ogre::String name, Ogre::Vector3 position);
 
     /**
       * Query flags used for ray intersection tests.
@@ -117,7 +117,7 @@ public:
       * Sets recast visual debugging geometry in the scene to visible (true) or hide
       * it (false).
       **/
-    void setDebugVisibility(bool visible);
+    virtual void setDebugVisibility(bool visible);
 
 
 protected:
