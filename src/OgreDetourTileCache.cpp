@@ -2,10 +2,23 @@
 #include "DetourTileCache/DetourTileCache.h"
 #include <float.h>
 
+
+///// Static config parameters //////
+
+// Max number of layers a tile can have
 static const int EXPECTED_LAYERS_PER_TILE = 4;
 
-OgreDetourTileCache::OgreDetourTileCache(OgreRecast *recast)
+// Max number of (temp) obstacles that can be added to the tilecache
+static const int MAX_OBSTACLES = 128;
+
+// Extra padding added to the border size of tiles (together with agent radius)
+static const float BORDER_PADDING = 3;
+
+/////////////////////////////////////
+
+OgreDetourTileCache::OgreDetourTileCache(OgreRecast *recast, int tileSize)
     : m_recast(recast),
+      m_tileSize(tileSize - (tileSize%8)),  // Make sure tilesize is a multiple of 8
     m_keepInterResults(false),
     m_tileCache(0),
     m_cacheBuildTimeMs(0),
@@ -15,7 +28,6 @@ OgreDetourTileCache::OgreDetourTileCache(OgreRecast *recast)
     m_cacheBuildMemUsage(0),
     m_maxTiles(0),
     m_maxPolysPerTile(0),
-    m_tileSize(48),
     m_cellSize(0),
     m_tcomp(0),
     m_geom(0),
@@ -26,6 +38,10 @@ OgreDetourTileCache::OgreDetourTileCache(OgreRecast *recast)
     m_talloc = new LinearAllocator(32000);
     m_tcomp = new FastLZCompressor;
     m_tmproc = new MeshProcess;
+
+    // Sanity check on tilesize
+    if(m_tileSize < 16 || m_tileSize > 128)
+        m_tileSize = 48;
 }
 
 OgreDetourTileCache::~OgreDetourTileCache()
@@ -39,19 +55,23 @@ bool OgreDetourTileCache::configure(InputGeom *inputGeom)
 {
     m_geom = inputGeom;
 
-    m_recast->configure();  // Set recast params, we will reuse some of those
-
+    // Reuse OgreRecast context for tiled navmesh building
     m_ctx = m_recast->m_ctx;
 
     if (!m_geom || m_geom->isEmpty()) {
-        m_recast->m_pLog->logMessage("ERROR: buildTiledNavigation: No vertices and triangles.");
+        m_recast->m_pLog->logMessage("ERROR: OgreDetourTileCache::configure: No vertices and triangles.");
+        return false;
+    }
+
+    if (!m_geom->getChunkyMesh()) {
+        m_recast->m_pLog->logMessage("ERROR: OgreDetourTileCache::configure: Input mesh has no chunkyTriMesh built.");
         return false;
     }
 
     m_tmproc->init(m_geom);
 
 
-    // Init cache
+    // Init cache bounding box
     const float* bmin = m_geom->getMeshBoundsMin();
     const float* bmax = m_geom->getMeshBoundsMax();
 
@@ -60,30 +80,32 @@ bool OgreDetourTileCache::configure(InputGeom *inputGeom)
     m_cfg = m_recast->m_cfg;
 
     // Most params are taken from OgreRecast::configure, except for these:
-    m_cfg.tileSize = (int)m_tileSize;
-    m_cfg.borderSize = m_cfg.walkableRadius + 3; // Reserve enough padding.
+    m_cfg.tileSize = m_tileSize;
+    m_cfg.borderSize = m_cfg.walkableRadius + BORDER_PADDING; // Reserve enough padding.
     m_cfg.width = m_cfg.tileSize + m_cfg.borderSize*2;
     m_cfg.height = m_cfg.tileSize + m_cfg.borderSize*2;
 
+    // Set mesh bounds
     rcVcopy(m_cfg.bmin, bmin);
     rcVcopy(m_cfg.bmax, bmax);
 
+    // Cell size navmesh generation property is copied from OgreRecast config
     m_cellSize = m_cfg.cs;
 
-    // Determine grid size (number of tiles)
+    // Determine grid size (number of tiles) based on bounding box and grid cell size
     int gw = 0, gh = 0;
-    rcCalcGridSize(bmin, bmax, m_cellSize, &gw, &gh);
-    const int ts = (int)m_tileSize;
+    rcCalcGridSize(bmin, bmax, m_cellSize, &gw, &gh);   // Calculates how many times cellSize fits in the bounding box
+    const int ts = m_tileSize;
     const int tw = (gw + ts-1) / ts;    // Tile width
     const int th = (gh + ts-1) / ts;    // Tile height
     m_tw = tw;
     m_th = th;
     Ogre::LogManager::getSingletonPtr()->logMessage("Tiles: "+Ogre::StringConverter::toString(gw) + " x " + Ogre::StringConverter::toString(gh));
+    Ogre::LogManager::getSingletonPtr()->logMessage("Tilesize: "+Ogre::StringConverter::toString(m_tileSize)+"  Cellsize: "+Ogre::StringConverter::toString(m_cellSize));
 
 
     // Max tiles and max polys affect how the tile IDs are caculated.
     // There are 22 bits available for identifying a tile and a polygon.
-// TODO add more of the options available in the original recastDemo application GUI
     int tileBits = rcMin((int)dtIlog2(dtNextPow2(tw*th*EXPECTED_LAYERS_PER_TILE)), 14);
     if (tileBits > 14) tileBits = 14;
     int polyBits = 22 - tileBits;
@@ -96,17 +118,18 @@ bool OgreDetourTileCache::configure(InputGeom *inputGeom)
     // Tile cache params.
     memset(&m_tcparams, 0, sizeof(m_tcparams));
     rcVcopy(m_tcparams.orig, bmin);
-    // Copy some parameters from recast config
+    m_tcparams.width = m_tileSize;
+    m_tcparams.height = m_tileSize;
+    m_tcparams.maxTiles = tw*th*EXPECTED_LAYERS_PER_TILE;
+    m_tcparams.maxObstacles = MAX_OBSTACLES;    // Max number of temp obstacles that can be added to or removed from navmesh
+
+    // Copy the rest of the parameters from OgreRecast config
     m_tcparams.cs = m_cfg.cs;
     m_tcparams.ch = m_cfg.ch;
-    m_tcparams.width = (int)m_tileSize;
-    m_tcparams.height = (int)m_tileSize;
     m_tcparams.walkableHeight = m_cfg.walkableHeight;
     m_tcparams.walkableRadius = m_cfg.walkableRadius;
     m_tcparams.walkableClimb = m_cfg.walkableClimb;
     m_tcparams.maxSimplificationError = m_cfg.maxSimplificationError;
-    m_tcparams.maxTiles = tw*th*EXPECTED_LAYERS_PER_TILE;
-    m_tcparams.maxObstacles = 128;    // Max number of temp obstacles that can be added to or removed from navmesh
 
     return true;
 }
@@ -119,6 +142,7 @@ bool OgreDetourTileCache::TileCacheBuild(std::vector<Ogre::Entity*> srcMeshes)
 
 bool OgreDetourTileCache::TileCacheBuild(InputGeom *inputGeom)
 {
+    // Init configuration for specified geometry
     configure(inputGeom);
 
     dtStatus status;

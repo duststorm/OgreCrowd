@@ -69,8 +69,22 @@ void OgreRecastTerrainApplication::createScene()
 
 // TODO extract recast/detour parameters out of their wrappers, use config classes
     // RECAST (navmesh creation)
-    // Create the navmesh and show it
-    mRecast = new OgreRecast(mSceneMgr);
+    // Initialize custom navmesh parameters
+    OgreRecastConfigParams recastParams = OgreRecastConfigParams();
+    recastParams.setCellSize(50);
+    recastParams.setCellHeight(6);
+    recastParams.setAgentMaxSlope(45);
+    recastParams.setAgentHeight(2.5);
+    recastParams.setAgentMaxClimb(15);
+    recastParams.setAgentRadius(0.5);
+    recastParams.setEdgeMaxLen(2);
+    recastParams.setEdgeMaxError(1.3);
+    recastParams.setRegionMinSize(50);
+    recastParams.setRegionMergeSize(20);
+    recastParams.setDetailSampleDist(5);
+    recastParams.setDetailSampleMaxError(5);
+
+    mRecast = new OgreRecast(mSceneMgr, recastParams);
     InputGeom *geom = new InputGeom(mTerrainGroup);
     // Debug draw the recast bounding box around the terrain tile
     ConvexVolume bb = ConvexVolume(geom->getBoundingBox());
@@ -79,6 +93,7 @@ void OgreRecastTerrainApplication::createScene()
 //    geom->debugMesh(mSceneMgr);
     if(SINGLE_NAVMESH) {
         // Simple recast navmesh build example
+        // For large terrain meshes this is not recommended, as the build takes a very long time
 
         if(mRecast->NavMeshBuild(geom)) {
             mRecast->drawNavMesh();
@@ -91,7 +106,7 @@ void OgreRecastTerrainApplication::createScene()
     } else {
         // More advanced: use DetourTileCache to build a tiled and cached navmesh that can be updated with dynamic obstacles at runtime.
 
-        mDetourTileCache = new OgreDetourTileCache(mRecast);
+        mDetourTileCache = new OgreDetourTileCache(mRecast, 48);
         if(mDetourTileCache->TileCacheBuild(geom)) {
             mDetourTileCache->drawNavMesh();
         } else {

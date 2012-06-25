@@ -244,7 +244,12 @@ static int calcLayerBufferSize(const int gridWidth, const int gridHeight)
 class OgreDetourTileCache
 {
 public:
-    OgreDetourTileCache(OgreRecast *recast);
+    /**
+      * Create a tilecache that will build a tiled recast navmesh stored at the specified
+      * OgreRecast component. Will use specified tilesize (a multiple of 8 between 16 and 128),
+      * all other configuration parameters are copied from the OgreRecast component configuration.
+      **/
+    OgreDetourTileCache(OgreRecast *recast, int tileSize = 48);
     ~OgreDetourTileCache(void);
 
     bool configure(InputGeom *inputGeom);
@@ -366,7 +371,7 @@ protected:
 
     int m_maxTiles;
     int m_maxPolysPerTile;
-    float m_tileSize;
+    int m_tileSize;
 
     float m_cellSize;
 

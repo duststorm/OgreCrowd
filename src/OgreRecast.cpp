@@ -3,7 +3,7 @@
 #include "DetourTileCache/DetourTileCacheBuilder.h"
 
 
-OgreRecast::OgreRecast(Ogre::SceneManager* sceneMgr)
+OgreRecast::OgreRecast(Ogre::SceneManager* sceneMgr, OgreRecastConfigParams configParams)
     : m_pSceneMgr(sceneMgr),
     m_pRecastSN(NULL)
 {
@@ -22,13 +22,16 @@ OgreRecast::OgreRecast(Ogre::SceneManager* sceneMgr)
    //m_navMeshDrawFlags;
    m_ctx=NULL ;
 
-   RecastCleanup() ; //?? don't know if I should do this prior to making any recast stuff, but the demo did.
+   RecastCleanup() ; // TODO ?? don't know if I should do this prior to making any recast stuff, but the demo did.
    m_pRecastMOPath=NULL ;
 
    m_pRecastSN=m_pSceneMgr->getRootSceneNode()->createChildSceneNode("RecastSN");
 
 
    m_pLog = Ogre::LogManager::getSingletonPtr();
+
+   // Set configuration
+   configure(configParams);
 }
 
 
@@ -60,57 +63,59 @@ void OgreRecast::RecastCleanup()
 }
 
 
-
-
-void OgreRecast::configure()
+void OgreRecast::configure(OgreRecastConfigParams params)
 {
     // NOTE: this is one of the most important parts to get it right!!
-     /*
-       Perhaps the most important part of the above is setting the agent size with m_agentHeight and m_agentRadius, and the voxel cell size used, m_cellSize and m_cellHeight. In my project 32.0 units is 1 meter, so I've set the agent to 48 units high, and the cell sizes are quite large. The original cell sizes in the Recast/Detour demo were down around 0.3.
-       */
+    // Perhaps the most important part of the above is setting the agent size with m_agentHeight and m_agentRadius,
+    // and the voxel cell size used, m_cellSize and m_cellHeight. In my project 1 units is a little less than 1 meter,
+    // so I've set the agent to 2.5 units high, and the cell sizes to sub-meter size.
+    // This is about the same as in the original cell sizes in the Recast/Detour demo.
 
-    // cellsize (1.5, 1.0) was the most accurate at finding all the places we could go, but was also slow to generate.
+    // Smaller cellsizes are the most accurate at finding all the places we could go, but are also slow to generate.
     // Might be suitable for pre-generated meshes. Though it also produces a lot more polygons.
 
+    if(m_ctx)
+        delete m_ctx;
     m_ctx=new rcContext(true);
 
-    // TODO clean this up, put in some more clear place, allow config file
-    m_cellSize = /*9.0 ;//*/50;         //*
-    m_cellHeight = /*6.0 ;//*/6;       //*
-    m_agentMaxSlope = /*45*/45;          //*
-    m_agentHeight = 2.5/*64.0;  1*/;        //*
-    m_agentMaxClimb = 15;                //*
-    m_agentRadius = /*16;*/0.5;          //*
-    m_edgeMaxLen = 2/*512*/;
-    m_edgeMaxError = 1.3;
-    m_regionMinSize = 50;
-    m_regionMergeSize = 20;
-    m_vertsPerPoly = 6;
-    m_detailSampleDist = 5;
-    m_detailSampleMaxError = 5;
-    m_keepInterResults = false;
+    m_cellSize = params.getCellSize();
+    m_cellHeight = params.getCellHeight();
+    m_agentMaxSlope = params.getAgentMaxSlope();
+    m_agentHeight = params.getAgentHeight();
+    m_agentMaxClimb = params.getAgentMaxClimb();
+    m_agentRadius = params.getAgentRadius();
+    m_edgeMaxLen = params.getEdgeMaxLen();
+    m_edgeMaxError = params.getEdgeMaxError();
+    m_regionMinSize = params.getRegionMinSize();
+    m_regionMergeSize = params.getRegionMergeSize();
+    m_vertsPerPoly = params.getVertsPerPoly();
+    m_detailSampleDist = params.getDetailSampleDist();
+    m_detailSampleMaxError = params.getDetailSampleMaxError();
+    m_keepInterResults = params.getKeepInterResults();
 
-    // Init build configuration from GUI
+    // Init cfg object
     memset(&m_cfg, 0, sizeof(m_cfg));
     m_cfg.cs = m_cellSize;
     m_cfg.ch = m_cellHeight;
     m_cfg.walkableSlopeAngle = m_agentMaxSlope;
-    m_cfg.walkableHeight = (int)ceilf(m_agentHeight / m_cfg.ch);
-    m_cfg.walkableClimb = (int)floorf(m_agentMaxClimb / m_cfg.ch);
-    m_cfg.walkableRadius = (int)ceilf(m_agentRadius / m_cfg.cs);
-    m_cfg.maxEdgeLen = (int)(m_edgeMaxLen / m_cellSize);
+    m_cfg.walkableHeight = params._getWalkableheight();
+    m_cfg.walkableClimb = params._getWalkableClimb();
+    m_cfg.walkableRadius = params._getWalkableRadius();
+    m_cfg.maxEdgeLen = params._getMaxEdgeLen();
     m_cfg.maxSimplificationError = m_edgeMaxError;
-    m_cfg.minRegionArea = (int)rcSqr(m_regionMinSize);      // Note: area = size*size
-    m_cfg.mergeRegionArea = (int)rcSqr(m_regionMergeSize);   // Note: area = size*size
-    m_cfg.maxVertsPerPoly = (int)m_vertsPerPoly;
-    m_cfg.detailSampleDist = m_detailSampleDist < 0.9f ? 0 : m_cellSize * m_detailSampleDist;
-    m_cfg.detailSampleMaxError = m_cellHeight * m_detailSampleMaxError;
+    m_cfg.minRegionArea = params._getMinRegionArea();
+    m_cfg.mergeRegionArea = params._getMergeRegionArea();
+    m_cfg.maxVertsPerPoly = m_vertsPerPoly;
+    m_cfg.detailSampleDist = params._getDetailSampleDist();
+    m_cfg.detailSampleMaxError = params._getDetailSampleMaxError();
 
 
-    m_navMeshOffsetFromGround = m_cellHeight/5;//0.25;      // Distance above ground for drawing navmesh polygons
-    m_navMeshEdgesOffsetFromGround = m_cellHeight/3;        // Distance above ground for drawing edges of navmesh (should be slightly higher than navmesh polygons)
+    // Demo specific parameters
+    m_navMeshOffsetFromGround = m_cellHeight/5;         // Distance above ground for drawing navmesh polygons
+    m_navMeshEdgesOffsetFromGround = m_cellHeight/3;    // Distance above ground for drawing edges of navmesh (should be slightly higher than navmesh polygons)
     m_pathOffsetFromGround = m_agentHeight+m_navMeshOffsetFromGround; // Distance above ground for drawing path debug lines relative to cellheight (should be higher than navmesh polygons)
 
+    // Colors for navmesh debug drawing
     m_navmeshNeighbourEdgeCol= Ogre::ColourValue(0.9,0.9,0.9);   // Light Grey
     m_navmeshOuterEdgeCol    = Ogre::ColourValue(0,0,0);         // Black
     m_navmeshGroundPolygonCol= Ogre::ColourValue(0,0.7,0);       // Green
@@ -149,8 +154,6 @@ bool OgreRecast::NavMeshBuild(InputGeom* input)
    //
    // Step 1. Initialize build config.
    //
-   configure();
-
 
    // Reset build times gathering.
    m_ctx->resetTimers();
