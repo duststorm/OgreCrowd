@@ -279,6 +279,13 @@ void OgreRecastTerrainApplication::initBlendMaps(Ogre::Terrain* terrain)
 
 bool OgreRecastTerrainApplication::keyPressed( const OIS::KeyEvent &arg )
 {
+    if(  arg.key == OIS::KC_O
+      || arg.key == OIS::KC_BACK
+      || arg.key == OIS::KC_DELETE
+      || arg.key == OIS::KC_K
+      || arg.key == OIS::KC_I)
+        return BaseApplication::keyPressed(arg);    // Avoid these features from the dungeon demo
+
     // Use X to test terrain height
     if(arg.key == OIS::KC_X) {
         Ogre::Ray cursorRay = mCamera->getCameraToViewportRay(0.5, 0.5);
