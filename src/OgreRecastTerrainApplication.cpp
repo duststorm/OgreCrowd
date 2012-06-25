@@ -33,6 +33,7 @@ void OgreRecastTerrainApplication::createScene()
         mCamera->setFarClipDistance(0);   // enable infinite far clip distance if we can
     }
 
+    // Set viewport color to blue (makes bounding boxes more visible)
     Ogre::Viewport *vp = mWindow->getViewport(0);
     vp->setBackgroundColour(Ogre::ColourValue(13.0/255,221.0/255,229.0/255));
 
@@ -97,15 +98,6 @@ void OgreRecastTerrainApplication::createScene()
             Ogre::LogManager::getSingletonPtr()->logMessage("ERROR: could not generate useable navmesh from mesh using detourTileCache.");
             return;
         }
-/*
-        // Create a convex obstacle for the gate using its world-coordinate bounding box
-        mGateHull = new ConvexVolume(InputGeom::getWorldSpaceBoundingBox(gateE), mRecast->m_agentRadius);
-        // Note: it's important to choose a proper area type you want to mark with the polygon! I just set it to "unwalkable"
-        mGateHull->area = RC_NULL_AREA;   // Set area described by convex polygon to "unwalkable"
-        mGateHull->hmin = mGateHull->hmin - 0.3;    // Extend a bit downwards so it hits the ground (navmesh) for certain. (Maybe this is not necessary)
-        mDetourTileCache->addConvexShapeObstacle(mGateHull);
-        InputGeom::drawConvexVolume(mGateHull, mSceneMgr);
-*/
     }
 
 
@@ -131,13 +123,10 @@ void OgreRecastTerrainApplication::createScene()
 
 
 
-    // ADJUST CAMERA MOVING SPEED (default is 150)
-//    mCameraMan->setTopSpeed(1000);
 
 
-    mNavMeshNode = (Ogre::SceneNode*)mSceneMgr->getRootSceneNode()->getChild("RecastSN");
 
-/*
+
     //-------------------------------------------------
     // The rest of this method is specific to the demo
 
@@ -151,7 +140,7 @@ void OgreRecastTerrainApplication::createScene()
 
 
     // ADJUST CAMERA MOVING SPEED (default is 150)
-    mCameraMan->setTopSpeed(80);
+    mCameraMan->setTopSpeed(1000);
 
 
     // SETUP RAY SCENE QUERYING AND DEBUG DRAWING
@@ -163,8 +152,11 @@ void OgreRecastTerrainApplication::createScene()
         obj->setQueryFlags(NAVMESH_MASK);
     }
 
+// TODO raycast terrain
+/*
     if (RAYCAST_SCENE)
         mapE->setQueryFlags(NAVMESH_MASK);
+*/
 
     if(!OgreRecastApplication::mDebugDraw)
         mNavMeshNode->setVisible(false); // Even though we make it invisible, we still keep the navmesh entity in the scene to do ray intersection tests
@@ -183,9 +175,7 @@ void OgreRecastTerrainApplication::createScene()
     node->attachObject(mChaseCam);
     mChaseCam->setPosition(0, mDetourCrowd->getAgentHeight(), mDetourCrowd->getAgentRadius()*4);
     mChaseCam->pitch(Ogre::Degree(-15));
-    Ogre::Viewport *vp = mWindow->getViewport(0);
     mChaseCam->setAspectRatio(Ogre::Real(vp->getActualWidth()) / Ogre::Real(vp->getActualHeight()));
-*/
 }
 
 void OgreRecastTerrainApplication::configureTerrainDefaults(Ogre::Light* light)
@@ -289,6 +279,7 @@ void OgreRecastTerrainApplication::initBlendMaps(Ogre::Terrain* terrain)
 
 bool OgreRecastTerrainApplication::keyPressed( const OIS::KeyEvent &arg )
 {
+    // Use X to test terrain height
     if(arg.key == OIS::KC_X) {
         Ogre::Ray cursorRay = mCamera->getCameraToViewportRay(0.5, 0.5);
 
@@ -297,6 +288,42 @@ bool OgreRecastTerrainApplication::keyPressed( const OIS::KeyEvent &arg )
         if(result.hit) {
             Ogre::Real terrainHeight = result.position.y;
             Ogre::LogManager::getSingletonPtr()->logMessage("Terrain height: "+ Ogre::StringConverter::toString(terrainHeight));
+        }
+    }
+
+    return OgreRecastApplication::keyPressed(arg);
+
+    // Make sure that any redrawn navmesh tiles have the proper query mask
+    for (int i = 0; i < mNavMeshNode->numAttachedObjects(); i++) {
+        Ogre::MovableObject *obj = mNavMeshNode->getAttachedObject(i);
+        obj->setQueryFlags(NAVMESH_MASK);
+    }
+
+    // SPACE places a new agent at cursor position
+    if(arg.key == OIS::KC_SPACE
+//       && mApplicationState != STEER_AGENT  // no adding agents in steering mode (no mouse pointer)
+       && mDetourCrowd->getNbAgents() < mDetourCrowd->getMaxNbAgents()) {
+        // Find position on navmesh pointed to by cursor in the middle of the screen
+        Ogre::Ray cursorRay = mCamera->getCameraToViewportRay(0.5, 0.5);
+        Ogre::Vector3 rayHitPoint;
+        Ogre::MovableObject *rayHitObject;
+        if (rayQueryPointInScene(cursorRay, NAVMESH_MASK, rayHitPoint, &rayHitObject)) {
+            if ( Ogre::StringUtil::startsWith(rayHitObject->getName(), "recastmowalk", true) ) {
+                // Compensate for the fact that the ray-queried navmesh is drawn a little above the ground
+                rayHitPoint.y = rayHitPoint.y - mRecast->m_navMeshOffsetFromGround;
+            } else {
+                // Queried point was not on navmesh, find nearest point on the navmesh
+                mRecast->findNearestPointOnNavmesh(rayHitPoint, rayHitPoint);
+            }
+
+            Ogre::LogManager::getSingletonPtr()->logMessage("Info: added agent at position "+Ogre::StringConverter::toString(rayHitPoint));
+
+            Character *character = createCharacter("Agent"+Ogre::StringConverter::toString(mCharacters.size()), rayHitPoint);
+
+            // If in wander mode, give a random destination to agent (otherwise it will take the destination of the previous agent automatically)
+            if(mApplicationState == CROWD_WANDER || mApplicationState == STEER_AGENT) {
+                character->updateDestination(mRecast->getRandomNavMeshPoint(), false);
+            }
         }
     }
 
