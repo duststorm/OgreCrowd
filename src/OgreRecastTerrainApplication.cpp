@@ -116,6 +116,14 @@ void OgreRecastTerrainApplication::createScene()
     }
 
 
+    // You can save out the input geom to wavefront .obj like so:
+    // This can be used, for example, for testing in the official demo that comes with recast
+//    if(mRecast->m_geom)
+//        mRecast->m_geom->writeObj("terrainTestObj.obj");
+//    else
+//        mDetourTileCache->m_geom->writeObj("terrainTestObj.obj");
+
+
     // DETOUR (pathfinding)
     // Do a pathing between two random points on the navmesh and draw the path
     // Note that because we are using DetourCrowd we will not be doing pathfinds directly, DetourCrowd

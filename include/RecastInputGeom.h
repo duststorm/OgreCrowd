@@ -71,6 +71,11 @@ public:
     InputGeom(Ogre::TerrainGroup *terrainGroup, std::vector<Ogre::Entity*> srcMeshes = std::vector<Ogre::Entity*>());
 
     /**
+      * Output inputGeom to obj wavefront file.
+      **/
+    void writeObj(Ogre::String filename);
+
+    /**
       * Retrieve a bounding box for the entire inputGeom, in world space
       * coordinates.
       **/

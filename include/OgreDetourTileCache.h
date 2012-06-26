@@ -343,9 +343,9 @@ public:
 
     OgreRecast *m_recast;
 
+    InputGeom* m_geom;
 
 protected:
-    InputGeom* m_geom;
 
     bool m_keepInterResults;
 

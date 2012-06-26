@@ -13,3 +13,4 @@ OgreRecastDemo
 OgreRecastDemod
 *~
 *.orig
+*.obj

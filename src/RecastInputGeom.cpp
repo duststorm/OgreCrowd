@@ -1,6 +1,8 @@
 #include "RecastInputGeom.h"
 #include "OgreRecast.h"
+#include <OgreStreamSerialiser.h>
 #include <float.h>
+#include <cstdio>
 
 InputGeom::InputGeom(std::vector<Ogre::Entity*> srcMeshes)
     : mSrcMeshes(srcMeshes),
@@ -1616,4 +1618,24 @@ Ogre::AxisAlignedBox InputGeom::getBoundingBox()
     bb.setMinimum(min);
 
     return bb;
+}
+
+
+void InputGeom::writeObj(Ogre::String filename)
+{
+    std::fstream fstr(filename.c_str(), std::ios::out);
+//    Ogre::DataStreamPtr stream(OGRE_NEW Ogre::FileStreamDataStream(&fstr, false));
+//    Ogre::StreamSerialiser streamWriter(stream);
+
+    for(int i=0; i < nverts; i++) {
+        Ogre::String line = "v "+Ogre::StringConverter::toString(verts[3*i])+" "+Ogre::StringConverter::toString(verts[3*i+1])+" "+Ogre::StringConverter::toString(verts[3*i+2]);
+        fstr << line << std::endl;
+//        streamWriter.write(&line);
+    }
+    for(int i=0; i < ntris; i++) {
+        Ogre::String line = "f "+Ogre::StringConverter::toString(1+tris[3*i])+" "+Ogre::StringConverter::toString(1+tris[3*i+1])+" "+Ogre::StringConverter::toString(1+tris[3*i+2]);
+        fstr << line << std::endl;
+    }
+
+    fstr.close();
 }
