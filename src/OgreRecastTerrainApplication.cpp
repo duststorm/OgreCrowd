@@ -378,16 +378,6 @@ bool OgreRecastTerrainApplication::mousePressed( const OIS::MouseEvent &arg, OIS
         obj->setQueryFlags(NAVMESH_MASK);
     }
 
-    // Set static geometry query mask
-    if (OgreRecast::STATIC_GEOM_DEBUG) {
-        Ogre::StaticGeometry::RegionIterator it = mSceneMgr->getStaticGeometry("NavmeshDebugStaticGeom")->getRegionIterator();
-        while (it.hasMoreElements())
-        {
-            Ogre::StaticGeometry::Region* region = it.getNext();
-            region->setQueryFlags(NAVMESH_MASK);
-        }
-    }
-
     Ogre::Vector3 rayHitPoint;
     if(queryCursorPosition(rayHitPoint)) {
 
