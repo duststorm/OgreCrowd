@@ -199,7 +199,7 @@ void OgreRecastTerrainApplication::createScene()
 
 
     // ADJUST CAMERA MOVING SPEED (default is 150)
-    mCameraMan->setTopSpeed(1000);
+    mCameraMan->setTopSpeed(500);
 
 
     // SETUP RAY SCENE QUERYING AND DEBUG DRAWING
