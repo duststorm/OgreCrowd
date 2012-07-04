@@ -127,28 +127,14 @@ InputGeom::InputGeom(Ogre::TerrainGroup *terrainGroup, std::vector<Ogre::Entity*
       m_offMeshConCount(0),
       m_volumeCount(0)
 {
-// TODO We are only creating a navmesh from terrain at the moment
-// TODO look at PW's loadhouses method for entities loading
-
-
-// TODO check for no terrain
-//    if (srcMeshes.empty())
-//        return;
-
     // PARTS OF THE FOLLOWING CODE WERE TAKEN AND MODIFIED FROM AN OGRE3D FORUM POST
     const int numNodes = srcMeshes.size();
-    // TODO how to retrieve number of pages in terrain group? Hardcoded at the moment.
-    int pagesTotal = 1;
-    const int totalMeshes = pagesTotal /*+ numNodes*/;
 
-    nverts = 0;
-    ntris = 0;
-    size_t *meshVertexCount = new size_t[totalMeshes];
-    size_t *meshIndexCount = new size_t[totalMeshes];
-    Ogre::Vector3 **meshVertices = new Ogre::Vector3*[totalMeshes];
-    unsigned long **meshIndices = new unsigned long*[totalMeshes];
-
+    // Calculate bounds around all entities
     if(mSrcMeshes.size() > 0) {
+        // Set reference node
+        mReferenceNode = mSrcMeshes[0]->getParentSceneNode()->getCreator()->getRootSceneNode();
+
         // Calculate entity bounds
         // Set the area where the navigation mesh will be build.
         // Using bounding box of source mesh and specified cell size
@@ -159,10 +145,8 @@ InputGeom::InputGeom(Ogre::TerrainGroup *terrainGroup, std::vector<Ogre::Entity*
     }
 
     // Calculate terrain bounds
-    // TODO extract calculateTerrainExtents() ?
     Ogre::TerrainGroup::TerrainIterator ti = terrainGroup->getTerrainIterator();
     Ogre::Terrain* trn;
-// TODO we could calculate terrain count here
     size_t trnCount = 0;
     while(ti.hasMoreElements())
     {
@@ -187,6 +171,20 @@ InputGeom::InputGeom(Ogre::TerrainGroup *terrainGroup, std::vector<Ogre::Entity*
          trnCount++;
     }
 
+    //if (trnCount == 0)
+        // TODO return with error?
+
+    int pagesTotal = trnCount;
+    const int totalMeshes = pagesTotal + numNodes;
+
+    nverts = 0;
+    ntris = 0;
+    size_t *meshVertexCount = new size_t[totalMeshes];
+    size_t *meshIndexCount = new size_t[totalMeshes];
+    Ogre::Vector3 **meshVertices = new Ogre::Vector3*[totalMeshes];
+    unsigned long **meshIndices = new unsigned long*[totalMeshes];
+
+
 
     //---------------------------------------------------------------------------------
     // TERRAIN DATA BUILDING
@@ -195,8 +193,6 @@ InputGeom::InputGeom(Ogre::TerrainGroup *terrainGroup, std::vector<Ogre::Entity*
     while(ti.hasMoreElements())
     {
          trn = ti.getNext()->instance;
-// TODO do we want to set a query mask here? or does default suffice?
-//         trn->setQueryFlags(GEOMETRY_QUERY_MASK);
 
          // get height data, world size, map size
          float *mapptr = trn->getHeightData();
@@ -207,7 +203,7 @@ InputGeom::InputGeom(Ogre::TerrainGroup *terrainGroup, std::vector<Ogre::Entity*
 
          float DeltaX = 0;
          float DeltaZ = 0;
-     // TODO this hardcoded behaviour has to go! Supports only up to 4 terrain pages
+// TODO this hardcoded behaviour has to go! Supports only up to 4 terrain pages
          switch(trnCount)
          {
          case 0:
@@ -308,23 +304,27 @@ InputGeom::InputGeom(Ogre::TerrainGroup *terrainGroup, std::vector<Ogre::Entity*
              ++trnCount;
     }
 
-// TODO add entities
-/*
+
+
+
     //-----------------------------------------------------------------------------------------
     // ENTITY DATA BUILDING
 
-    for (uint i = 0 ; i < numNodes ; i++)
+
+    int i = 0;
+    for(std::vector<Ogre::Entity*>::iterator iter = mSrcMeshes.begin(); iter != mSrcMeshes.end(); iter++)
     {
         int ind = pagesTotal + i;
-        Ogre::Entity *ent = (Ogre::Entity*)SharedData::getSingleton().mNavNodeList[i]->getAttachedObject(0);
-        TemplateUtils::getMeshInformation(ent->getMesh(), meshVertexCount[ind], meshVertices[ind], meshIndexCount[ind], meshIndices[ind]);
+        getMeshInformation((*iter)->getMesh(), meshVertexCount[ind], meshVertices[ind], meshIndexCount[ind], meshIndices[ind]);
 
         //total number of verts
         nverts += meshVertexCount[ind];
         //total number of indices
         ntris += meshIndexCount[ind];
+
+        i++;
     }
-*/
+
 
     //-----------------------------------------------------------------------------------------
     // DECLARE RECAST DATA BUFFERS USING THE INFO WE GRABBED ABOVE
@@ -366,8 +366,8 @@ InputGeom::InputGeom(Ogre::TerrainGroup *terrainGroup, std::vector<Ogre::Entity*
 
     }
 
-//TODO Add entities
-/*
+
+
     //-----------------------------------------------------------------------------------------
     // RECAST TERRAIN ENTITY DATA BUILDING
 
@@ -377,19 +377,13 @@ InputGeom::InputGeom(Ogre::TerrainGroup *terrainGroup, std::vector<Ogre::Entity*
     // we start referencing recast's buffers from the correct place, otherwise we just end up
     // overwriting our terrain data, which really is a pain ;)
 
-    // int vertsIndex = 0;
-    // int prevVerticiesCount = 0;
-    // int prevIndexCountTotal = 0;
-
     //set the reference node
-    Ogre::SceneNode *referenceNode;
-    referenceNode = SharedData::getSingleton().iSceneMgr->getRootSceneNode();
-
-    for (uint i = 0 ; i < SharedData::getSingleton().mNavNodeList.size() ; i++)
+    i = 0;
+    for(std::vector<Ogre::Entity*>::iterator iter = mSrcMeshes.begin(); iter != mSrcMeshes.end(); iter++)
     {
         int ind = pagesTotal + i;
         //find the transform between the reference node and this node
-        Ogre::Matrix4 transform = referenceNode->_getFullTransform().inverse() * SharedData::getSingleton().mNavNodeList[i]->_getFullTransform();
+        Ogre::Matrix4 transform = mReferenceNode->_getFullTransform().inverse() * (*iter)->getParentSceneNode()->_getFullTransform();
         Ogre::Vector3 vertexPos;
         for (uint j = 0 ; j < meshVertexCount[ind] ; j++)
         {
@@ -406,10 +400,11 @@ InputGeom::InputGeom(Ogre::TerrainGroup *terrainGroup, std::vector<Ogre::Entity*
         }
         prevIndexCountTotal += meshIndexCount[ind];
         prevVerticiesCount += meshVertexCount[ind];
-    }
-*/
 
-// TODO Fix!!
+        i++;
+    }
+
+
 /*
     //delete tempory arrays
     //TODO These probably could member varibles, this would increase performance slightly
@@ -418,7 +413,7 @@ InputGeom::InputGeom(Ogre::TerrainGroup *terrainGroup, std::vector<Ogre::Entity*
         delete [] meshVertices[i];
 
     }
-
+*/
     // first 4 were created differently, without getMeshInformation();
     // throws an exception if we delete the first 4
     // TODO - FIX THIS MEMORY LEAK - its only small, but its still not good
@@ -426,7 +421,7 @@ InputGeom::InputGeom(Ogre::TerrainGroup *terrainGroup, std::vector<Ogre::Entity*
     {
         delete [] meshIndices[i];
     }
-*/
+
     delete [] meshVertices;
     delete [] meshVertexCount;
     delete [] meshIndices;

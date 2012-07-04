@@ -67,13 +67,12 @@ void OgreRecastTerrainApplication::createScene()
 
     mTerrainGroup->freeTemporaryResources();
 
-// TODO extract recast/detour parameters out of their wrappers, use config classes
     // RECAST (navmesh creation)
     mGeom = new InputGeom(mTerrainGroup);
     // Debug draw the recast bounding box around the terrain tile
     ConvexVolume bb = ConvexVolume(mGeom->getBoundingBox());
     InputGeom::drawConvexVolume(&bb, mSceneMgr);
-    // Verify rasterized terrain mesh
+    // Uncomment to verify rasterized terrain mesh
 //    geom->debugMesh(mSceneMgr);
     if(SINGLE_NAVMESH) {
         // Simple recast navmesh build example
@@ -113,7 +112,7 @@ void OgreRecastTerrainApplication::createScene()
         recastParams.setCellHeight(0.5);
         recastParams.setAgentMaxSlope(45);
         recastParams.setAgentHeight(2.5);
-        recastParams.setAgentMaxClimb(15);
+        recastParams.setAgentMaxClimb(0.5);
         recastParams.setAgentRadius(0.5);
 //        recastParams.setEdgeMaxLen(2);
 //        recastParams.setEdgeMaxError(1.3);
@@ -350,17 +349,47 @@ bool OgreRecastTerrainApplication::keyPressed( const OIS::KeyEvent &arg )
             box.setMinimum(rayHitPoint.x - boxSize/2, mRecast->m_cfg.bmin[1], rayHitPoint.z - boxSize/2);
             box.setMaximum(rayHitPoint.x + boxSize/2, mRecast->m_cfg.bmax[1], rayHitPoint.z + boxSize/2);
 
+// TODO eventually you will run out of memory (either because of GPU memory of inefficient debug drawing geometry, or CPU ram due to tilecache and navmesh becoming too large). Add features for caching out unused tiles.
             // Build tiles around cursor
             mDetourTileCache->buildTiles(mGeom, &box);
         }
     }
 
-    if(  arg.key == OIS::KC_O
-//      || arg.key == OIS::KC_BACK
-//      || arg.key == OIS::KC_DELETE
-      || arg.key == OIS::KC_K
-      || arg.key == OIS::KC_I)
-        return BaseApplication::keyPressed(arg);    // Avoid these features from the dungeon demo
+    // Place house
+    if( arg.key == OIS::KC_H) {
+        Ogre::Vector3 rayHitPoint;
+        if (queryCursorPosition(rayHitPoint, NAVMESH_MASK, false)) {
+            Ogre::Entity *houseEnt = mSceneMgr->createEntity("tudorhouse.mesh");
+            Ogre::SceneNode *houseNode = mSceneMgr->getRootSceneNode()->createChildSceneNode();
+            houseNode->attachObject(houseEnt);
+            houseNode->rotate(Ogre::Vector3::UNIT_Y, Ogre::Degree(Ogre::Math::RangeRandom(0, 360)));
+            float houseHeight = houseEnt->getBoundingBox().getSize().y;
+            float scale = 0.02;
+            houseNode->setScale(scale, scale, scale);
+            rayHitPoint.y += ( houseHeight/2 ) * scale;
+            houseNode->setPosition(rayHitPoint);
+            mNavmeshEnts.push_back(houseEnt);
+
+            // Get bounding box of the entity. All navmesh tiles touching it will have to be rebuilt.
+            Ogre::AxisAlignedBox bb = InputGeom::getWorldSpaceBoundingBox(houseEnt);
+
+            // Recreate recast input geometry data with terrain and all extra entities
+            if(mGeom)
+                delete mGeom;
+            mGeom = new InputGeom(mTerrainGroup, mNavmeshEnts);
+
+            // Rebuild tiles that touch bounding box
+            mDetourTileCache->updateFromGeometry(mGeom, &bb);
+        }
+    }
+
+
+
+    // Avoid these features from the dungeon demo
+    if(  arg.key == OIS::KC_O   // There is no door outdoor! :)
+      || arg.key == OIS::KC_K   // Walkable geometry works with terrain sample too, the only problem is that
+      || arg.key == OIS::KC_I)  //      currently agents are clipped to terrain height.
+        return BaseApplication::keyPressed(arg);
 
     // Use X to test terrain height
     if(arg.key == OIS::KC_X) {

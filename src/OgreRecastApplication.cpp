@@ -538,7 +538,7 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
         // Find position on navmesh pointed to by cursor in the middle of the screen
         Ogre::Vector3 rayHitPoint;
         Ogre::MovableObject *rayHitObject;
-        if (queryCursorPosition(rayHitPoint, OBSTACLE_MASK, &rayHitObject)) {
+        if (queryCursorPosition(rayHitPoint, OBSTACLE_MASK, false, &rayHitObject)) {
 
             // Find the obstacle associated with the hit entity
             Obstacle *obst = NULL;
@@ -564,7 +564,7 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
     if(arg.key == OIS::KC_K && !SINGLE_NAVMESH) {
         // Find position on any geometry pointed to by cursor in the middle of the screen
         Ogre::Vector3 rayHitPoint;
-        if (queryCursorPosition(rayHitPoint, DEFAULT_MASK)) {
+        if (queryCursorPosition(rayHitPoint, DEFAULT_MASK, false)) {
 
             // Create a little height offset for placing the obstacle
             rayHitPoint.y += 0.3;
@@ -599,7 +599,7 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
         // Find position on any geometry pointed to by cursor in the middle of the screen
         Ogre::Vector3 rayHitPoint;
         Ogre::MovableObject *rayHitObject;
-        if (queryCursorPosition(rayHitPoint, DEFAULT_MASK, &rayHitObject)) {
+        if (queryCursorPosition(rayHitPoint, DEFAULT_MASK, false, &rayHitObject)) {
 
             // If we hit a pallet, remove it
             if( std::find(mWalkableObjects.begin(), mWalkableObjects.end(), rayHitObject) != mWalkableObjects.end() ) {
