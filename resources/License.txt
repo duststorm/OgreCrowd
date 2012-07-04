@@ -5,9 +5,10 @@ The dungeon mesh is part of the original recastnavigation distribution. It was
 created and donated to the recastnavigation project by John Ratcliff. I hold no 
 rights over it.
 
-The WoodPallet.mesh and its textures, and all resources in the terrain/ folder
-are part of the original Ogre3D samples. It's unclear to me what their exact
-license terms are, but I assume that it is fine to use them in a sample.
+The WoodPallet.mesh and tudorhouse.mesh and their textures, and all resources in 
+the terrain/ folder are part of the original Ogre3D samples. 
+It's unclear to me what their exact license terms are, but I assume that it is 
+fine to use them in a sample.
 
 The other meshes are my work, in particular Cylinder.mesh and textures and 
 GameChar-male and its textures, the Pot mesh, Box mesh, as well as the overlay 
