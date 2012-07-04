@@ -69,22 +69,6 @@ void OgreRecastTerrainApplication::createScene()
 
 // TODO extract recast/detour parameters out of their wrappers, use config classes
     // RECAST (navmesh creation)
-    // Initialize custom navmesh parameters
-    OgreRecastConfigParams recastParams = OgreRecastConfigParams();
-    recastParams.setCellSize(50);
-    recastParams.setCellHeight(6);
-    recastParams.setAgentMaxSlope(45);
-    recastParams.setAgentHeight(2.5);
-    recastParams.setAgentMaxClimb(15);
-    recastParams.setAgentRadius(0.5);
-    recastParams.setEdgeMaxLen(2);
-    recastParams.setEdgeMaxError(1.3);
-    recastParams.setRegionMinSize(50);
-    recastParams.setRegionMergeSize(20);
-    recastParams.setDetailSampleDist(5);
-    recastParams.setDetailSampleMaxError(5);
-
-    mRecast = new OgreRecast(mSceneMgr, recastParams);
     InputGeom *geom = new InputGeom(mTerrainGroup);
     // Debug draw the recast bounding box around the terrain tile
     ConvexVolume bb = ConvexVolume(geom->getBoundingBox());
@@ -94,6 +78,23 @@ void OgreRecastTerrainApplication::createScene()
     if(SINGLE_NAVMESH) {
         // Simple recast navmesh build example
         // For large terrain meshes this is not recommended, as the build takes a very long time
+
+        // Initialize custom navmesh parameters
+        OgreRecastConfigParams recastParams = OgreRecastConfigParams();
+        recastParams.setCellSize(50);
+        recastParams.setCellHeight(6);
+        recastParams.setAgentMaxSlope(45);
+        recastParams.setAgentHeight(2.5);
+        recastParams.setAgentMaxClimb(15);
+        recastParams.setAgentRadius(0.5);
+        recastParams.setEdgeMaxLen(2);
+        recastParams.setEdgeMaxError(1.3);
+        recastParams.setRegionMinSize(50);
+        recastParams.setRegionMergeSize(20);
+        recastParams.setDetailSampleDist(5);
+        recastParams.setDetailSampleMaxError(5);
+
+        mRecast = new OgreRecast(mSceneMgr, recastParams);
 
         if(mRecast->NavMeshBuild(geom)) {
             mRecast->drawNavMesh();
@@ -106,13 +107,49 @@ void OgreRecastTerrainApplication::createScene()
     } else {
         // More advanced: use DetourTileCache to build a tiled and cached navmesh that can be updated with dynamic obstacles at runtime.
 
+        // Initialize custom navmesh parameters
+        OgreRecastConfigParams recastParams = OgreRecastConfigParams();
+        recastParams.setCellSize(0.3);
+        recastParams.setCellHeight(0.5);
+        recastParams.setAgentMaxSlope(45);
+        recastParams.setAgentHeight(2.5);
+        recastParams.setAgentMaxClimb(15);
+        recastParams.setAgentRadius(0.5);
+//        recastParams.setEdgeMaxLen(2);
+//        recastParams.setEdgeMaxError(1.3);
+//        recastParams.setRegionMinSize(50);
+//        recastParams.setRegionMergeSize(20);
+//        recastParams.setDetailSampleDist(5);
+//        recastParams.setDetailSampleMaxError(5);
+
+        mRecast = new OgreRecast(mSceneMgr, recastParams);
+
+        // Optimize debug drawing batch count
+        OgreRecast::STATIC_GEOM_DEBUG = true;
+
+        // Make it quiet to avoid spamming the log
+        OgreRecast::VERBOSE = false;
+
         mDetourTileCache = new OgreDetourTileCache(mRecast, 48);
+        mDetourTileCache->configure(geom);
+        Ogre::AxisAlignedBox areaToLoad;
+//        areaToLoad.setMaximum(geom->getBoundingBox().getMaximum());
+//        areaToLoad.setMinimum(Ogre::Vector3(5000, 0, 5000));
+
+//        areaToLoad.setMinimum(geom->getBoundingBox().getMinimum());
+//        areaToLoad.setMaximum(Ogre::Vector3(-5800, geom->getBoundingBox().getMaximum().y, -5800));
+
+        areaToLoad.setMinimum(Ogre::Vector3(-2400, 0, -6000));
+        areaToLoad.setMaximum(Ogre::Vector3(-2300, geom->getBoundingBox().getMaximum().y, -5800));
+        mDetourTileCache->buildTiles(geom, &areaToLoad);    // Only build a few tiles
+        /*
         if(mDetourTileCache->TileCacheBuild(geom)) {
             mDetourTileCache->drawNavMesh();
         } else {
             Ogre::LogManager::getSingletonPtr()->logMessage("ERROR: could not generate useable navmesh from mesh using detourTileCache.");
             return;
         }
+        */
     }
 
 
@@ -303,8 +340,8 @@ void OgreRecastTerrainApplication::initBlendMaps(Ogre::Terrain* terrain)
 bool OgreRecastTerrainApplication::keyPressed( const OIS::KeyEvent &arg )
 {
     if(  arg.key == OIS::KC_O
-      || arg.key == OIS::KC_BACK
-      || arg.key == OIS::KC_DELETE
+//      || arg.key == OIS::KC_BACK
+//      || arg.key == OIS::KC_DELETE
       || arg.key == OIS::KC_K
       || arg.key == OIS::KC_I)
         return BaseApplication::keyPressed(arg);    // Avoid these features from the dungeon demo
@@ -333,27 +370,26 @@ void OgreRecastTerrainApplication::destroyScene(void)
 
 bool OgreRecastTerrainApplication::mousePressed( const OIS::MouseEvent &arg, OIS::MouseButtonID id )
 {
+    // TODO extract submethod
+
     // Make sure that any redrawn navmesh tiles have the proper query mask
     for (int i = 0; i < mNavMeshNode->numAttachedObjects(); i++) {
         Ogre::MovableObject *obj = mNavMeshNode->getAttachedObject(i);
         obj->setQueryFlags(NAVMESH_MASK);
     }
 
-    // Do ray scene query
-    //send a raycast straight out from the camera at the center position
-    Ogre::Ray mouseRay = mCamera->getCameraToViewportRay(0.5, 0.5);
+    // Set static geometry query mask
+    if (OgreRecast::STATIC_GEOM_DEBUG) {
+        Ogre::StaticGeometry::RegionIterator it = mSceneMgr->getStaticGeometry("NavmeshDebugStaticGeom")->getRegionIterator();
+        while (it.hasMoreElements())
+        {
+            Ogre::StaticGeometry::Region* region = it.getNext();
+            region->setQueryFlags(NAVMESH_MASK);
+        }
+    }
 
     Ogre::Vector3 rayHitPoint;
-    Ogre::MovableObject *rayHitObject;
-    if (rayQueryPointInScene(mouseRay, NAVMESH_MASK, rayHitPoint, &rayHitObject)) {
-
-        if ( Ogre::StringUtil::startsWith(rayHitObject->getName(), "recastmowalk", true) ) {
-            // Compensate for the fact that the ray-queried navmesh is drawn a little above the ground
-            rayHitPoint.y = rayHitPoint.y - mRecast->m_navMeshOffsetFromGround;
-        } else {
-            // Queried point was not on navmesh, find nearest point on the navmesh
-            mRecast->findNearestPointOnNavmesh(rayHitPoint, rayHitPoint);
-        }
+    if(queryCursorPosition(rayHitPoint)) {
 
         Ogre::SceneNode *markerNode = NULL;
 
@@ -384,10 +420,49 @@ bool OgreRecastTerrainApplication::mousePressed( const OIS::MouseEvent &arg, OIS
 }
 
 
+bool OgreRecastTerrainApplication::queryCursorPosition(Ogre::Vector3 &rayHitPoint, unsigned long queryflags, Ogre::MovableObject **rayHitObject)
+{
+    if (OgreRecast::STATIC_GEOM_DEBUG || OgreRecastApplication::RAYCAST_SCENE) {
+        // Raycast terrain
+        Ogre::Ray cursorRay = mCamera->getCameraToViewportRay(0.5, 0.5);
+
+        // Perform the scene query
+        Ogre::TerrainGroup::RayResult result = mTerrainGroup->rayIntersects(cursorRay);
+        if(result.hit) {
+            // Queried point was not on navmesh, find nearest point on the navmesh
+            mRecast->findNearestPointOnNavmesh(result.position, rayHitPoint);
+            return true;
+        } else {
+            return false;
+        }
+    } else {
+        return OgreRecastApplication::queryCursorPosition(rayHitPoint, queryflags, rayHitObject);
+    }
+}
+
+
 Character* OgreRecastTerrainApplication::createCharacter(Ogre::String name, Ogre::Vector3 position)
 {
     Character* character = OgreRecastApplication::createCharacter(name, position);
     // Enable terrain clipping for character
     character->clipToTerrain(mTerrainGroup);
     return character;
+}
+
+bool OgreRecastTerrainApplication::frameRenderingQueued(const Ogre::FrameEvent &evt)
+{
+    // Update navmesh debug drawing
+    mRecast->update();
+
+    return OgreRecastApplication::frameRenderingQueued(evt);
+}
+
+void OgreRecastTerrainApplication::setDebugVisibility(bool visible)
+{
+    OgreRecastApplication::setDebugVisibility(visible);
+
+    if(OgreRecast::STATIC_GEOM_DEBUG) {
+        Ogre::StaticGeometry *sg = mSceneMgr->getStaticGeometry("NavmeshDebugStaticGeom");
+        sg->setVisible(visible);
+    }
 }

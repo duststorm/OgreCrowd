@@ -88,20 +88,24 @@ bool OgreDetourTileCache::configure(InputGeom *inputGeom)
     // Set mesh bounds
     rcVcopy(m_cfg.bmin, bmin);
     rcVcopy(m_cfg.bmax, bmax);
+    // Also define navmesh bounds in recast component
+    rcVcopy(m_recast->m_cfg.bmin, bmin);
+    rcVcopy(m_recast->m_cfg.bmax, bmax);
 
     // Cell size navmesh generation property is copied from OgreRecast config
     m_cellSize = m_cfg.cs;
 
     // Determine grid size (number of tiles) based on bounding box and grid cell size
     int gw = 0, gh = 0;
-    rcCalcGridSize(bmin, bmax, m_cellSize, &gw, &gh);   // Calculates how many times cellSize fits in the bounding box
+    rcCalcGridSize(bmin, bmax, m_cellSize, &gw, &gh);   // Calculates total size of voxel grid
     const int ts = m_tileSize;
     const int tw = (gw + ts-1) / ts;    // Tile width
     const int th = (gh + ts-1) / ts;    // Tile height
     m_tw = tw;
     m_th = th;
-    Ogre::LogManager::getSingletonPtr()->logMessage("Tiles: "+Ogre::StringConverter::toString(gw) + " x " + Ogre::StringConverter::toString(gh));
+    Ogre::LogManager::getSingletonPtr()->logMessage("Total Voxels: "+Ogre::StringConverter::toString(gw) + " x " + Ogre::StringConverter::toString(gh));
     Ogre::LogManager::getSingletonPtr()->logMessage("Tilesize: "+Ogre::StringConverter::toString(m_tileSize)+"  Cellsize: "+Ogre::StringConverter::toString(m_cellSize));
+    Ogre::LogManager::getSingletonPtr()->logMessage("Tiles: "+Ogre::StringConverter::toString(m_tw)+" x "+Ogre::StringConverter::toString(m_th));
 
 
     // Max tiles and max polys affect how the tile IDs are caculated.
@@ -131,25 +135,16 @@ bool OgreDetourTileCache::configure(InputGeom *inputGeom)
     m_tcparams.walkableClimb = m_cfg.walkableClimb;
     m_tcparams.maxSimplificationError = m_cfg.maxSimplificationError;
 
-    return true;
+    return initTileCache();
 }
 
-bool OgreDetourTileCache::TileCacheBuild(std::vector<Ogre::Entity*> srcMeshes)
+
+bool OgreDetourTileCache::initTileCache()
 {
-    InputGeom *inputGeom = new InputGeom(srcMeshes);
-    return TileCacheBuild(inputGeom);
-}
-
-bool OgreDetourTileCache::TileCacheBuild(InputGeom *inputGeom)
-{
-    // Init configuration for specified geometry
-    configure(inputGeom);
-
-    dtStatus status;
-
-
     // BUILD TileCache
     dtFreeTileCache(m_tileCache);
+
+    dtStatus status;
 
     m_tileCache = dtAllocTileCache();
     if (!m_tileCache)
@@ -199,7 +194,21 @@ bool OgreDetourTileCache::TileCacheBuild(InputGeom *inputGeom)
         return false;
     }
 
+    return true;
+}
 
+bool OgreDetourTileCache::TileCacheBuild(std::vector<Ogre::Entity*> srcMeshes)
+{
+    InputGeom *inputGeom = new InputGeom(srcMeshes);
+    return TileCacheBuild(inputGeom);
+}
+
+bool OgreDetourTileCache::TileCacheBuild(InputGeom *inputGeom)
+{
+    // Init configuration for specified geometry
+    configure(inputGeom);
+
+    dtStatus status;
 
     // Preprocess tiles.
     // Prepares navmesh tiles in a 2D intermediary format that allows quick conversion to a 3D navmesh
@@ -784,7 +793,7 @@ void OgreDetourTileCache::drawDetail(const int tx, const int ty)
 
         // Draw navmesh
         Ogre::String tileName = Ogre::StringConverter::toString(tiles[i]);
-        Ogre::LogManager::getSingletonPtr()->logMessage("Drawing tile: "+tileName);
+//        Ogre::LogManager::getSingletonPtr()->logMessage("Drawing tile: "+tileName);
 // TODO this is a dirty quickfix that should be gone as soon as there is a rebuildTile(tileref) method
         if(m_recast->m_pSceneMgr->hasManualObject("RecastMOWalk_"+tileName))
             return;
@@ -865,12 +874,25 @@ void OgreDetourTileCache::updateFromGeometry(std::vector<Ogre::Entity*> srcMeshe
     InputGeom geom = InputGeom(srcMeshes, areaToUpdate);
         // TODO do I need geometry to extend a bit out of the bounds for navmesh tiles to always properly connect to the rest?
 
+    updateFromGeometry(&geom);
+}
+
+void OgreDetourTileCache::updateFromGeometry(InputGeom *inputGeom, const Ogre::AxisAlignedBox *areaToUpdate)
+{
+    // Use bounding box from inputgeom if no area was explicitly specified
+    Ogre::AxisAlignedBox updateArea;
+    if(!areaToUpdate)
+        updateArea = inputGeom->getBoundingBox();
+    else
+        updateArea = *areaToUpdate;
+
     // Determine which navmesh tiles have to be updated
     float bmin[3], bmax[3];
-    OgreRecast::OgreVect3ToFloatA(areaToUpdate.getMinimum(), bmin);
-    OgreRecast::OgreVect3ToFloatA(areaToUpdate.getMaximum(), bmax);
+    OgreRecast::OgreVect3ToFloatA(updateArea.getMinimum(), bmin);
+    OgreRecast::OgreVect3ToFloatA(updateArea.getMaximum(), bmax);
     dtCompressedTileRef touched[DT_MAX_TOUCHED_TILES];
     int ntouched = 0;
+//    m_tileCache->calcTightTileBounds();
     m_tileCache->queryTiles(bmin, bmax, touched, &ntouched, DT_MAX_TOUCHED_TILES);
 
     // Rebuild affected tiles
@@ -888,15 +910,112 @@ void OgreDetourTileCache::updateFromGeometry(std::vector<Ogre::Entity*> srcMeshe
             tile = NULL;
 
 // TODO we actually want a buildTile method with a tileRef as input param. As this method does a bounding box intersection with tiles again, which might result in multiple tiles being rebuilt (which will lead to nothing because only one tile is removed..), and we determined which tiles to bebuild already, anyway (using queryTiles)
-            buildTile(tx, ty, &geom);
+            buildTile(tx, ty, inputGeom);
         }
-
     }
-
 }
 
-bool OgreDetourTileCache::removeTile(dtTileRef tileRef)
+void OgreDetourTileCache::buildTiles(InputGeom *inputGeom, const Ogre::AxisAlignedBox *areaToUpdate)
 {
+    // Use bounding box from inputgeom if no area was explicitly specified
+    Ogre::AxisAlignedBox updateArea;
+    if(!areaToUpdate)
+        updateArea = inputGeom->getBoundingBox();
+    else
+        updateArea = *areaToUpdate;
+
+    // Verify whether area to update falls within tilecache bounds, otherwise clip
+    Ogre::Vector3 min = areaToUpdate->getMinimum();
+    if (min.x < m_cfg.bmin[0])
+        min.x = m_cfg.bmin[0];
+    if (min.z < m_cfg.bmin[2])
+        min.z = m_cfg.bmin[2];
+    if (min.x > m_cfg.bmax[0])
+        min.x = m_cfg.bmax[0];
+    if (min.z > m_cfg.bmax[2])
+        min.z = m_cfg.bmax[2];
+
+    Ogre::Vector3 max = areaToUpdate->getMaximum();
+    if (max.x < m_cfg.bmin[0])
+        max.x = m_cfg.bmin[0];
+    if (max.z < m_cfg.bmin[2])
+        max.z = m_cfg.bmin[2];
+    if (max.x > m_cfg.bmax[0])
+        max.x = m_cfg.bmax[0];
+    if (max.z > m_cfg.bmax[2])
+        max.z = m_cfg.bmax[2];
+
+
+    // Determine which navmesh tiles have to be built
+    // Total width of the tilecache in world units
+    float xWidth = m_cfg.bmax[0] - m_cfg.bmin[0];
+    float zWidth = m_cfg.bmax[2] - m_cfg.bmin[2];
+
+    // Width of one tile in world units
+    float tileXWidth = xWidth/m_tw; // This is tileSize*cellSize
+    float tileZWidth = zWidth/m_th;
+
+    // Calculate tile index range that falls within bounding box
+    int minTx = (min.x - m_cfg.bmin[0]) / tileXWidth;
+    int maxTx = (max.x - m_cfg.bmin[0]) / tileXWidth;
+    int minTy = (min.z - m_cfg.bmin[2]) / tileZWidth;
+    int maxTy = (max.z - m_cfg.bmin[2]) / tileZWidth;
+        // TODO you can also go the other route: using cellsize and tilesize
+
+    // Assert tx and ty are within index bounds, otherwise clip
+    if (minTx < 0)
+        minTx = 0;
+    if (maxTx < 0)
+        maxTx = 0;
+    if (minTx > m_tw)
+        minTx = m_tw;
+    if (maxTx > m_tw)
+        maxTx = m_tw;
+
+    if (minTy < 0)
+        minTy = 0;
+    if (maxTy < 0)
+        maxTy = 0;
+    if (minTy > m_th)
+        minTy = m_th;
+    if (maxTy > m_th)
+        maxTy = m_th;
+
+    int tilesToBuildX = maxTx - minTx;
+    int tilesToBuildY = maxTy - minTy;
+    if(tilesToBuildX * tilesToBuildY > 5)
+        Ogre::LogManager::getSingletonPtr()->logMessage("Building "+Ogre::StringConverter::toString(tilesToBuildX)+" x "+Ogre::StringConverter::toString(tilesToBuildY)+" navmesh tiles.");
+
+    // Build tiles
+    for (int ty = minTy; ty < maxTy; ty++) {
+        for (int tx = minTx; tx < maxTx; tx++) {
+            buildTile(tx, ty, inputGeom);
+        }
+    }
+}
+
+void OgreDetourTileCache::unloadTiles(const Ogre::AxisAlignedBox &areaToUpdate)
+{
+    // Determine which navmesh tiles have to be removed
+    float bmin[3], bmax[3];
+    OgreRecast::OgreVect3ToFloatA(areaToUpdate.getMinimum(), bmin);
+    OgreRecast::OgreVect3ToFloatA(areaToUpdate.getMaximum(), bmax);
+    dtCompressedTileRef touched[DT_MAX_TOUCHED_TILES];
+    int ntouched = 0;
+    m_tileCache->queryTiles(bmin, bmax, touched, &ntouched, DT_MAX_TOUCHED_TILES);
+
+    // Remove tiles
+    for (int i = 0; i < ntouched; ++i)
+    {
+        removeTile(touched[i]);
+    }
+}
+
+bool OgreDetourTileCache::removeTile(dtCompressedTileRef tileRef)
+{
+    if(!tileRef)
+        return false;
+
     Ogre::LogManager::getSingletonPtr()->logMessage("Removed tile "+Ogre::StringConverter::toString(tileRef));
 
     dtStatus status = m_tileCache->removeTile(tileRef, NULL, NULL);
@@ -916,6 +1035,7 @@ bool OgreDetourTileCache::removeTile(dtTileRef tileRef)
     Ogre::String entName = "RecastMOWalk_"+Ogre::StringConverter::toString(tileRef);
     Ogre::LogManager::getSingletonPtr()->logMessage("Removing tile: "+entName);
 
+// TODO fix when using staticGeometry
     try {
         Ogre::MovableObject *o = m_recast->m_pRecastSN->getAttachedObject(entName);
         o->detachFromParent();

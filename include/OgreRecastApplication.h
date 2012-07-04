@@ -36,6 +36,8 @@ public:
       **/
     static void loadConfig(Ogre::String configFileName);
 
+    virtual bool queryCursorPosition(Ogre::Vector3 &rayHitPoint, unsigned long queryflags = NAVMESH_MASK, Ogre::MovableObject **rayHitObject = NULL);
+
     /**
       * Calculate an intersection point of a ray with objects in the scene.
       * ray is the ray which is intersected with the scene
@@ -43,7 +45,7 @@ public:
       * result is the point in the scene that was hit, in world-space coordinates
       * foundMovable is the entity or object that was hit
       **/
-    bool rayQueryPointInScene(Ogre::Ray ray, unsigned long queryMask, Ogre::Vector3 &result, Ogre::MovableObject **foundMovable);
+    virtual bool rayQueryPointInScene(Ogre::Ray ray, unsigned long queryMask, Ogre::Vector3 &result, Ogre::MovableObject **foundMovable);
 
     /**
       * Retrieve a marker with specified name and optional material (to override default material).

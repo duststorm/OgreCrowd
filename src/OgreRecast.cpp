@@ -3,9 +3,14 @@
 #include "DetourTileCache/DetourTileCacheBuilder.h"
 
 
+bool OgreRecast::STATIC_GEOM_DEBUG = false;
+bool OgreRecast::VERBOSE = true;
+
 OgreRecast::OgreRecast(Ogre::SceneManager* sceneMgr, OgreRecastConfigParams configParams)
     : m_pSceneMgr(sceneMgr),
-    m_pRecastSN(NULL)
+    m_pRecastSN(NULL),
+      m_sg(NULL),
+      m_rebuildSg(false)
 {
    // Init recast stuff in a safe state
    
@@ -707,7 +712,6 @@ void OgreRecast::CreateRecastPolyMesh(const Ogre::String name, const unsigned sh
          }
      }
       m_pRecastMOWalk->end() ;
-      m_pRecastSN->attachObject(m_pRecastMOWalk);
 
 
 
@@ -743,7 +747,6 @@ void OgreRecast::CreateRecastPolyMesh(const Ogre::String name, const unsigned sh
       }
 
       m_pRecastMONeighbour->end() ;
-      m_pRecastSN->attachObject(m_pRecastMONeighbour) ;
       
 
       // Define manualObject with navmesh outer edges (boundaries)
@@ -778,9 +781,51 @@ void OgreRecast::CreateRecastPolyMesh(const Ogre::String name, const unsigned sh
       }
 
       m_pRecastMOBoundary->end() ;
-      m_pRecastSN->attachObject(m_pRecastMOBoundary) ;
 
 
+      if(STATIC_GEOM_DEBUG) {
+          // Render navmesh tiles more efficiently using staticGeometry
+
+          // Early out if empty meshes drawn
+          if (m_pRecastMOWalk->getNumSections() == 0)
+              return;
+
+          if(!m_sg) {
+            m_sg = m_pSceneMgr->createStaticGeometry("NavmeshDebugStaticGeom");
+            Ogre::Vector3 bmin; Ogre::Vector3 bmax; Ogre::Vector3 bsize;
+            FloatAToOgreVect3(m_cfg.bmin, bmin);
+            FloatAToOgreVect3(m_cfg.bmax, bmax);
+            bsize = bmax - bmin;
+            m_sg->setRegionDimensions(bsize);
+            m_sg->setOrigin(bmin);
+          }
+
+
+          m_pRecastMOWalk->convertToMesh("mesh_"+m_pRecastMOWalk->getName());
+          Ogre::Entity *walkEnt = m_pSceneMgr->createEntity("ent_"+m_pRecastMOWalk->getName(), "mesh_"+m_pRecastMOWalk->getName());
+          m_sg->addEntity(walkEnt, Ogre::Vector3::ZERO);
+
+          // TODO line drawing does not seem to work with staticGeometry
+          if (false && m_pRecastMONeighbour->getNumSections() > 0) {
+              m_pRecastMONeighbour->convertToMesh("mesh_"+m_pRecastMONeighbour->getName());
+              Ogre::Entity *neighbourEnt = m_pSceneMgr->createEntity("ent_"+m_pRecastMONeighbour->getName(), "mesh_"+m_pRecastMONeighbour->getName());
+              m_sg->addEntity(neighbourEnt, Ogre::Vector3::ZERO);
+          }
+
+          if (false && m_pRecastMOBoundary->getNumSections() > 0) {
+              m_pRecastMOBoundary->convertToMesh("mesh_"+m_pRecastMOBoundary->getName());
+              Ogre::Entity *boundaryEnt = m_pSceneMgr->createEntity("ent_"+m_pRecastMOBoundary->getName(), "mesh_"+m_pRecastMOBoundary->getName());
+              m_sg->addEntity(boundaryEnt, Ogre::Vector3::ZERO);
+          }
+
+          // Set dirty flag of solid geometry so it will be rebuilt next update()
+          m_rebuildSg = true;
+      } else {
+          // Add manualobjects directly to scene (can be slow for lots of tiles)
+          m_pRecastSN->attachObject(m_pRecastMOWalk);
+          m_pRecastSN->attachObject(m_pRecastMONeighbour) ;
+          m_pRecastSN->attachObject(m_pRecastMOBoundary) ;
+      }
 
 
    }// end areacount
@@ -788,7 +833,18 @@ void OgreRecast::CreateRecastPolyMesh(const Ogre::String name, const unsigned sh
    if(regionColors)
        delete[] regionColors;
 
-   Ogre::LogManager::getSingletonPtr()->logMessage("Added navmesh part "+name+" to the scene.");
+   if (VERBOSE)
+       Ogre::LogManager::getSingletonPtr()->logMessage("Added navmesh part "+name+" to the scene.");
+}
+
+void OgreRecast::update()
+{
+    if (m_rebuildSg) {
+        if (m_sg)
+            m_sg->build();
+
+        m_rebuildSg = false;
+    }
 }
 
 void OgreRecast::CreateRecastPathLine(int nPathSlot)

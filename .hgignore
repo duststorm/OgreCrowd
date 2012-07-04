@@ -9,6 +9,7 @@ CMakeLists.txt
 Makefile
 gmon.out
 screenshot*jpg
+screenshot*png
 OgreRecastDemo
 OgreRecastDemod
 *~

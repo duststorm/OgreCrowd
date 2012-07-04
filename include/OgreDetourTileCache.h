@@ -248,6 +248,7 @@ public:
       * Create a tilecache that will build a tiled recast navmesh stored at the specified
       * OgreRecast component. Will use specified tilesize (a multiple of 8 between 16 and 128),
       * all other configuration parameters are copied from the OgreRecast component configuration.
+      * Tilesize is the number of (recast) cells per tile.
       **/
     OgreDetourTileCache(OgreRecast *recast, int tileSize = 48);
     ~OgreDetourTileCache(void);
@@ -279,6 +280,14 @@ public:
     bool buildTile(const int tx, const int ty, InputGeom *inputGeom);
 
     void updateFromGeometry(std::vector<Ogre::Entity*> srcMeshes, const Ogre::AxisAlignedBox &areaToUpdate);
+
+    // Only has effect if there are already tiles loaded for that area!
+    void updateFromGeometry(InputGeom *inputGeom, const Ogre::AxisAlignedBox *areaToUpdate = NULL);
+
+    // TODO maybe also add a unloadAllTilesExcept(boundingBox) method
+    void unloadTiles(const Ogre::AxisAlignedBox &areaToUpdate);
+
+    void buildTiles(InputGeom *inputGeom, const Ogre::AxisAlignedBox *areaToUpdate = NULL);
 
     /**
       * Build the 2D navigation grid divided in layers that is the intermediary format stored in the tilecache.
@@ -329,7 +338,7 @@ public:
 
     bool removeTempObstacle(dtObstacleRef obstacleRef);
 
-    bool removeTile(dtTileRef tileRef);
+    bool removeTile(dtCompressedTileRef tileRef);
 
     void drawDetail(const int tx, const int ty);
 
@@ -346,6 +355,8 @@ public:
     InputGeom* m_geom;
 
 protected:
+
+    bool initTileCache(void);
 
     bool m_keepInterResults;
 

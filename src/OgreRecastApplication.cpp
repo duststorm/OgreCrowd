@@ -240,7 +240,7 @@ void OgreRecastApplication::createScene(void)
         obj->setQueryFlags(NAVMESH_MASK);
     }
 
-    if (RAYCAST_SCENE)
+    if (RAYCAST_SCENE || OgreRecast::STATIC_GEOM_DEBUG) // also when using static geometry because it's hard to ray query static geometry
         mapE->setQueryFlags(NAVMESH_MASK);
 
     if(!OgreRecastApplication::mDebugDraw)
@@ -372,16 +372,7 @@ bool OgreRecastApplication::mousePressed( const OIS::MouseEvent &arg, OIS::Mouse
     Ogre::Ray mouseRay = mCamera->getCameraToViewportRay(0.5, 0.5);
 
     Ogre::Vector3 rayHitPoint;
-    Ogre::MovableObject *rayHitObject;
-    if (rayQueryPointInScene(mouseRay, NAVMESH_MASK, rayHitPoint, &rayHitObject)) {
-
-        if ( Ogre::StringUtil::startsWith(rayHitObject->getName(), "recastmowalk", true) ) {
-            // Compensate for the fact that the ray-queried navmesh is drawn a little above the ground
-            rayHitPoint.y = rayHitPoint.y - mRecast->m_navMeshOffsetFromGround;
-        } else {
-            // Queried point was not on navmesh, find nearest point on the navmesh
-            mRecast->findNearestPointOnNavmesh(rayHitPoint, rayHitPoint);
-        }
+    if(queryCursorPosition(rayHitPoint)) {
 
         Ogre::SceneNode *markerNode = NULL;
 
@@ -435,17 +426,8 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
        && mApplicationState != STEER_AGENT  // no adding agents in steering mode (no mouse pointer)
        && mDetourCrowd->getNbAgents() < mDetourCrowd->getMaxNbAgents()) {
         // Find position on navmesh pointed to by cursor in the middle of the screen
-        Ogre::Ray cursorRay = mCamera->getCameraToViewportRay(0.5, 0.5);
         Ogre::Vector3 rayHitPoint;
-        Ogre::MovableObject *rayHitObject;
-        if (rayQueryPointInScene(cursorRay, NAVMESH_MASK, rayHitPoint, &rayHitObject)) {
-            if ( Ogre::StringUtil::startsWith(rayHitObject->getName(), "recastmowalk", true) ) {
-                // Compensate for the fact that the ray-queried navmesh is drawn a little above the ground
-                rayHitPoint.y = rayHitPoint.y - mRecast->m_navMeshOffsetFromGround;
-            } else {
-                // Queried point was not on navmesh, find nearest point on the navmesh
-                mRecast->findNearestPointOnNavmesh(rayHitPoint, rayHitPoint);
-            }
+        if (queryCursorPosition(rayHitPoint)) {
 
             Ogre::LogManager::getSingletonPtr()->logMessage("Info: added agent at position "+Ogre::StringConverter::toString(rayHitPoint));
 
@@ -517,18 +499,8 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
 
     // Debug function: test which navmesh tiles are near the queried point
     if(!SINGLE_NAVMESH && arg.key == OIS::KC_X) {
-        Ogre::Ray cursorRay = mCamera->getCameraToViewportRay(0.5, 0.5);
         Ogre::Vector3 rayHitPoint;
-        Ogre::MovableObject *rayHitObject;
-        if (rayQueryPointInScene(cursorRay, NAVMESH_MASK, rayHitPoint, &rayHitObject)) {
-
-            if ( Ogre::StringUtil::startsWith(rayHitObject->getName(), "recastmowalk", true) ) {
-                // Compensate for the fact that the ray-queried navmesh is drawn a little above the ground
-                rayHitPoint.y = rayHitPoint.y - mRecast->m_navMeshOffsetFromGround;
-            } else {
-                // Queried point was not on navmesh, find nearest point on the navmesh
-                mRecast->findNearestPointOnNavmesh(rayHitPoint, rayHitPoint);
-            }
+        if (queryCursorPosition(rayHitPoint)) {
 
             std::vector<dtTileRef> tiles = mDetourTileCache->getTilesAroundPoint(rayHitPoint, 1);
             Ogre::String strTiles = "";
@@ -543,18 +515,8 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
     // Backspace adds a temporary obstacle to the navmesh (in dtTileCache mode)
     if(!SINGLE_NAVMESH && mApplicationState != STEER_AGENT && arg.key == OIS::KC_BACK) {
         // Find position on navmesh pointed to by cursor in the middle of the screen
-        Ogre::Ray cursorRay = mCamera->getCameraToViewportRay(0.5, 0.5);
         Ogre::Vector3 rayHitPoint;
-        Ogre::MovableObject *rayHitObject;
-        if (rayQueryPointInScene(cursorRay, NAVMESH_MASK, rayHitPoint, &rayHitObject)) {
-
-            if ( Ogre::StringUtil::startsWith(rayHitObject->getName(), "recastmowalk", true) ) {
-                // Compensate for the fact that the ray-queried navmesh is drawn a little above the ground
-                rayHitPoint.y = rayHitPoint.y - mRecast->m_navMeshOffsetFromGround;
-            } else {
-                // Queried point was not on navmesh, find nearest point on the navmesh
-                mRecast->findNearestPointOnNavmesh(rayHitPoint, rayHitPoint);
-            }
+        if (queryCursorPosition(rayHitPoint)) {
 
             Ogre::LogManager::getSingletonPtr()->logMessage("Adding obstacle on point "+Ogre::StringConverter::toString(rayHitPoint));
 
@@ -577,10 +539,9 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
     // Delete removes a temporary obstacle from the navmesh (in dtTileCache mode)
     if(!SINGLE_NAVMESH && mApplicationState != STEER_AGENT && arg.key == OIS::KC_DELETE) {
         // Find position on navmesh pointed to by cursor in the middle of the screen
-        Ogre::Ray cursorRay = mCamera->getCameraToViewportRay(0.5, 0.5);
         Ogre::Vector3 rayHitPoint;
         Ogre::MovableObject *rayHitObject;
-        if (rayQueryPointInScene(cursorRay, OBSTACLE_MASK, rayHitPoint, &rayHitObject)) {
+        if (queryCursorPosition(rayHitPoint, OBSTACLE_MASK, &rayHitObject)) {
 
             // Find the obstacle associated with the hit entity
             Obstacle *obst = NULL;
@@ -605,13 +566,8 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
     // K key adds a wooden pallet to the scene that can be climbed by agents
     if(arg.key == OIS::KC_K && !SINGLE_NAVMESH) {
         // Find position on any geometry pointed to by cursor in the middle of the screen
-        Ogre::Ray cursorRay = mCamera->getCameraToViewportRay(0.5, 0.5);
         Ogre::Vector3 rayHitPoint;
-        Ogre::MovableObject *rayHitObject;
-        if (rayQueryPointInScene(cursorRay, DEFAULT_MASK, rayHitPoint, &rayHitObject)) {
-            if ( Ogre::StringUtil::startsWith(rayHitObject->getName(), "recastmowalk", true) )
-                // Compensate for the fact that the ray-queried navmesh is drawn a little above the ground
-                rayHitPoint.y = rayHitPoint.y - mRecast->m_navMeshOffsetFromGround;
+        if (queryCursorPosition(rayHitPoint, DEFAULT_MASK)) {
 
             // Create a little height offset for placing the obstacle
             rayHitPoint.y += 0.3;
@@ -644,13 +600,9 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
     // I key removes the wooden pallet that is pointed to by the cursor
     if(arg.key == OIS::KC_I && !SINGLE_NAVMESH) {
         // Find position on any geometry pointed to by cursor in the middle of the screen
-        Ogre::Ray cursorRay = mCamera->getCameraToViewportRay(0.5, 0.5);
         Ogre::Vector3 rayHitPoint;
         Ogre::MovableObject *rayHitObject;
-        if (rayQueryPointInScene(cursorRay, DEFAULT_MASK, rayHitPoint, &rayHitObject)) {
-            if ( Ogre::StringUtil::startsWith(rayHitObject->getName(), "recastmowalk", true) )
-                // Compensate for the fact that the ray-queried navmesh is drawn a little above the ground
-                rayHitPoint.y = rayHitPoint.y - mRecast->m_navMeshOffsetFromGround;
+        if (queryCursorPosition(rayHitPoint, DEFAULT_MASK, &rayHitObject)) {
 
             // If we hit a pallet, remove it
             if( std::find(mWalkableObjects.begin(), mWalkableObjects.end(), rayHitObject) != mWalkableObjects.end() ) {
@@ -859,6 +811,33 @@ void OgreRecastApplication::setDestinationForAllAgents(Ogre::Vector3 destination
     for(std::vector<Character*>::iterator iter = mCharacters.begin(); iter != mCharacters.end(); iter++) {
         (*iter)->setDestination(destination);   // This happens here because DetourCrowd does not manage Characters, only agents.
     }
+}
+
+bool OgreRecastApplication::queryCursorPosition(Ogre::Vector3 &rayHitPoint, unsigned long queryflags, Ogre::MovableObject **rayHitObject)
+{
+    // Do ray scene query
+    //send a raycast straight out from the camera at the center position
+    Ogre::Ray mouseRay = mCamera->getCameraToViewportRay(0.5, 0.5);
+
+    Ogre::MovableObject *hitObject;
+    if (rayQueryPointInScene(mouseRay, queryflags, rayHitPoint, &hitObject)) {
+
+        if ( Ogre::StringUtil::startsWith(hitObject->getName(), "recastmowalk", true) ) {
+            // Compensate for the fact that the ray-queried navmesh is drawn a little above the ground
+            rayHitPoint.y = rayHitPoint.y - mRecast->m_navMeshOffsetFromGround;
+        } else {
+            // Queried point was not on navmesh, find nearest point on the navmesh
+            mRecast->findNearestPointOnNavmesh(rayHitPoint, rayHitPoint);
+        }
+
+        // Pass pointer to hit movable
+        if (rayHitObject)
+            *rayHitObject = hitObject;
+
+        return true;
+    }
+
+    return false;
 }
 
 bool OgreRecastApplication::rayQueryPointInScene(Ogre::Ray ray, unsigned long queryMask, Ogre::Vector3 &result, Ogre::MovableObject **foundMovable)
