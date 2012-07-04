@@ -627,6 +627,8 @@ public:
 
    void drawPolyMesh(const struct rcPolyMesh &mesh, bool colorRegions=true);
 
+   void removeDrawnNavmesh(unsigned int tileRef);
+
    /**
      * Create an Ogre::ManualObject mesh to visually debug a path on the navmesh found
      * using detour. The path stored in the specified slot number is visualized, and the
@@ -715,6 +717,7 @@ public:
 
    Ogre::StaticGeometry *m_sg;
    bool m_rebuildSg;
+   bool m_sgReset;
 
    float m_flTestStart[3] ;
    float m_flTestEnd[3] ;

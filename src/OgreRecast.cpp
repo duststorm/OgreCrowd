@@ -10,7 +10,8 @@ OgreRecast::OgreRecast(Ogre::SceneManager* sceneMgr, OgreRecastConfigParams conf
     : m_pSceneMgr(sceneMgr),
     m_pRecastSN(NULL),
       m_sg(NULL),
-      m_rebuildSg(false)
+      m_rebuildSg(false),
+      m_sgReset(false)
 {
    // Init recast stuff in a safe state
    
@@ -805,9 +806,9 @@ void OgreRecast::CreateRecastPolyMesh(const Ogre::String name, const unsigned sh
           Ogre::Entity *walkEnt = m_pSceneMgr->createEntity("ent_"+m_pRecastMOWalk->getName(), "mesh_"+m_pRecastMOWalk->getName());
           m_sg->addEntity(walkEnt, Ogre::Vector3::ZERO);
 
-          // TODO line drawing does not seem to work with staticGeometry
+// TODO line drawing does not work with staticGeometry
           if (false && m_pRecastMONeighbour->getNumSections() > 0) {
-              m_pRecastMONeighbour->convertToMesh("mesh_"+m_pRecastMONeighbour->getName());
+              m_pRecastMONeighbour->convertToMesh("mesh_"+m_pRecastMONeighbour->getName());     // Creating meshes from manualobjects without polygons is not a good idea!
               Ogre::Entity *neighbourEnt = m_pSceneMgr->createEntity("ent_"+m_pRecastMONeighbour->getName(), "mesh_"+m_pRecastMONeighbour->getName());
               m_sg->addEntity(neighbourEnt, Ogre::Vector3::ZERO);
           }
@@ -839,6 +840,24 @@ void OgreRecast::CreateRecastPolyMesh(const Ogre::String name, const unsigned sh
 
 void OgreRecast::update()
 {
+    // Fully rebuild static geometry after a reset (when tiles should be removed)
+    if(m_sgReset) {
+        // Add navmesh tiles to static geometry
+        Ogre::SceneManager::MovableObjectIterator iterator = m_pSceneMgr->getMovableObjectIterator("Entity");
+        while(iterator.hasMoreElements())
+        {
+            Ogre::Entity* ent = static_cast<Ogre::Entity*>(iterator.getNext());
+            // Add all navmesh poly debug entities
+            if(Ogre::StringUtil::startsWith(ent->getName(), "ent_recastmowalk_"))
+                m_sg->addEntity(ent, Ogre::Vector3::ZERO);
+        }
+        m_sg->build();
+
+        m_sgReset = false;
+        m_rebuildSg = false;
+    }
+
+    // Rebuild static geometry (only tiles should be added, none removed)
     if (m_rebuildSg) {
         if (m_sg)
             m_sg->build();
@@ -971,3 +990,58 @@ bool OgreRecast::findNearestPointOnNavmesh(Ogre::Vector3 position, Ogre::Vector3
     FloatAToOgreVect3(rPt, resultPt);
     return true;
 }
+
+
+void OgreRecast::removeDrawnNavmesh(unsigned int tileRef)
+{
+    Ogre::String name = "RecastMOWalk_"+Ogre::StringConverter::toString(tileRef);
+    Ogre::LogManager::getSingletonPtr()->logMessage("Removing tile: "+name);
+    Ogre::String entName = "";
+
+    if(OgreRecast::STATIC_GEOM_DEBUG) {
+        if(!m_sgReset) {
+            m_sg->reset();
+            m_sgReset = true;
+        }
+
+        m_pSceneMgr->destroyManualObject(name);
+        entName = "ent_"+name;
+        name = "mesh_"+name;
+        m_pSceneMgr->destroyMovableObject(entName, "Entity");
+        Ogre::MeshManager::getSingletonPtr()->remove(name);
+
+        name = "RecastMONeighbour_"+Ogre::StringConverter::toString(tileRef);
+        m_pSceneMgr->destroyManualObject(entName);
+        entName = "ent_"+name;
+        name = "mesh_"+name;
+        m_pSceneMgr->destroyMovableObject(entName, "Entity");
+        Ogre::MeshManager::getSingletonPtr()->remove(name);
+
+        name = "RecastMOBoundary_"+Ogre::StringConverter::toString(tileRef);
+        m_pSceneMgr->destroyManualObject(entName);
+        entName = "ent_"+name;
+        name = "mesh_"+name;
+        m_pSceneMgr->destroyMovableObject(entName, "Entity");
+        Ogre::MeshManager::getSingletonPtr()->remove(name);
+
+    } else {
+        try {
+            Ogre::MovableObject *o = m_pRecastSN->getAttachedObject(name);
+            o->detachFromParent();
+            m_pSceneMgr->destroyManualObject(name);
+
+            name = "RecastMONeighbour_"+Ogre::StringConverter::toString(tileRef);
+            o = m_pRecastSN->getAttachedObject(name);
+            o->detachFromParent();
+            m_pSceneMgr->destroyManualObject(name);
+
+            name = "RecastMOBoundary_"+Ogre::StringConverter::toString(tileRef);
+            o = m_pRecastSN->getAttachedObject(name);
+            o->detachFromParent();
+            m_pSceneMgr->destroyManualObject(name);
+        } catch (Ogre::Exception e) {
+            // This is possible if the tile contained no polygons (hence it was not drawn)
+        }
+    }
+}
+

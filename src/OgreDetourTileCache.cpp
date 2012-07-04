@@ -1032,27 +1032,7 @@ bool OgreDetourTileCache::removeTile(dtCompressedTileRef tileRef)
 
 
     // Remove debug geometry that belongs to this tile from scene
-    Ogre::String entName = "RecastMOWalk_"+Ogre::StringConverter::toString(tileRef);
-    Ogre::LogManager::getSingletonPtr()->logMessage("Removing tile: "+entName);
-
-// TODO fix when using staticGeometry
-    try {
-        Ogre::MovableObject *o = m_recast->m_pRecastSN->getAttachedObject(entName);
-        o->detachFromParent();
-        m_recast->m_pSceneMgr->destroyManualObject(entName);
-
-        entName = "RecastMONeighbour_"+Ogre::StringConverter::toString(tileRef);
-        o = m_recast->m_pRecastSN->getAttachedObject(entName);
-        o->detachFromParent();
-        m_recast->m_pSceneMgr->destroyManualObject(entName);
-
-        entName = "RecastMOBoundary_"+Ogre::StringConverter::toString(tileRef);
-        o = m_recast->m_pRecastSN->getAttachedObject(entName);
-        o->detachFromParent();
-        m_recast->m_pSceneMgr->destroyManualObject(entName);
-    } catch (Ogre::Exception e) {
-        // This is possible if the tile contained no polygons (hence it was not drawn)
-    }
+    m_recast->removeDrawnNavmesh(tileRef);
 
     return true;
 }
