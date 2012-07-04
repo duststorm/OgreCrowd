@@ -759,6 +759,10 @@ public:
    Ogre::SceneManager* m_pSceneMgr;
 
 private:
+   /**
+     * Retrieve the vertices from a manual object, even if they are not referenced by faces.
+     * Does not retrieve faces, as it is intended to retrieve line drawings.
+     **/
    std::vector<Ogre::Vector3> getManualObjectVertices(Ogre::ManualObject *man);
 };
 

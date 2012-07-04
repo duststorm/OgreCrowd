@@ -370,7 +370,8 @@ void OgreRecastTerrainApplication::destroyScene(void)
 
 bool OgreRecastTerrainApplication::queryCursorPosition(Ogre::Vector3 &rayHitPoint, unsigned long queryflags, Ogre::MovableObject **rayHitObject)
 {
-    if (OgreRecast::STATIC_GEOM_DEBUG || OgreRecastApplication::RAYCAST_SCENE) {
+    if ( (OgreRecast::STATIC_GEOM_DEBUG || OgreRecastApplication::RAYCAST_SCENE)
+            && queryflags == NAVMESH_MASK ) {
         // Raycast terrain
         Ogre::Ray cursorRay = mCamera->getCameraToViewportRay(0.5, 0.5);
 
