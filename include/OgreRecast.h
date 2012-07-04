@@ -717,7 +717,6 @@ public:
 
    Ogre::StaticGeometry *m_sg;
    bool m_rebuildSg;
-   bool m_sgReset;
 
    float m_flTestStart[3] ;
    float m_flTestEnd[3] ;
@@ -758,6 +757,9 @@ public:
 
    Ogre::LogManager* m_pLog;
    Ogre::SceneManager* m_pSceneMgr;
+
+private:
+   std::vector<Ogre::Vector3> getManualObjectVertices(Ogre::ManualObject *man);
 };
 
 #endif // #ifndef __OgreRecast_h_

@@ -10,8 +10,7 @@ OgreRecast::OgreRecast(Ogre::SceneManager* sceneMgr, OgreRecastConfigParams conf
     : m_pSceneMgr(sceneMgr),
     m_pRecastSN(NULL),
       m_sg(NULL),
-      m_rebuildSg(false),
-      m_sgReset(false)
+      m_rebuildSg(false)
 {
    // Init recast stuff in a safe state
    
@@ -783,7 +782,6 @@ void OgreRecast::CreateRecastPolyMesh(const Ogre::String name, const unsigned sh
 
       m_pRecastMOBoundary->end() ;
 
-
       if(STATIC_GEOM_DEBUG) {
           // Render navmesh tiles more efficiently using staticGeometry
 
@@ -841,8 +839,10 @@ void OgreRecast::CreateRecastPolyMesh(const Ogre::String name, const unsigned sh
 void OgreRecast::update()
 {
     // Fully rebuild static geometry after a reset (when tiles should be removed)
-    if(m_sgReset) {
-        // Add navmesh tiles to static geometry
+    if(m_rebuildSg) {
+        m_sg->reset();
+
+        // Add navmesh tiles (polys) to static geometry
         Ogre::SceneManager::MovableObjectIterator iterator = m_pSceneMgr->getMovableObjectIterator("Entity");
         while(iterator.hasMoreElements())
         {
@@ -853,17 +853,93 @@ void OgreRecast::update()
         }
         m_sg->build();
 
-        m_sgReset = false;
+
+        // Batch all lines together in one single manualObject (since we cannot use staticGeometry for lines)
+        if(m_pSceneMgr->hasManualObject("AllNeighbourLines")) {
+            m_pRecastSN->detachObject("AllNeighbourLines") ;
+            m_pSceneMgr->destroyManualObject("AllNeighbourLines");
+        }
+        if(m_pSceneMgr->hasManualObject("AllBoundaryLines")) {
+            m_pRecastSN->detachObject("AllBoundaryLines") ;
+            m_pSceneMgr->destroyManualObject("AllBoundaryLines");
+        }
+
+        Ogre::ManualObject *allNeighbourLines = m_pSceneMgr->createManualObject("AllNeighbourLines");
+        allNeighbourLines->begin("recastdebug", Ogre::RenderOperation::OT_LINE_LIST);
+        allNeighbourLines->colour(m_navmeshNeighbourEdgeCol);
+
+        Ogre::ManualObject *allBoundaryLines = m_pSceneMgr->createManualObject("AllBoundaryLines");
+        allBoundaryLines->begin("recastdebug", Ogre::RenderOperation::OT_LINE_LIST);
+        allBoundaryLines->colour(m_navmeshOuterEdgeCol);
+
+        iterator = m_pSceneMgr->getMovableObjectIterator("ManualObject");
+        while(iterator.hasMoreElements())
+        {
+            Ogre::ManualObject* man = static_cast<Ogre::ManualObject*>(iterator.getNext());
+
+            if(Ogre::StringUtil::startsWith(man->getName(), "recastmoneighbour_")) {
+                std::vector<Ogre::Vector3> verts = getManualObjectVertices(man);
+
+                for(std::vector<Ogre::Vector3>::iterator iter = verts.begin(); iter != verts.end(); iter++) {
+                    allNeighbourLines->position(*iter);
+                }
+            } else if(Ogre::StringUtil::startsWith(man->getName(), "recastmoboundary_")) {
+                std::vector<Ogre::Vector3> verts = getManualObjectVertices(man);
+
+                for(std::vector<Ogre::Vector3>::iterator iter = verts.begin(); iter != verts.end(); iter++) {
+                    allBoundaryLines->position(*iter);
+                }
+            }
+        }
+        allNeighbourLines->end();
+        allBoundaryLines->end();
+
+        m_pRecastSN->attachObject(allNeighbourLines);
+        m_pRecastSN->attachObject(allBoundaryLines);
+
+
         m_rebuildSg = false;
     }
+}
 
-    // Rebuild static geometry (only tiles should be added, none removed)
-    if (m_rebuildSg) {
-        if (m_sg)
-            m_sg->build();
+std::vector<Ogre::Vector3> OgreRecast::getManualObjectVertices(Ogre::ManualObject *manual)
+{
+    std::vector<Ogre::Vector3> returnVertices;
+    unsigned long thisSectionStart = 0;
+    for (int i=0; i<manual->getNumSections(); i++)
+    {
+        Ogre::ManualObject::ManualObjectSection * section = manual->getSection(i);
+        Ogre::RenderOperation * renderOp = section->getRenderOperation();
 
-        m_rebuildSg = false;
+        //Collect the vertices
+        {
+            const Ogre::VertexElement * vertexElement = renderOp->vertexData->vertexDeclaration->findElementBySemantic(Ogre::VES_POSITION);
+            Ogre::HardwareVertexBufferSharedPtr vertexBuffer = renderOp->vertexData->vertexBufferBinding->getBuffer(vertexElement->getSource());
+
+            char * verticesBuffer = (char*)vertexBuffer->lock(Ogre::HardwareBuffer::HBL_READ_ONLY);
+            float * positionArrayHolder;
+
+            thisSectionStart = returnVertices.size();
+
+            returnVertices.reserve(returnVertices.size() + renderOp->vertexData->vertexCount);
+
+            for (unsigned int j=0; j<renderOp->vertexData->vertexCount; j++)
+            {
+                vertexElement->baseVertexPointerToElement(verticesBuffer + j * vertexBuffer->getVertexSize(), &positionArrayHolder);
+                Ogre::Vector3 vertexPos = Ogre::Vector3(positionArrayHolder[0],
+                                                        positionArrayHolder[1],
+                                                        positionArrayHolder[2]);
+
+                //vertexPos = (orient * (vertexPos * scale)) + position;
+
+                returnVertices.push_back(vertexPos);
+            }
+
+            vertexBuffer->unlock();
+        }
     }
+
+    return returnVertices;
 }
 
 void OgreRecast::CreateRecastPathLine(int nPathSlot)
@@ -999,11 +1075,6 @@ void OgreRecast::removeDrawnNavmesh(unsigned int tileRef)
     Ogre::String entName = "";
 
     if(OgreRecast::STATIC_GEOM_DEBUG) {
-        if(!m_sgReset) {
-            m_sg->reset();
-            m_sgReset = true;
-        }
-
         m_pSceneMgr->destroyManualObject(name);
         entName = "ent_"+name;
         name = "mesh_"+name;
@@ -1011,18 +1082,21 @@ void OgreRecast::removeDrawnNavmesh(unsigned int tileRef)
         Ogre::MeshManager::getSingletonPtr()->remove(name);
 
         name = "RecastMONeighbour_"+Ogre::StringConverter::toString(tileRef);
-        m_pSceneMgr->destroyManualObject(entName);
+        m_pSceneMgr->destroyManualObject(name);
         entName = "ent_"+name;
         name = "mesh_"+name;
         m_pSceneMgr->destroyMovableObject(entName, "Entity");
         Ogre::MeshManager::getSingletonPtr()->remove(name);
 
         name = "RecastMOBoundary_"+Ogre::StringConverter::toString(tileRef);
-        m_pSceneMgr->destroyManualObject(entName);
+        m_pSceneMgr->destroyManualObject(name);
         entName = "ent_"+name;
         name = "mesh_"+name;
         m_pSceneMgr->destroyMovableObject(entName, "Entity");
         Ogre::MeshManager::getSingletonPtr()->remove(name);
+
+        // Set dirty flag to trigger rebuild next update
+        m_rebuildSg = true;
 
     } else {
         try {
