@@ -810,7 +810,7 @@ void OgreRecastApplication::setDestinationForAllAgents(Ogre::Vector3 destination
     }
 }
 
-bool OgreRecastApplication::queryCursorPosition(Ogre::Vector3 &rayHitPoint, unsigned long queryflags, Ogre::MovableObject **rayHitObject)
+bool OgreRecastApplication::queryCursorPosition(Ogre::Vector3 &rayHitPoint, unsigned long queryflags, bool clipToNavmesh, Ogre::MovableObject **rayHitObject)
 {
     // Do ray scene query
     //send a raycast straight out from the camera at the center position
@@ -822,8 +822,8 @@ bool OgreRecastApplication::queryCursorPosition(Ogre::Vector3 &rayHitPoint, unsi
         if ( Ogre::StringUtil::startsWith(hitObject->getName(), "recastmowalk", true) ) {
             // Compensate for the fact that the ray-queried navmesh is drawn a little above the ground
             rayHitPoint.y = rayHitPoint.y - mRecast->m_navMeshOffsetFromGround;
-        } else {
-            // Queried point was not on navmesh, find nearest point on the navmesh
+        } else if(clipToNavmesh) {
+            // Queried point was not on navmesh, find nearest point on the navmesh (if not possible returns exact point)
             mRecast->findNearestPointOnNavmesh(rayHitPoint, rayHitPoint);
         }
 

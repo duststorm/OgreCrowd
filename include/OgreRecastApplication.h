@@ -36,7 +36,7 @@ public:
       **/
     static void loadConfig(Ogre::String configFileName);
 
-    virtual bool queryCursorPosition(Ogre::Vector3 &rayHitPoint, unsigned long queryflags = NAVMESH_MASK, Ogre::MovableObject **rayHitObject = NULL);
+    virtual bool queryCursorPosition(Ogre::Vector3 &rayHitPoint, unsigned long queryflags = NAVMESH_MASK, bool clipToNavmesh = true, Ogre::MovableObject **rayHitObject = NULL);
 
     /**
       * Calculate an intersection point of a ray with objects in the scene.

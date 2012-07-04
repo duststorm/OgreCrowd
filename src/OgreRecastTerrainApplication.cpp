@@ -69,9 +69,9 @@ void OgreRecastTerrainApplication::createScene()
 
 // TODO extract recast/detour parameters out of their wrappers, use config classes
     // RECAST (navmesh creation)
-    InputGeom *geom = new InputGeom(mTerrainGroup);
+    mGeom = new InputGeom(mTerrainGroup);
     // Debug draw the recast bounding box around the terrain tile
-    ConvexVolume bb = ConvexVolume(geom->getBoundingBox());
+    ConvexVolume bb = ConvexVolume(mGeom->getBoundingBox());
     InputGeom::drawConvexVolume(&bb, mSceneMgr);
     // Verify rasterized terrain mesh
 //    geom->debugMesh(mSceneMgr);
@@ -96,7 +96,7 @@ void OgreRecastTerrainApplication::createScene()
 
         mRecast = new OgreRecast(mSceneMgr, recastParams);
 
-        if(mRecast->NavMeshBuild(geom)) {
+        if(mRecast->NavMeshBuild(mGeom)) {
             mRecast->drawNavMesh();
         } else {
             Ogre::LogManager::getSingletonPtr()->logMessage("ERROR: could not generate useable navmesh from mesh.");
@@ -131,7 +131,7 @@ void OgreRecastTerrainApplication::createScene()
         OgreRecast::VERBOSE = false;
 
         mDetourTileCache = new OgreDetourTileCache(mRecast, 48);
-        mDetourTileCache->configure(geom);
+        mDetourTileCache->configure(mGeom);
         Ogre::AxisAlignedBox areaToLoad;
 //        areaToLoad.setMaximum(geom->getBoundingBox().getMaximum());
 //        areaToLoad.setMinimum(Ogre::Vector3(5000, 0, 5000));
@@ -140,8 +140,8 @@ void OgreRecastTerrainApplication::createScene()
 //        areaToLoad.setMaximum(Ogre::Vector3(-5800, geom->getBoundingBox().getMaximum().y, -5800));
 
         areaToLoad.setMinimum(Ogre::Vector3(-2400, 0, -6000));
-        areaToLoad.setMaximum(Ogre::Vector3(-2300, geom->getBoundingBox().getMaximum().y, -5800));
-        mDetourTileCache->buildTiles(geom, &areaToLoad);    // Only build a few tiles
+        areaToLoad.setMaximum(Ogre::Vector3(-2300, mGeom->getBoundingBox().getMaximum().y, -5800));
+        mDetourTileCache->buildTiles(mGeom, &areaToLoad);    // Only build a few tiles
         /*
         if(mDetourTileCache->TileCacheBuild(geom)) {
             mDetourTileCache->drawNavMesh();
@@ -339,6 +339,22 @@ void OgreRecastTerrainApplication::initBlendMaps(Ogre::Terrain* terrain)
 
 bool OgreRecastTerrainApplication::keyPressed( const OIS::KeyEvent &arg )
 {
+    // Build navmesh around cursor position
+    if( arg.key == OIS::KC_N) {
+        Ogre::Vector3 rayHitPoint;
+        if (queryCursorPosition(rayHitPoint, NAVMESH_MASK, false)) {
+            // Size of the area to build around cursor
+            float boxSize = 50;
+
+            Ogre::AxisAlignedBox box;
+            box.setMinimum(rayHitPoint.x - boxSize/2, mRecast->m_cfg.bmin[1], rayHitPoint.z - boxSize/2);
+            box.setMaximum(rayHitPoint.x + boxSize/2, mRecast->m_cfg.bmax[1], rayHitPoint.z + boxSize/2);
+
+            // Build tiles around cursor
+            mDetourTileCache->buildTiles(mGeom, &box);
+        }
+    }
+
     if(  arg.key == OIS::KC_O
 //      || arg.key == OIS::KC_BACK
 //      || arg.key == OIS::KC_DELETE
@@ -368,7 +384,7 @@ void OgreRecastTerrainApplication::destroyScene(void)
     OGRE_DELETE mTerrainGlobals;
 }
 
-bool OgreRecastTerrainApplication::queryCursorPosition(Ogre::Vector3 &rayHitPoint, unsigned long queryflags, Ogre::MovableObject **rayHitObject)
+bool OgreRecastTerrainApplication::queryCursorPosition(Ogre::Vector3 &rayHitPoint, unsigned long queryflags, bool clipToNavmesh, Ogre::MovableObject **rayHitObject)
 {
     if ( (OgreRecast::STATIC_GEOM_DEBUG || OgreRecastApplication::RAYCAST_SCENE)
             && queryflags == NAVMESH_MASK ) {
@@ -379,13 +395,18 @@ bool OgreRecastTerrainApplication::queryCursorPosition(Ogre::Vector3 &rayHitPoin
         Ogre::TerrainGroup::RayResult result = mTerrainGroup->rayIntersects(cursorRay);
         if(result.hit) {
             // Queried point was not on navmesh, find nearest point on the navmesh
-            mRecast->findNearestPointOnNavmesh(result.position, rayHitPoint);
-            return true;
+            if (clipToNavmesh && mRecast->findNearestPointOnNavmesh(result.position, rayHitPoint) ) {
+                return true;
+            } else {
+                rayHitPoint = result.position;
+                return true;
+            }
+
         } else {
             return false;
         }
     } else {
-        return OgreRecastApplication::queryCursorPosition(rayHitPoint, queryflags, rayHitObject);
+        return OgreRecastApplication::queryCursorPosition(rayHitPoint, queryflags, clipToNavmesh, rayHitObject);
     }
 }
 

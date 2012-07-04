@@ -640,7 +640,7 @@ public:
      * Find a point on the navmesh closest to the specified point position, within predefined
      * bounds.
      * Returns true if such a point is found (returned as resultPt), returns false
-     * if no point is found.
+     * if no point is found. When false is returned, resultPt is not altered.
      **/
    bool findNearestPointOnNavmesh(Ogre::Vector3 position, Ogre::Vector3 &resultPt);
 

@@ -31,7 +31,7 @@ protected:
 
     virtual bool frameRenderingQueued(const Ogre::FrameEvent &evt);
 
-    virtual bool queryCursorPosition(Ogre::Vector3 &rayHitPoint, unsigned long queryflags = NAVMESH_MASK, Ogre::MovableObject **rayHitObject = NULL);
+    virtual bool queryCursorPosition(Ogre::Vector3 &rayHitPoint, unsigned long queryflags = NAVMESH_MASK, bool clipToNavmesh = true, Ogre::MovableObject **rayHitObject = NULL);
 
 
 private:
@@ -42,6 +42,8 @@ private:
     Ogre::TerrainGlobalOptions* mTerrainGlobals;
     Ogre::TerrainGroup* mTerrainGroup;
     bool mTerrainsImported;
+
+    InputGeom *mGeom;
 
 };
 
