@@ -13,6 +13,11 @@ The terrain materials, more specifically the .dds texture files are property
 of NVIDIA. A special license applies, which can be found in the separate license
 file in the materials/terrain/ folder.
 
+The highlanderhouse.01.mesh and its materials are part of a model pack that
+dragonsnail of Artifex Terra 3D donated to the Ogre community. The specific
+license under which they are released can be found in a separate license file 
+in this folder.
+
 The other meshes are my work, in particular Cylinder.mesh and textures and 
 GameChar-male and its textures, the Pot mesh, Box mesh, as well as the overlay 
 cursor.

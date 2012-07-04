@@ -359,15 +359,27 @@ bool OgreRecastTerrainApplication::keyPressed( const OIS::KeyEvent &arg )
     if( arg.key == OIS::KC_H) {
         Ogre::Vector3 rayHitPoint;
         if (queryCursorPosition(rayHitPoint, NAVMESH_MASK, false)) {
-            Ogre::Entity *houseEnt = mSceneMgr->createEntity("tudorhouse.mesh");
-            Ogre::SceneNode *houseNode = mSceneMgr->getRootSceneNode()->createChildSceneNode();
-            houseNode->attachObject(houseEnt);
-            houseNode->rotate(Ogre::Vector3::UNIT_Y, Ogre::Degree(Ogre::Math::RangeRandom(0, 360)));
-            float houseHeight = houseEnt->getBoundingBox().getSize().y;
-            float scale = 0.02;
-            houseNode->setScale(scale, scale, scale);
-            rayHitPoint.y += ( houseHeight/2 ) * scale;
-            houseNode->setPosition(rayHitPoint);
+            Ogre::Entity *houseEnt = NULL;
+            if(Ogre::Math::RangeRandom(0,2) < 1) {
+                houseEnt = mSceneMgr->createEntity("tudorhouse.mesh");
+                Ogre::SceneNode *houseNode = mSceneMgr->getRootSceneNode()->createChildSceneNode();
+                houseNode->attachObject(houseEnt);
+                houseNode->rotate(Ogre::Vector3::UNIT_Y, Ogre::Degree(Ogre::Math::RangeRandom(0, 360)));
+                float houseHeight = houseEnt->getBoundingBox().getSize().y;
+                float scale = 0.02;
+                houseNode->setScale(scale, scale, scale);
+                rayHitPoint.y += ( houseHeight/2 ) * scale; // tudorhouse mesh doesn't have its origin on the ground
+                houseNode->setPosition(rayHitPoint);
+            } else {
+                houseEnt = mSceneMgr->createEntity("highlanderhouse.01.mesh");
+                Ogre::SceneNode *houseNode = mSceneMgr->getRootSceneNode()->createChildSceneNode();
+                houseNode->attachObject(houseEnt);
+                houseNode->rotate(Ogre::Vector3::UNIT_Y, Ogre::Degree(Ogre::Math::RangeRandom(0, 360)));
+                float houseHeight = houseEnt->getBoundingBox().getSize().y;
+                float scale = 2.5;
+                houseNode->setScale(scale, scale, scale);
+                houseNode->setPosition(rayHitPoint);
+            }
             mNavmeshEnts.push_back(houseEnt);
 
             // Get bounding box of the entity. All navmesh tiles touching it will have to be rebuilt.
