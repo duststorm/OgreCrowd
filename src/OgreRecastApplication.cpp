@@ -367,11 +367,8 @@ bool OgreRecastApplication::mousePressed( const OIS::MouseEvent &arg, OIS::Mouse
         obj->setQueryFlags(NAVMESH_MASK);
     }
 
-    // Do ray scene query
-    //send a raycast straight out from the camera at the center position
-    Ogre::Ray mouseRay = mCamera->getCameraToViewportRay(0.5, 0.5);
-
     Ogre::Vector3 rayHitPoint;
+    //send a raycast straight out from the camera at the center position
     if(queryCursorPosition(rayHitPoint)) {
 
         Ogre::SceneNode *markerNode = NULL;

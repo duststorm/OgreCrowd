@@ -29,11 +29,6 @@ protected:
       **/
     virtual bool keyPressed( const OIS::KeyEvent &arg );
 
-    /**
-      * Handle mouse input.
-      **/
-    virtual bool mousePressed( const OIS::MouseEvent &arg, OIS::MouseButtonID id );
-
     virtual bool frameRenderingQueued(const Ogre::FrameEvent &evt);
 
     virtual bool queryCursorPosition(Ogre::Vector3 &rayHitPoint, unsigned long queryflags = NAVMESH_MASK, Ogre::MovableObject **rayHitObject = NULL);

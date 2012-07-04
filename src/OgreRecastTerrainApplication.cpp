@@ -368,48 +368,6 @@ void OgreRecastTerrainApplication::destroyScene(void)
     OGRE_DELETE mTerrainGlobals;
 }
 
-bool OgreRecastTerrainApplication::mousePressed( const OIS::MouseEvent &arg, OIS::MouseButtonID id )
-{
-    // TODO extract submethod
-
-    // Make sure that any redrawn navmesh tiles have the proper query mask
-    for (int i = 0; i < mNavMeshNode->numAttachedObjects(); i++) {
-        Ogre::MovableObject *obj = mNavMeshNode->getAttachedObject(i);
-        obj->setQueryFlags(NAVMESH_MASK);
-    }
-
-    Ogre::Vector3 rayHitPoint;
-    if(queryCursorPosition(rayHitPoint)) {
-
-        Ogre::SceneNode *markerNode = NULL;
-
-        if(id == OIS::MB_Left) {
-            markerNode = getOrCreateMarker("EndPos", "Cylinder/Wires/Brown");
-
-            if(mApplicationState != SIMPLE_PATHFIND)
-                mCharacters[0]->updateDestination(rayHitPoint, false);  // Update destination of first agent only
-        }
-
-        if(id == OIS::MB_Right && mApplicationState == SIMPLE_PATHFIND) {
-            markerNode = getOrCreateMarker("BeginPos", "Cylinder/Wires/DarkGreen");
-        }
-
-        if(markerNode != NULL) {
-            if(mDebugDraw)
-                rayHitPoint.y = rayHitPoint.y + mRecast->m_navMeshOffsetFromGround;
-            markerNode->setPosition(rayHitPoint);
-        }
-
-        if(mApplicationState == SIMPLE_PATHFIND) {
-            drawPathBetweenMarkers(1,1);    // Draw navigation path (in DRAW_DEBUG) and begin marker
-            UpdateAllAgentDestinations();   //Steer all agents to set destination
-        }
-    }
-
-    return BaseApplication::mousePressed(arg, id);
-}
-
-
 bool OgreRecastTerrainApplication::queryCursorPosition(Ogre::Vector3 &rayHitPoint, unsigned long queryflags, Ogre::MovableObject **rayHitObject)
 {
     if (OgreRecast::STATIC_GEOM_DEBUG || OgreRecastApplication::RAYCAST_SCENE) {
