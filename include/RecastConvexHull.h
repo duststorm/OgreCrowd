@@ -34,6 +34,15 @@ public:
       **/
     ConvexVolume(Ogre::AxisAlignedBox boundingBox, float offset = 0.0f);
 
+    /**
+      * Move this convex hull to a new world position offset with specified
+      * translation vector.
+      * Can be done pretty fast. Due to the 2D nature of this convex hull it's
+      * not possible to apply an arbitrary rotation, however (though in theory
+      * rotations around Y axis would work).
+      **/
+    void move(Ogre::Vector3 translate);
+
     float verts[MAX_CONVEXVOL_PTS*3];
     float hmin, hmax;
     float bmin[3], bmax[3];

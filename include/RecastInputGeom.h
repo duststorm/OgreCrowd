@@ -87,6 +87,19 @@ public:
       **/
     static Ogre::AxisAlignedBox getWorldSpaceBoundingBox(Ogre::MovableObject *ent);
 
+    /**
+      * Apply the specified rotation to all vertices of this geometry.
+      * Note that this does not affect the entities the inputGeom was
+      * originally built from!
+      **/
+    void applyOrientation(Ogre::Quaternion orientation);
+
+    /**
+      * Move all vertices of this inputGeom with the offset specified by the
+      * translation vector.
+      **/
+    void move(Ogre::Vector3 translate);
+
     ~InputGeom();
 
     float* getVerts(void);
@@ -225,6 +238,7 @@ private:
 
     std::vector<Ogre::Entity*> mSrcMeshes;
     Ogre::SceneNode *mReferenceNode;
+    Ogre::TerrainGroup *mTerrainGroup;
 
     /**
       * Optimized structures that stores triangles in axis aligned boxes of uniform size

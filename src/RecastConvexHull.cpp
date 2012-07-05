@@ -125,3 +125,26 @@ ConvexVolume::ConvexVolume(Ogre::AxisAlignedBox boundingBox, float offset)
 
     area = SAMPLE_POLYAREA_DOOR;   // You can choose whatever flag you assing to the poly area
 }
+
+
+void ConvexVolume::move(Ogre::Vector3 translate)
+{
+    // Offset all verts with translation vector
+    for( int i = 0; i < nverts; i++) {
+        verts[3*i +0] += translate.x;
+        verts[3*i +1] += translate.y;
+        verts[3*i +2] += translate.z;
+    }
+
+    // Recalculate bounds
+    bmin[0] += translate.x;
+    bmin[1] += translate.y;
+    bmin[2] += translate.z;
+
+    bmax[0] += translate.x;
+    bmax[1] += translate.y;
+    bmax[2] += translate.z;
+
+    hmin += translate.y;
+    hmax += translate.y;
+}

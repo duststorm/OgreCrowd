@@ -56,3 +56,32 @@ Ogre::Entity* CylinderObstacle::getEntity()
 {
     return mEnt;
 }
+
+
+void CylinderObstacle::updatePosition(Ogre::Vector3 position)
+{
+    // Modify position if larger than epsilon
+    if ( mPosition.squaredDistance(position) > SQUARED_DISTANCE_EPSILON ) {
+        mPosition = position;
+
+        // Remove obstacle and re-add it at new location
+        mDetourTileCache->removeTempObstacle(mObstacleRef);
+        mObstacleRef = mDetourTileCache->addTempObstacle(mPosition);
+    }
+}
+
+Ogre::Vector3 CylinderObstacle::getPosition()
+{
+    return mPosition;
+}
+
+void CylinderObstacle::updateOrientation(Ogre::Quaternion orientation)
+{
+    // Do nothing
+    return;
+}
+
+Ogre::Quaternion CylinderObstacle::getOrientation()
+{
+    return Ogre::Quaternion::IDENTITY;
+}

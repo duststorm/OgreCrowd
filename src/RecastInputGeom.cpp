@@ -6,6 +6,7 @@
 
 InputGeom::InputGeom(std::vector<Ogre::Entity*> srcMeshes)
     : mSrcMeshes(srcMeshes),
+      mTerrainGroup(0),
       nverts(0),
       ntris(0),
       mReferenceNode(0),
@@ -54,7 +55,8 @@ void InputGeom::buildChunkyTriMesh()
 }
 
 InputGeom::InputGeom(Ogre::Entity* srcMesh)
-    : nverts(0),
+    : mTerrainGroup(0),
+      nverts(0),
       ntris(0),
       mReferenceNode(0),
       bmin(0),
@@ -101,6 +103,7 @@ InputGeom::~InputGeom()
 // Tile bounds need to be in world space coordinates
 InputGeom::InputGeom(std::vector<Ogre::Entity*> srcMeshes, const Ogre::AxisAlignedBox &tileBounds)
     : mSrcMeshes(srcMeshes),
+      mTerrainGroup(0),
       nverts(0),
       ntris(0),
       mReferenceNode(0),
@@ -136,6 +139,7 @@ InputGeom::InputGeom(std::vector<Ogre::Entity*> srcMeshes, const Ogre::AxisAlign
 
 InputGeom::InputGeom(Ogre::TerrainGroup *terrainGroup, std::vector<Ogre::Entity*> srcMeshes)
     : mSrcMeshes(srcMeshes),
+      mTerrainGroup(terrainGroup),
       nverts(0),
       ntris(0),
       mReferenceNode(0),
@@ -688,10 +692,11 @@ void InputGeom::convertOgreEntities(Ogre::AxisAlignedBox &tileBounds)
 void InputGeom::calculateExtents()
 {
     Ogre::Entity* ent = mSrcMeshes[0];
-    const Ogre::AxisAlignedBox srcMeshBB = ent->getBoundingBox();
+    Ogre::AxisAlignedBox srcMeshBB = ent->getBoundingBox();
     Ogre::Matrix4 transform = mReferenceNode->_getFullTransform().inverse() * ent->getParentSceneNode()->_getFullTransform();
-    Ogre::Vector3 min = transform * srcMeshBB.getMinimum();
-    Ogre::Vector3 max = transform * srcMeshBB.getMaximum();
+    srcMeshBB.transform(transform);
+    Ogre::Vector3 min = srcMeshBB.getMinimum();
+    Ogre::Vector3 max = srcMeshBB.getMaximum();
 
     // Calculate min and max from all entities
     for(std::vector<Ogre::Entity*>::iterator iter = mSrcMeshes.begin(); iter != mSrcMeshes.end(); iter++) {
@@ -700,8 +705,9 @@ void InputGeom::calculateExtents()
         //find the transform between the reference node and this node
         transform = mReferenceNode->_getFullTransform().inverse() * ent->getParentSceneNode()->_getFullTransform();
 
-        const Ogre::AxisAlignedBox srcMeshBB = ent->getBoundingBox();
-        Ogre::Vector3 min2 = transform * srcMeshBB.getMinimum();
+        Ogre::AxisAlignedBox srcMeshBB = ent->getBoundingBox();
+        srcMeshBB.transform(transform);
+        Ogre::Vector3 min2 = srcMeshBB.getMinimum();
         if(min2.x < min.x)
             min.x = min2.x;
         if(min2.y < min.y)
@@ -709,7 +715,7 @@ void InputGeom::calculateExtents()
         if(min2.z < min.z)
             min.z = min2.z;
 
-        Ogre::Vector3 max2 = transform * srcMeshBB.getMaximum();
+        Ogre::Vector3 max2 = srcMeshBB.getMaximum();
         if(max2.x > max.x)
             max.x = max2.x;
         if(max2.y > max.y)
@@ -1638,4 +1644,63 @@ void InputGeom::writeObj(Ogre::String filename)
     }
 
     fstr.close();
+}
+
+
+
+void InputGeom::applyOrientation(Ogre::Quaternion orientation)
+{
+// TODO allow this or not?
+    /*
+    if(mTerrainGroup)
+        return; // It makes no sense to do this if this inputGeom contains terrain!
+    */
+
+
+    // Apply transformation to all verts
+    Ogre::Matrix4 transform = Ogre::Matrix4(orientation); // Convert quaternion into regular transformation matrix
+    Ogre::Vector3 vert;
+    for (int i = 0; i < nverts; i++) {
+        vert.x = verts[3*i + 0];
+        vert.y = verts[3*i + 1];
+        vert.z = verts[3*i + 2];
+
+        // Apply rotation to vector
+        vert = transform * vert;
+
+        verts[3*i + 0] = vert.x;
+        verts[3*i + 1] = vert.y;
+        verts[3*i + 2] = vert.z;
+    }
+
+
+    // Transform extents
+    Ogre::AxisAlignedBox bb;
+    bb.setMinimum(bmin[0], bmin[1], bmin[2]);
+    bb.setMaximum(bmax[0], bmax[1], bmax[2]);
+
+    bb.transform(transform);
+
+    OgreRecast::OgreVect3ToFloatA(bb.getMinimum(), bmin);
+    OgreRecast::OgreVect3ToFloatA(bb.getMaximum(), bmax);
+}
+
+void InputGeom::move(Ogre::Vector3 translation)
+{
+    // Apply translation to all verts
+    for (int i = 0; i < nverts; i++) {
+        verts[3*i + 0] += translation.x;
+        verts[3*i + 1] += translation.y;
+        verts[3*i + 2] += translation.z;
+    }
+
+
+    // Transform extents
+    bmin[0] += translation.x;
+    bmin[1] += translation.y;
+    bmin[2] += translation.z;
+
+    bmax[0] += translation.x;
+    bmax[1] += translation.y;
+    bmax[2] += translation.z;
 }

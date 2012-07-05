@@ -7,7 +7,8 @@ ConvexShapeObstacle::ConvexShapeObstacle(Ogre::Vector3 position, Ogre::Real offs
       mEnt(0),
       mNode(0),
       mConvexHullDebug(0),
-      mInputGeom(0)
+      mInputGeom(0),
+      mOffset(offset)
 {
     // Randomly place a box or a pot as obstacle
     mNode = mSceneMgr->getRootSceneNode()->createChildSceneNode();
@@ -22,6 +23,8 @@ ConvexShapeObstacle::ConvexShapeObstacle(Ogre::Vector3 position, Ogre::Real offs
     mNode->attachObject(mEnt);
     mNode->setPosition(mPosition);
 
+    mOrientation = mNode->getOrientation();
+
     mEnt->setQueryFlags(OgreRecastApplication::OBSTACLE_MASK);  // add to query group for obstacles
 
     // Transfer entitiy geometry to recast compatible format
@@ -34,7 +37,7 @@ ConvexShapeObstacle::ConvexShapeObstacle(Ogre::Vector3 position, Ogre::Real offs
 
         // Create convex area obstacle in the detourTileCache
         // Create convex hull with agent radios offset around the object (this is important so agents don't walk through the edges of the obstacle!)
-        mConvexHull = mInputGeom->getConvexHull(offset);
+        mConvexHull = mInputGeom->getConvexHull(mOffset);
     } else {
         // Create a convex hull simply from the bounding box
 
@@ -87,4 +90,67 @@ void ConvexShapeObstacle::update(long time)
 Ogre::Entity* ConvexShapeObstacle::getEntity()
 {
     return mEnt;
+}
+
+
+void ConvexShapeObstacle::updatePosition(Ogre::Vector3 position)
+{
+    // Modify position if larger than epsilon
+    if ( mPosition.squaredDistance(position) > SQUARED_DISTANCE_EPSILON ) {
+        // Remove obstacle
+        mDetourTileCache->removeConvexShapeObstacle(mConvexHull);
+
+        // Transform hull to new location
+        mConvexHull->move(position-mPosition);
+
+        // Re-add hull as obstacle at new location
+        mDetourTileCache->addConvexShapeObstacle(mConvexHull);
+
+        mPosition = position;
+
+
+        // Now also set the position to the visual obstacle entity
+        mNode->setPosition(position);
+        mConvexHullDebug->setVisible(false);    // Just hide it for now. It's attached to the root scenenode so we can't move it easily.
+    }
+}
+
+Ogre::Vector3 ConvexShapeObstacle::getPosition()
+{
+    return mPosition;
+}
+
+void ConvexShapeObstacle::updateOrientation(Ogre::Quaternion orientation)
+{
+    // Modify orientation if difference larger than epsilon
+    if(! mOrientation.equals(orientation, Ogre::Degree(ORIENTATION_TOLERANCE_DEGREES))) {
+        // Remove old obstacle from tilecache
+        mDetourTileCache->removeConvexShapeObstacle(mConvexHull);
+
+        // In case we didn't generate inputgeom yet (we previously generated hull directly from the bounding box), do it now
+        if(!mInputGeom)
+            mInputGeom = new InputGeom(mEnt);
+
+        // Apply rotation to the inputGeometry and calculate a new 2D convex hull
+// TODO doesn't work yet
+        mInputGeom->applyOrientation(orientation * mOrientation.Inverse());
+        if (mConvexHull)
+            delete mConvexHull;
+        mConvexHull = mInputGeom->getConvexHull(mOffset);
+
+        // Add new hull as obstacle to tilecache
+        mDetourTileCache->addConvexShapeObstacle(mConvexHull);
+
+        mOrientation = orientation;
+
+
+        // Now also set the rotation to the visual obstacle entity
+        mNode->setOrientation(orientation);
+    }
+}
+
+
+Ogre::Quaternion ConvexShapeObstacle::getOrientation()
+{
+    return mOrientation;
 }

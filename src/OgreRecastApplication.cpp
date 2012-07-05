@@ -418,6 +418,22 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
         obj->setQueryFlags(NAVMESH_MASK);
     }
 
+    /*
+    // For testing obstacle transformations
+    if(arg.key == OIS::KC_T) {
+        // Rotate obstacles
+        for (std::vector<Obstacle*>::iterator iter = mObstacles.begin(); iter != mObstacles.end(); iter++) {
+            Obstacle *obst = *iter;
+            // Moving works, rotating obstacles does not work yet
+//            Ogre::Degree rotation = Ogre::Degree(obst->getOrientation().getYaw());
+//            rotation += Ogre::Degree(25); // Rotate 25 degrees
+//            obst->updateOrientation(Ogre::Quaternion(rotation, Ogre::Vector3::UNIT_Y));
+            Ogre::Vector3 pos = obst->getPosition() + Ogre::Vector3::UNIT_X;
+            obst->updatePosition(pos);
+        }
+    }
+    */
+
     // SPACE places a new agent at cursor position
     if(arg.key == OIS::KC_SPACE
        && mApplicationState != STEER_AGENT  // no adding agents in steering mode (no mouse pointer)
