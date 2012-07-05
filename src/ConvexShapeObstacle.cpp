@@ -25,16 +25,12 @@ ConvexShapeObstacle::ConvexShapeObstacle(Ogre::Vector3 position, Ogre::Real offs
     mEnt->setQueryFlags(OgreRecastApplication::OBSTACLE_MASK);  // add to query group for obstacles
 
     // Transfer entitiy geometry to recast compatible format
-// TODO I want to use the other constructor for one entity here!!
-    std::vector<Ogre::Entity*> ents;
-    ents.push_back(mEnt);
-
     if(mEnt->getMesh()->getName() == "Pot.mesh") {
         // Create a convex hull from the mesh geometry
 
         // Note that it is important to first add your entity to the scene before creating an inputGeom from it.
         // This is so that it can calculate the world space coordinates for the object, which are needed for recast.
-        mInputGeom = new InputGeom(ents);
+        mInputGeom = new InputGeom(mEnt);
 
         // Create convex area obstacle in the detourTileCache
         // Create convex hull with agent radios offset around the object (this is important so agents don't walk through the edges of the obstacle!)

@@ -6,9 +6,9 @@
 
 InputGeom::InputGeom(std::vector<Ogre::Entity*> srcMeshes)
     : mSrcMeshes(srcMeshes),
-    nverts(0),
-    ntris(0),
-    mReferenceNode(0),
+      nverts(0),
+      ntris(0),
+      mReferenceNode(0),
       bmin(0),
       bmax(0),
       m_offMeshConCount(0),
@@ -34,9 +34,12 @@ InputGeom::InputGeom(std::vector<Ogre::Entity*> srcMeshes)
     convertOgreEntities();
 
 
-
-
 // TODO You don't need to build this in single navmesh mode
+    buildChunkyTriMesh();
+}
+
+void InputGeom::buildChunkyTriMesh()
+{
     m_chunkyMesh = new rcChunkyTriMesh;
     if (!m_chunkyMesh)
     {
@@ -50,15 +53,40 @@ InputGeom::InputGeom(std::vector<Ogre::Entity*> srcMeshes)
     }
 }
 
-// TODO
-/*
 InputGeom::InputGeom(Ogre::Entity* srcMesh)
+    : nverts(0),
+      ntris(0),
+      mReferenceNode(0),
+      bmin(0),
+      bmax(0),
+      m_offMeshConCount(0),
+      m_volumeCount(0)
 {
-    std::vector<Ogre::Entity*> input;
-    input.push_back(srcMesh);
-    InputGeom(srcMesh);
+    if (! srcMesh)
+        return;
+
+    mSrcMeshes.push_back(srcMesh);
+
+
+    // Convert Ogre::Entity source meshes to a format that recast understands
+
+    //set the reference node
+    mReferenceNode = srcMesh->getParentSceneNode()->getCreator()->getRootSceneNode();
+
+
+    // Set the area where the navigation mesh will be build.
+    // Using bounding box of source mesh and specified cell size
+    calculateExtents();
+
+
+    // Convert ogre geometry (vertices, triangles and normals)
+    convertOgreEntities();
+
+
+// TODO You don't need to build this in single navmesh mode
+    buildChunkyTriMesh();
 }
-*/
+
 
 InputGeom::~InputGeom()
 {
@@ -73,9 +101,9 @@ InputGeom::~InputGeom()
 // Tile bounds need to be in world space coordinates
 InputGeom::InputGeom(std::vector<Ogre::Entity*> srcMeshes, const Ogre::AxisAlignedBox &tileBounds)
     : mSrcMeshes(srcMeshes),
-    nverts(0),
-    ntris(0),
-    mReferenceNode(0),
+      nverts(0),
+      ntris(0),
+      mReferenceNode(0),
       m_offMeshConCount(0),
       m_volumeCount(0)
 {
@@ -102,28 +130,15 @@ InputGeom::InputGeom(std::vector<Ogre::Entity*> srcMeshes, const Ogre::AxisAlign
     convertOgreEntities();
 
 
-    m_offMeshConCount = 0;
-    m_volumeCount = 0;
-
 // TODO You don't need to build this in single navmesh mode
-    m_chunkyMesh = new rcChunkyTriMesh;
-    if (!m_chunkyMesh)
-    {
-        Ogre::LogManager::getSingletonPtr()->logMessage("buildTiledNavigation: Out of memory 'm_chunkyMesh'.");
-        return;
-    }
-    if (!rcCreateChunkyTriMesh(getVerts(), getTris(), getTriCount(), 256, m_chunkyMesh))
-    {
-        Ogre::LogManager::getSingletonPtr()->logMessage("buildTiledNavigation: Failed to build chunky mesh.");
-        return;
-    }
+    buildChunkyTriMesh();
 }
 
 InputGeom::InputGeom(Ogre::TerrainGroup *terrainGroup, std::vector<Ogre::Entity*> srcMeshes)
     : mSrcMeshes(srcMeshes),
-    nverts(0),
-    ntris(0),
-    mReferenceNode(0),
+      nverts(0),
+      ntris(0),
+      mReferenceNode(0),
       m_offMeshConCount(0),
       m_volumeCount(0)
 {
@@ -405,6 +420,7 @@ InputGeom::InputGeom(Ogre::TerrainGroup *terrainGroup, std::vector<Ogre::Entity*
     }
 
 
+// TODO fix this (memory leak)
 /*
     //delete tempory arrays
     //TODO These probably could member varibles, this would increase performance slightly
@@ -461,18 +477,7 @@ InputGeom::InputGeom(Ogre::TerrainGroup *terrainGroup, std::vector<Ogre::Entity*
 
 
     // Build chunky tri mesh from triangles, used for tiled navmesh construction
-    m_chunkyMesh = new rcChunkyTriMesh;
-    if (!m_chunkyMesh)
-    {
-        Ogre::LogManager::getSingletonPtr()->logMessage("ERROR: buildTiledNavigation: Out of memory 'm_chunkyMesh'.");
-        return;
-    }
-    if (!rcCreateChunkyTriMesh(getVerts(), getTris(), getTriCount(), 256, m_chunkyMesh))
-    {
-        Ogre::LogManager::getSingletonPtr()->logMessage("ERROR: buildTiledNavigation: Failed to build chunky mesh.");
-        return;
-    }
-
+    buildChunkyTriMesh();
 }
 
 

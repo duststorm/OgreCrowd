@@ -201,6 +201,12 @@ private:
     void calculateExtents(void);
 
     /**
+      * Build chunky tri mesh.
+      * Only needed for building tiled navmeshes.
+      **/
+    void buildChunkyTriMesh(void);
+
+    /**
       * Convert triangles and verticies of ogre entities
       * to recast internal geometry format.
       **/
