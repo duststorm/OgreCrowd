@@ -1661,6 +1661,7 @@ void InputGeom::applyOrientation(Ogre::Quaternion orientation, Ogre::Vector3 piv
     Ogre::Matrix4 transform = Ogre::Matrix4(orientation); // Convert quaternion into regular transformation matrix
     Ogre::Vector3 vert;
     for (int i = 0; i < nverts; i++) {
+        // Obtain vertex (translated towards pivot point)
         vert.x = verts[3*i + 0] - pivot.x;
         vert.y = verts[3*i + 1] - pivot.y;
         vert.z = verts[3*i + 2] - pivot.z;
@@ -1668,6 +1669,7 @@ void InputGeom::applyOrientation(Ogre::Quaternion orientation, Ogre::Vector3 piv
         // Apply rotation to vector
         vert = transform * vert;
 
+        // Store the rotated vector and add translation away from pivot point again
         verts[3*i + 0] = vert.x + pivot.x;
         verts[3*i + 1] = vert.y + pivot.y;
         verts[3*i + 2] = vert.z + pivot.z;
@@ -1676,13 +1678,20 @@ void InputGeom::applyOrientation(Ogre::Quaternion orientation, Ogre::Vector3 piv
 
     // Transform extents
     Ogre::AxisAlignedBox bb;
-    bb.setMinimum(bmin[0], bmin[1], bmin[2]);
-    bb.setMaximum(bmax[0], bmax[1], bmax[2]);
+    bb.setMinimum(bmin[0] - pivot.x, bmin[1] - pivot.y, bmin[2] - pivot.z);
+    bb.setMaximum(bmax[0] - pivot.x, bmax[1] - pivot.y, bmax[2] - pivot.z);
 
     bb.transform(transform);
 
-    OgreRecast::OgreVect3ToFloatA(bb.getMinimum(), bmin);
-    OgreRecast::OgreVect3ToFloatA(bb.getMaximum(), bmax);
+    Ogre::Vector3 min = bb.getMinimum();
+    bmin[0] = min.x + pivot.x;
+    bmin[1] = min.y + pivot.y;
+    bmin[2] = min.z + pivot.z;
+
+    Ogre::Vector3 max = bb.getMaximum();
+    bmax[0] = max.x + pivot.x;
+    bmax[1] = max.y + pivot.y;
+    bmax[2] = max.z + pivot.z;
 }
 
 void InputGeom::move(Ogre::Vector3 translation)
