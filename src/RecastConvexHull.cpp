@@ -52,7 +52,7 @@ ConvexVolume::ConvexVolume(InputGeom* geom, float offset)
     rcVcopy(bmin, geom->getMeshBoundsMin());
     rcVcopy(bmax, geom->getMeshBoundsMax());
 
-//TODO offset is still broken for a lot of shapes! Fix this!
+//TODO offsetting is still broken for a lot of shapes! Fix this!
     // Offset convex hull if needed
     if(offset > 0.01f) {
         float offsetVerts[MAX_CONVEXVOL_PTS * 3]; // An offset hull is allowed twice the number of vertices

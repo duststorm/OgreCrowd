@@ -8,7 +8,9 @@ ConvexShapeObstacle::ConvexShapeObstacle(Ogre::Vector3 position, Ogre::Real offs
       mNode(0),
       mConvexHullDebug(0),
       mInputGeom(0),
-      mOffset(offset)
+      mOffset(offset),
+      debugMin(0),
+      debugMax(0)
 {
     // Randomly place a box or a pot as obstacle
     mNode = mSceneMgr->getRootSceneNode()->createChildSceneNode();
@@ -137,10 +139,38 @@ void ConvexShapeObstacle::updateOrientation(Ogre::Quaternion orientation)
 
         // Apply rotation to the inputGeometry and calculate a new 2D convex hull
         Ogre::Quaternion relativeOrientation = orientation * mOrientation.Inverse();    // Calculate relative rotation from current rotation to the specified one
+        orientation.normalise();    // Make sure quaternion is normalized
         mInputGeom->applyOrientation(relativeOrientation, mPosition);   // Rotate around obstacle position (center or origin point)
         if (mConvexHull)
             delete mConvexHull;
         mConvexHull = mInputGeom->getConvexHull(mOffset);
+
+        // Debug bounds
+        if(!debugMin) {
+            debugMin = mSceneMgr->getRootSceneNode()->createChildSceneNode();
+            Ogre::Entity *e = mSceneMgr->createEntity("Box.mesh");
+            debugMin->attachObject(e);
+            debugMin->setScale(0.1,0.1,0.1);
+        }
+        if(!debugMax) {
+            debugMax = mSceneMgr->getRootSceneNode()->createChildSceneNode();
+            Ogre::Entity *e = mSceneMgr->createEntity("Box.mesh");
+            debugMax->attachObject(e);
+            debugMax->setScale(0.1,0.1,0.1);
+        }
+        Ogre::Vector3 v;
+        OgreRecast::FloatAToOgreVect3(mConvexHull->bmin, v);
+        debugMin->setPosition(v);
+
+        OgreRecast::FloatAToOgreVect3(mConvexHull->bmax, v);
+        debugMax->setPosition(v);
+
+        /*
+        Ogre::AxisAlignedBox bb = InputGeom::getWorldSpaceBoundingBox(mEnt);
+        debugMin->setPosition(bb.getMinimum());
+        debugMax->setPosition(bb.getMaximum());
+        */
+
 
         // Add new hull as obstacle to tilecache
         mDetourTileCache->addConvexShapeObstacle(mConvexHull);

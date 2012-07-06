@@ -90,12 +90,20 @@ InputGeom::InputGeom(Ogre::Entity* srcMesh)
 }
 
 
+// TODO make sure I don't forget destructing some members
 InputGeom::~InputGeom()
 {
-    delete m_chunkyMesh;
+    if(m_chunkyMesh)
+        delete m_chunkyMesh;
+
     delete[] verts;
     delete[] normals;
     delete[] tris;
+    delete[] bmin;
+    delete[] bmax;
+
+    if(mOriginalBB)
+        delete mOriginalBB;
 }
 
 // Used to query scene to get input geometry of a tile directly
@@ -104,6 +112,8 @@ InputGeom::~InputGeom()
 InputGeom::InputGeom(std::vector<Ogre::Entity*> srcMeshes, const Ogre::AxisAlignedBox &tileBounds)
     : mSrcMeshes(srcMeshes),
       mTerrainGroup(0),
+      bmin(0),
+      bmax(0),
       nverts(0),
       ntris(0),
       mReferenceNode(0),
@@ -142,6 +152,8 @@ InputGeom::InputGeom(Ogre::TerrainGroup *terrainGroup, std::vector<Ogre::Entity*
       mTerrainGroup(terrainGroup),
       nverts(0),
       ntris(0),
+      bmin(0),
+      bmax(0),
       mReferenceNode(0),
       m_offMeshConCount(0),
       m_volumeCount(0)
@@ -724,10 +736,10 @@ void InputGeom::calculateExtents()
             max.z = max2.z;
     }
 
-    if(bmin) delete[] bmin;
-    if(bmax) delete[] bmax;
-    bmin = new float[3];
-    bmax = new float[3];
+    if(!bmin)
+        bmin = new float[3];
+    if(!bmax)
+        bmax = new float[3];
     OgreRecast::OgreVect3ToFloatA(min, bmin);
     OgreRecast::OgreVect3ToFloatA(max, bmax);
 }
@@ -1656,6 +1668,18 @@ void InputGeom::applyOrientation(Ogre::Quaternion orientation, Ogre::Vector3 piv
         return; // It makes no sense to do this if this inputGeom contains terrain!
     */
 
+    // Store original bounding box (because continuously rotating the BB makes it grow incessantly)
+    if(!mOriginalBB) {
+        mOriginalBB = new Ogre::AxisAlignedBox();
+        Ogre::Vector3 v;
+        OgreRecast::FloatAToOgreVect3(bmin, v);
+        mOriginalBB->setMinimum(v);
+        OgreRecast::FloatAToOgreVect3(bmax, v);
+        mOriginalBB->setMaximum(v);
+
+        mAccumulatedTransformation = Ogre::Matrix4::IDENTITY;
+    }
+
 
     // Apply transformation to all verts
     Ogre::Matrix4 transform = Ogre::Matrix4(orientation); // Convert quaternion into regular transformation matrix
@@ -1677,11 +1701,16 @@ void InputGeom::applyOrientation(Ogre::Quaternion orientation, Ogre::Vector3 piv
 
 
     // Transform extents
+    // Transform original bounding box, as continually rotating an AABB will lead to an ever growing BB
     Ogre::AxisAlignedBox bb;
+    bb.setMaximum(mOriginalBB->getMaximum());
+    bb.setMinimum(mOriginalBB->getMinimum());
+    // Store the accumulated transformation from original bounding box to current orientation
+    mAccumulatedTransformation = mAccumulatedTransformation * transform;
     bb.setMinimum(bmin[0] - pivot.x, bmin[1] - pivot.y, bmin[2] - pivot.z);
     bb.setMaximum(bmax[0] - pivot.x, bmax[1] - pivot.y, bmax[2] - pivot.z);
 
-    bb.transform(transform);
+    bb.transform(mAccumulatedTransformation);
 
     Ogre::Vector3 min = bb.getMinimum();
     bmin[0] = min.x + pivot.x;

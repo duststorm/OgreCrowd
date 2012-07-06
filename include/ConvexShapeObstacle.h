@@ -104,6 +104,9 @@ protected:
       * Visual debug representation of the calculated convex hull, in the form of a line drawing.
       **/
     Ogre::ManualObject *mConvexHullDebug;
+
+    Ogre::SceneNode *debugMin;
+    Ogre::SceneNode *debugMax;
 };
 
 #endif // CONVEXSHAPEOBSTACLE_H

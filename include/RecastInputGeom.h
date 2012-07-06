@@ -252,6 +252,9 @@ private:
       **/
     rcChunkyTriMesh *m_chunkyMesh;
 
+    Ogre::AxisAlignedBox *mOriginalBB;
+    Ogre::Matrix4 mAccumulatedTransformation;
+
 
     /// @name Off-Mesh connections.
     ///@{
