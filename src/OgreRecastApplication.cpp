@@ -418,20 +418,6 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
         obj->setQueryFlags(NAVMESH_MASK);
     }
 
-    // For testing obstacle transformations
-    if(arg.key == OIS::KC_T) {
-        // Rotate obstacles
-        for (std::vector<Obstacle*>::iterator iter = mObstacles.begin(); iter != mObstacles.end(); iter++) {
-            Obstacle *obst = *iter;
-            // Moving works, rotating obstacles does not work yet
-            Ogre::Degree rotation = Ogre::Degree(obst->getOrientation().getYaw());
-            rotation += Ogre::Degree(25); // Rotate 25 degrees
-            obst->updateOrientation(Ogre::Quaternion(rotation, Ogre::Vector3::UNIT_Y));
-//            Ogre::Vector3 pos = obst->getPosition() + Ogre::Vector3::UNIT_X;
-//            obst->updatePosition(pos);
-        }
-    }
-
     // SPACE places a new agent at cursor position
     if(arg.key == OIS::KC_SPACE
        && mApplicationState != STEER_AGENT  // no adding agents in steering mode (no mouse pointer)
@@ -505,21 +491,6 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
                 mLabelOverlay->setCaption("Simple navigation");
                 mCrosshair->show();
                 mWindow->getViewport(0)->setCamera(mCamera);
-        }
-    }
-
-    // Debug function: test which navmesh tiles are near the queried point
-    if(!SINGLE_NAVMESH && arg.key == OIS::KC_X) {
-        Ogre::Vector3 rayHitPoint;
-        if (queryCursorPosition(rayHitPoint)) {
-
-            std::vector<dtTileRef> tiles = mDetourTileCache->getTilesAroundPoint(rayHitPoint, 1);
-            Ogre::String strTiles = "";
-            for (std::vector<dtTileRef>::iterator iter = tiles.begin(); iter != tiles.end(); iter++) {
-                dtTileRef tile = *iter;
-                strTiles = strTiles + " " + Ogre::StringConverter::toString(tile);
-            }
-            Ogre::LogManager::getSingletonPtr()->logMessage("Found tiles for point "+Ogre::StringConverter::toString(rayHitPoint)+": "+ strTiles);
         }
     }
 
@@ -667,6 +638,42 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
     // Buffer input of W key for controlling first agent in steering demo mode
     if (arg.key == OIS::KC_W)
         mMoveForwardKeyPressed = true;
+
+
+
+    // Debug function: test which navmesh tiles are near the queried point
+    if(!SINGLE_NAVMESH && arg.key == OIS::KC_X) {
+        Ogre::Vector3 rayHitPoint;
+        if (queryCursorPosition(rayHitPoint)) {
+
+            std::vector<dtTileRef> tiles = mDetourTileCache->getTilesAroundPoint(rayHitPoint, 1);
+            Ogre::String strTiles = "";
+            for (std::vector<dtTileRef>::iterator iter = tiles.begin(); iter != tiles.end(); iter++) {
+                dtTileRef tile = *iter;
+                strTiles = strTiles + " " + Ogre::StringConverter::toString(tile);
+            }
+            Ogre::LogManager::getSingletonPtr()->logMessage("Found tiles for point "+Ogre::StringConverter::toString(rayHitPoint)+": "+ strTiles);
+        }
+    }
+
+    // For testing obstacle transformations
+    if(arg.key == OIS::KC_T) {
+        // Rotate obstacles
+        for (std::vector<Obstacle*>::iterator iter = mObstacles.begin(); iter != mObstacles.end(); iter++) {
+            Obstacle *obst = *iter;
+
+            // Rotate obstacle
+            Ogre::Degree rotation = Ogre::Degree(obst->getOrientation().getYaw());
+            rotation += Ogre::Degree(25); // Rotate 25 degrees
+            obst->updateOrientation(Ogre::Quaternion(rotation, Ogre::Vector3::UNIT_Y));
+
+            // Move obstacle
+//            Ogre::Vector3 pos = obst->getPosition() + Ogre::Vector3::UNIT_X;
+//            obst->updatePosition(pos);
+        }
+    }
+
+
 
     // Disable regular camera movement in agent steering demo mode
     if( mApplicationState == STEER_AGENT &&
