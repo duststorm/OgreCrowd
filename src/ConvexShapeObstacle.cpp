@@ -111,7 +111,11 @@ void ConvexShapeObstacle::updatePosition(Ogre::Vector3 position)
 
         // Now also set the position to the visual obstacle entity
         mNode->setPosition(position);
-        mConvexHullDebug->setVisible(false);    // Just hide it for now. It's attached to the root scenenode so we can't move it easily.
+
+        // Create new debug drawing of the convex hull
+        mConvexHullDebug->detachFromParent();
+        mSceneMgr->destroyManualObject(mConvexHullDebug);
+        mConvexHullDebug = InputGeom::drawConvexVolume(mConvexHull, mSceneMgr);
     }
 }
 
@@ -132,20 +136,26 @@ void ConvexShapeObstacle::updateOrientation(Ogre::Quaternion orientation)
             mInputGeom = new InputGeom(mEnt);
 
         // Apply rotation to the inputGeometry and calculate a new 2D convex hull
-// TODO doesn't work yet
-        mInputGeom->applyOrientation(orientation * mOrientation.Inverse());
+        Ogre::Quaternion relativeOrientation = orientation * mOrientation.Inverse();    // Calculate relative rotation from current rotation to the specified one
+        mInputGeom->applyOrientation(relativeOrientation, mPosition);   // Rotate around obstacle position (center or origin point)
         if (mConvexHull)
             delete mConvexHull;
         mConvexHull = mInputGeom->getConvexHull(mOffset);
 
         // Add new hull as obstacle to tilecache
         mDetourTileCache->addConvexShapeObstacle(mConvexHull);
+            // TODO it doesn't always properly detect which tiles to rebuild, the geometry is correct, however
 
         mOrientation = orientation;
 
 
         // Now also set the rotation to the visual obstacle entity
         mNode->setOrientation(orientation);
+
+        // Create new debug drawing of the convex hull
+        mConvexHullDebug->detachFromParent();
+        mSceneMgr->destroyManualObject(mConvexHullDebug);
+        mConvexHullDebug = InputGeom::drawConvexVolume(mConvexHull, mSceneMgr);
     }
 }
 

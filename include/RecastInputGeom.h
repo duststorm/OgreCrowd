@@ -91,8 +91,11 @@ public:
       * Apply the specified rotation to all vertices of this geometry.
       * Note that this does not affect the entities the inputGeom was
       * originally built from!
+      * Rotation will happen around specified pivot point (because inputGeom
+      * is in world-space coordinates and has no explicit reference to its
+      * origin or center point). Default value for pivot point is the world origin.
       **/
-    void applyOrientation(Ogre::Quaternion orientation);
+    void applyOrientation(Ogre::Quaternion orientation, Ogre::Vector3 pivot = Ogre::Vector3::ZERO);
 
     /**
       * Move all vertices of this inputGeom with the offset specified by the

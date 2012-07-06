@@ -1648,7 +1648,7 @@ void InputGeom::writeObj(Ogre::String filename)
 
 
 
-void InputGeom::applyOrientation(Ogre::Quaternion orientation)
+void InputGeom::applyOrientation(Ogre::Quaternion orientation, Ogre::Vector3 pivot)
 {
 // TODO allow this or not?
     /*
@@ -1661,16 +1661,16 @@ void InputGeom::applyOrientation(Ogre::Quaternion orientation)
     Ogre::Matrix4 transform = Ogre::Matrix4(orientation); // Convert quaternion into regular transformation matrix
     Ogre::Vector3 vert;
     for (int i = 0; i < nverts; i++) {
-        vert.x = verts[3*i + 0];
-        vert.y = verts[3*i + 1];
-        vert.z = verts[3*i + 2];
+        vert.x = verts[3*i + 0] - pivot.x;
+        vert.y = verts[3*i + 1] - pivot.y;
+        vert.z = verts[3*i + 2] - pivot.z;
 
         // Apply rotation to vector
         vert = transform * vert;
 
-        verts[3*i + 0] = vert.x;
-        verts[3*i + 1] = vert.y;
-        verts[3*i + 2] = vert.z;
+        verts[3*i + 0] = vert.x + pivot.x;
+        verts[3*i + 1] = vert.y + pivot.y;
+        verts[3*i + 2] = vert.z + pivot.z;
     }
 
 
