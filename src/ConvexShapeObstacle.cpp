@@ -37,7 +37,7 @@ ConvexShapeObstacle::ConvexShapeObstacle(Ogre::Vector3 position, Ogre::Real offs
         // This is so that it can calculate the world space coordinates for the object, which are needed for recast.
         mInputGeom = new InputGeom(mEnt);
 
-        // Create convex area obstacle in the detourTileCache
+        // Create convex  obstacle in the detourTileCache
         // Create convex hull with agent radios offset around the object (this is important so agents don't walk through the edges of the obstacle!)
         mConvexHull = mInputGeom->getConvexHull(mOffset);
     } else {
@@ -144,37 +144,10 @@ void ConvexShapeObstacle::updateOrientation(Ogre::Quaternion orientation)
         if (mConvexHull)
             delete mConvexHull;
         mConvexHull = mInputGeom->getConvexHull(mOffset);
-
-        // Debug bounds
-        if(!debugMin) {
-            debugMin = mSceneMgr->getRootSceneNode()->createChildSceneNode();
-            Ogre::Entity *e = mSceneMgr->createEntity("Box.mesh");
-            debugMin->attachObject(e);
-            debugMin->setScale(0.1,0.1,0.1);
-        }
-        if(!debugMax) {
-            debugMax = mSceneMgr->getRootSceneNode()->createChildSceneNode();
-            Ogre::Entity *e = mSceneMgr->createEntity("Box.mesh");
-            debugMax->attachObject(e);
-            debugMax->setScale(0.1,0.1,0.1);
-        }
-        Ogre::Vector3 v;
-        OgreRecast::FloatAToOgreVect3(mConvexHull->bmin, v);
-        debugMin->setPosition(v);
-
-        OgreRecast::FloatAToOgreVect3(mConvexHull->bmax, v);
-        debugMax->setPosition(v);
-
-        /*
-        Ogre::AxisAlignedBox bb = InputGeom::getWorldSpaceBoundingBox(mEnt);
-        debugMin->setPosition(bb.getMinimum());
-        debugMax->setPosition(bb.getMaximum());
-        */
-
+        mConvexHull->area = RC_NULL_AREA;   // Be sure to set the proper area for the convex shape!
 
         // Add new hull as obstacle to tilecache
         mDetourTileCache->addConvexShapeObstacle(mConvexHull);
-            // TODO it doesn't always properly detect which tiles to rebuild, the geometry is correct, however
 
         mOrientation = orientation;
 

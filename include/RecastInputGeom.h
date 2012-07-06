@@ -97,6 +97,13 @@ public:
       * Usually you specify the world position of the entity that this inputGeom was
       * built from as pivot point (or the center of the bounding box in case of multiple
       * entities).
+      *
+      * In this implementation, bounding boxes are not recalculated after a rotation (
+      * this is a little more difficult to do efficiently than it might seem).
+      * You cannot continuously rotate the same AABB because it will keep growing in size.
+      * You can either calculate a bounding box that fits the model in all possible rotations,
+      * or recalculate a bounding box from all verts (inefficient), or use a bounding box or
+      * convex hull from the physics engine to speed it up.
       **/
     void applyOrientation(Ogre::Quaternion orientation, Ogre::Vector3 pivot = Ogre::Vector3::ZERO);
 
@@ -251,9 +258,6 @@ private:
       * (tiles). Allows quick access to a part of the geometry, but requires more memory to store.
       **/
     rcChunkyTriMesh *m_chunkyMesh;
-
-    Ogre::AxisAlignedBox *mOriginalBB;
-    Ogre::Matrix4 mAccumulatedTransformation;
 
 
     /// @name Off-Mesh connections.

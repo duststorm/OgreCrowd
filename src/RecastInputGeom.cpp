@@ -101,9 +101,6 @@ InputGeom::~InputGeom()
     delete[] tris;
     delete[] bmin;
     delete[] bmax;
-
-    if(mOriginalBB)
-        delete mOriginalBB;
 }
 
 // Used to query scene to get input geometry of a tile directly
@@ -1668,18 +1665,6 @@ void InputGeom::applyOrientation(Ogre::Quaternion orientation, Ogre::Vector3 piv
         return; // It makes no sense to do this if this inputGeom contains terrain!
     */
 
-    // Store original bounding box (because continuously rotating the BB makes it grow incessantly)
-    if(!mOriginalBB) {
-        mOriginalBB = new Ogre::AxisAlignedBox();
-        Ogre::Vector3 v;
-        OgreRecast::FloatAToOgreVect3(bmin, v);
-        mOriginalBB->setMinimum(v);
-        OgreRecast::FloatAToOgreVect3(bmax, v);
-        mOriginalBB->setMaximum(v);
-
-        mAccumulatedTransformation = Ogre::Matrix4::IDENTITY;
-    }
-
 
     // Apply transformation to all verts
     Ogre::Matrix4 transform = Ogre::Matrix4(orientation); // Convert quaternion into regular transformation matrix
@@ -1701,26 +1686,10 @@ void InputGeom::applyOrientation(Ogre::Quaternion orientation, Ogre::Vector3 piv
 
 
     // Transform extents
-    // Transform original bounding box, as continually rotating an AABB will lead to an ever growing BB
-    Ogre::AxisAlignedBox bb;
-    bb.setMaximum(mOriginalBB->getMaximum());
-    bb.setMinimum(mOriginalBB->getMinimum());
-    // Store the accumulated transformation from original bounding box to current orientation
-    mAccumulatedTransformation = mAccumulatedTransformation * transform;
-    bb.setMinimum(bmin[0] - pivot.x, bmin[1] - pivot.y, bmin[2] - pivot.z);
-    bb.setMaximum(bmax[0] - pivot.x, bmax[1] - pivot.y, bmax[2] - pivot.z);
-
-    bb.transform(mAccumulatedTransformation);
-
-    Ogre::Vector3 min = bb.getMinimum();
-    bmin[0] = min.x + pivot.x;
-    bmin[1] = min.y + pivot.y;
-    bmin[2] = min.z + pivot.z;
-
-    Ogre::Vector3 max = bb.getMaximum();
-    bmax[0] = max.x + pivot.x;
-    bmax[1] = max.y + pivot.y;
-    bmax[2] = max.z + pivot.z;
+    // Abandoned for now: this means bounding boxes are not rotated any that you best
+    // rotate only pretty symmetrical shapes
+    // If this does not suffice you could use the bounding box or hull from the physics engine
+    // Or fully recalculate the bounding box from all vertices
 }
 
 void InputGeom::move(Ogre::Vector3 translation)
