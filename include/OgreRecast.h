@@ -242,11 +242,11 @@ public:
     /**
       * @see{_detailSampleDist}
       **/
-    inline int _getDetailSampleDist(void) { return _detailSampleDist; }
+    inline int _getDetailSampleDist(void) { return (int)_detailSampleDist; }
     /**
       * @see{detailSampleMaxError}
       **/
-    inline int _getDetailSampleMaxError(void) { return _detailSampleMaxError; }
+    inline int _getDetailSampleMaxError(void) { return (int)_detailSampleMaxError; }
 
 
 

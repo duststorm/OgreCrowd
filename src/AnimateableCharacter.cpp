@@ -2,7 +2,7 @@
 #include "OgreRecastApplication.h"
 
 AnimateableCharacter::AnimateableCharacter(Ogre::String name, Ogre::SceneManager *sceneMgr, OgreDetourCrowd* detourCrowd, bool debugDraw, Ogre::Vector3 position)
-    : Character::Character(name, sceneMgr, detourCrowd, position),
+    : Character(name, sceneMgr, detourCrowd, position),
     mAnimState(NULL),
     mAnimSpeedScale(1),
     mDebugNode(NULL)

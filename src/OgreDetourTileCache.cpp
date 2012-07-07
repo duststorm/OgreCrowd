@@ -81,7 +81,7 @@ bool OgreDetourTileCache::configure(InputGeom *inputGeom)
 
     // Most params are taken from OgreRecast::configure, except for these:
     m_cfg.tileSize = m_tileSize;
-    m_cfg.borderSize = m_cfg.walkableRadius + BORDER_PADDING; // Reserve enough padding.
+    m_cfg.borderSize = (int) (m_cfg.walkableRadius + BORDER_PADDING); // Reserve enough padding.
     m_cfg.width = m_cfg.tileSize + m_cfg.borderSize*2;
     m_cfg.height = m_cfg.tileSize + m_cfg.borderSize*2;
 
@@ -130,9 +130,9 @@ bool OgreDetourTileCache::configure(InputGeom *inputGeom)
     // Copy the rest of the parameters from OgreRecast config
     m_tcparams.cs = m_cfg.cs;
     m_tcparams.ch = m_cfg.ch;
-    m_tcparams.walkableHeight = m_cfg.walkableHeight;
-    m_tcparams.walkableRadius = m_cfg.walkableRadius;
-    m_tcparams.walkableClimb = m_cfg.walkableClimb;
+    m_tcparams.walkableHeight = (float) m_cfg.walkableHeight;
+    m_tcparams.walkableRadius = (float) m_cfg.walkableRadius;
+    m_tcparams.walkableClimb = (float) m_cfg.walkableClimb;
     m_tcparams.maxSimplificationError = m_cfg.maxSimplificationError;
 
     return initTileCache();

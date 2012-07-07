@@ -43,7 +43,6 @@ bool OgreRecastApplication::OBSTACLES = true;
 // Set to true to build simple single navmesh, set to false to build tiled navmesh using detourTileCache that supports temp obstacles
 // Note that for terrain it's not a good idea to construct a single navmesh, as it's much slower
 bool OgreRecastApplication::SINGLE_NAVMESH = false;
-
 // Set to true to also query dungeon mesh when clicking to set begin position or destination
 bool OgreRecastApplication::RAYCAST_SCENE = false;
 

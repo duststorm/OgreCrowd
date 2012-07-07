@@ -202,8 +202,8 @@ InputGeom::InputGeom(Ogre::TerrainGroup *terrainGroup, std::vector<Ogre::Entity*
     //if (trnCount == 0)
         // TODO return with error?
 
-    int pagesTotal = trnCount;
-    const int totalMeshes = pagesTotal + numNodes;
+	size_t pagesTotal = trnCount;
+    const size_t totalMeshes = pagesTotal + numNodes;
 
     nverts = 0;
     ntris = 0;
@@ -373,11 +373,11 @@ InputGeom::InputGeom(Ogre::TerrainGroup *terrainGroup, std::vector<Ogre::Entity*
     int prevVerticiesCount = 0;
     int prevIndexCountTotal = 0;
 
-    for (uint i = 0 ; i < pagesTotal ; ++i)
+    for (size_t i = 0 ; i < pagesTotal ; ++i)
     {
         //We don't need to transform terrain verts, they are already in world space!
         Ogre::Vector3 vertexPos;
-        for (uint j = 0 ; j < meshVertexCount[i] ; ++j)
+        for (size_t j = 0 ; j < meshVertexCount[i] ; ++j)
         {
             vertexPos = meshVertices[i][j];
             verts[vertsIndex] = vertexPos.x;
@@ -386,7 +386,7 @@ InputGeom::InputGeom(Ogre::TerrainGroup *terrainGroup, std::vector<Ogre::Entity*
             vertsIndex+=3;
         }
 
-        for (uint j = 0 ; j < meshIndexCount[i] ; j++)
+        for (size_t j = 0 ; j < meshIndexCount[i] ; j++)
         {
             tris[prevIndexCountTotal+j] = meshIndices[i][j]+prevVerticiesCount;
         }
@@ -414,7 +414,7 @@ InputGeom::InputGeom(Ogre::TerrainGroup *terrainGroup, std::vector<Ogre::Entity*
         //find the transform between the reference node and this node
         Ogre::Matrix4 transform = mReferenceNode->_getFullTransform().inverse() * (*iter)->getParentSceneNode()->_getFullTransform();
         Ogre::Vector3 vertexPos;
-        for (uint j = 0 ; j < meshVertexCount[ind] ; j++)
+        for (size_t j = 0 ; j < meshVertexCount[ind] ; j++)
         {
             vertexPos = transform * meshVertices[ind][j];
             verts[vertsIndex] = vertexPos.x;
@@ -423,7 +423,7 @@ InputGeom::InputGeom(Ogre::TerrainGroup *terrainGroup, std::vector<Ogre::Entity*
             vertsIndex+=3;
         }
 
-        for (uint j = 0 ; j < meshIndexCount[ind] ; j++)
+        for (size_t j = 0 ; j < meshIndexCount[ind] ; j++)
         {
             tris[prevIndexCountTotal+j] = meshIndices[ind][j]+prevVerticiesCount;
         }
@@ -438,7 +438,7 @@ InputGeom::InputGeom(Ogre::TerrainGroup *terrainGroup, std::vector<Ogre::Entity*
 /*
     //delete tempory arrays
     //TODO These probably could member varibles, this would increase performance slightly
-    for(uint i = 0; i < totalMeshes; ++i)
+    for(size_t i = 0; i < totalMeshes; ++i)
     {
         delete [] meshVertices[i];
 
@@ -447,7 +447,7 @@ InputGeom::InputGeom(Ogre::TerrainGroup *terrainGroup, std::vector<Ogre::Entity*
     // first 4 were created differently, without getMeshInformation();
     // throws an exception if we delete the first 4
     // TODO - FIX THIS MEMORY LEAK - its only small, but its still not good
-    for(uint i  = pagesTotal; i < totalMeshes; ++i)
+    for(size_t i  = pagesTotal; i < totalMeshes; ++i)
     {
         delete [] meshIndices[i];
     }
@@ -540,7 +540,7 @@ void InputGeom::convertOgreEntities()
         //find the transform between the reference node and this node
         Ogre::Matrix4 transform = mReferenceNode->_getFullTransform().inverse() * ent->getParentSceneNode()->_getFullTransform();
         Ogre::Vector3 vertexPos;
-        for (uint j = 0 ; j < meshVertexCount[i] ; j++)
+        for (size_t j = 0 ; j < meshVertexCount[i] ; j++)
         {
             vertexPos = transform*meshVertices[i][j];
             verts[vertsIndex] = vertexPos.x;
@@ -549,7 +549,7 @@ void InputGeom::convertOgreEntities()
             vertsIndex+=3;
         }
 
-        for (uint j = 0 ; j < meshIndexCount[i] ; j++)
+        for (size_t j = 0 ; j < meshIndexCount[i] ; j++)
         {
             tris[prevIndexCountTotal+j] = meshIndices[i][j]+prevVerticiesCount;
         }
@@ -643,7 +643,7 @@ void InputGeom::convertOgreEntities(Ogre::AxisAlignedBox &tileBounds)
         //find the transform between the reference node and this node
         Ogre::Matrix4 transform = mReferenceNode->_getFullTransform().inverse() * ent->getParentSceneNode()->_getFullTransform();
         Ogre::Vector3 vertexPos;
-        for (uint j = 0 ; j < meshVertexCount[i] ; j++)
+        for (size_t j = 0 ; j < meshVertexCount[i] ; j++)
         {
             vertexPos = transform*meshVertices[i][j];
             verts[vertsIndex] = vertexPos.x;
@@ -652,7 +652,7 @@ void InputGeom::convertOgreEntities(Ogre::AxisAlignedBox &tileBounds)
             vertsIndex+=3;
         }
 
-        for (uint j = 0 ; j < meshIndexCount[i] ; j++)
+        for (size_t j = 0 ; j < meshIndexCount[i] ; j++)
         {
             tris[prevIndexCountTotal+j] = meshIndices[i][j]+prevVerticiesCount;
         }
@@ -909,7 +909,7 @@ void InputGeom::getManualMeshInformation(const Ogre::ManualObject *manual,
     std::vector<Ogre::Vector3> returnVertices;
     std::vector<unsigned long> returnIndices;
     unsigned long thisSectionStart = 0;
-    for (int i=0; i<manual->getNumSections(); i++)
+    for (size_t i=0; i < manual->getNumSections(); i++)
     {
         Ogre::ManualObject::ManualObjectSection * section = manual->getSection(i);
         Ogre::RenderOperation * renderOp = section->getRenderOperation();
@@ -963,7 +963,7 @@ void InputGeom::getManualMeshInformation(const Ogre::ManualObject *manual,
 
                 returnIndices.reserve(returnIndices.size() + renderOp->indexData->indexCount);
 
-                for (int j = 0; j < renderOp->indexData->indexCount; j++)
+                for (size_t j = 0; j < renderOp->indexData->indexCount; j++)
                 {
                     unsigned long index;
                     //We also have got to remember that for a multi section object, each section has
@@ -1077,6 +1077,8 @@ ConvexVolume* InputGeom::getConvexVolume(int volIndex)
 {
     if (volIndex < 0 || volIndex > m_volumeCount)
         return NULL;
+
+	return m_volumes[volIndex];
 }
 
 

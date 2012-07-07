@@ -1,4 +1,4 @@
-#include "include/OgreRecastTerrainApplication.h"
+#include "OgreRecastTerrainApplication.h"
 #include <Terrain/OgreTerrain.h>
 
 OgreRecastTerrainApplication::OgreRecastTerrainApplication()

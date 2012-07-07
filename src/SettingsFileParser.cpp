@@ -1,4 +1,4 @@
-#include "include/SettingsFileParser.h"
+#include "SettingsFileParser.h"
 
 SettingsFileParser::SettingsFileParser(Ogre::String filePath)
     : mFilePath(filePath)

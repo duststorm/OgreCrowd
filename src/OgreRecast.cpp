@@ -111,8 +111,8 @@ void OgreRecast::configure(OgreRecastConfigParams params)
     m_cfg.minRegionArea = params._getMinRegionArea();
     m_cfg.mergeRegionArea = params._getMergeRegionArea();
     m_cfg.maxVertsPerPoly = m_vertsPerPoly;
-    m_cfg.detailSampleDist = params._getDetailSampleDist();
-    m_cfg.detailSampleMaxError = params._getDetailSampleMaxError();
+    m_cfg.detailSampleDist = (float) params._getDetailSampleDist();
+    m_cfg.detailSampleMaxError = (float) params._getDetailSampleMaxError();
 
 
     // Demo specific parameters
@@ -931,7 +931,7 @@ std::vector<Ogre::Vector3> OgreRecast::getManualObjectVertices(Ogre::ManualObjec
 {
     std::vector<Ogre::Vector3> returnVertices;
     unsigned long thisSectionStart = 0;
-    for (int i=0; i<manual->getNumSections(); i++)
+    for (size_t i=0; i < manual->getNumSections(); i++)
     {
         Ogre::ManualObject::ManualObjectSection * section = manual->getSection(i);
         Ogre::RenderOperation * renderOp = section->getRenderOperation();
