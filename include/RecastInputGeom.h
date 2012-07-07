@@ -7,6 +7,15 @@
 #include "RecastConvexHull.h"
 
 
+/**
+  * One node or chunk of the chunky tri mesh.
+  * Contains a 2D xz plane bounding box.
+  * n is the number of tris contained in this chunk.
+  * i is the starting index of the tris contained in this chunk.
+  * The actual tris are in the chunkyMesh object itself, in linear
+  * order per node, so that each node only needs the begin position
+  * and tri count to reference its tris.
+  **/
 struct rcChunkyTriMeshNode
 {
         float bmin[2], bmax[2];
@@ -62,15 +71,48 @@ int rcGetChunksOverlappingSegment(const rcChunkyTriMesh* cm, float p[2], float q
 class InputGeom
 {
 public:
+    /**
+      * Create recast compatible inputgeom from the specified entities. The entities have to be added to the
+      * scene before this call, as we need to calculate the world coordinates of the entity.
+      * Vertices and faces of the specified source entities are stored in this inputGeom, individual entity
+      * grouping and origin points are lost.
+      **/
     InputGeom(std::vector<Ogre::Entity*> srcMeshes);
+
+    /**
+      * @see{InputGeom(std::vector<Ogre::Entity*>)}
+      * The same, only for a single entity.
+      **/
     InputGeom(Ogre::Entity* srcMesh);
 
+    /**
+      * Construct inputGeom from the specified entities, only geometry that falls within the specified bounds
+      * is stored. Note: this is not done optimally, only bounding box intersections are used. But tile building
+      * is further optimized due to the use of the chunky tri mesh structure that is built within this inputGeom.
+      * Further this constructor is the same as @see{InputGeom(std::vector<Ogre::Entity*>)}
+      * Make sure to adapt your tileBounds fall together with the tilecache bounds so that they cover exactly the tiles you want to rebuild.
+      **/
     InputGeom(std::vector<Ogre::Entity*> srcMeshes, const Ogre::AxisAlignedBox &tileBounds);
 
+    /**
+      * Construct inputGeom from terrain geometry and specified entities.
+      * The entity part is the same as @see{InputGeom(std::vector<Ogre::Entity*>)}
+      * Terrain geometry is added from highest LOD level of terrain.
+      **/
     InputGeom(Ogre::TerrainGroup *terrainGroup, std::vector<Ogre::Entity*> srcMeshes = std::vector<Ogre::Entity*>());
+
+// TODO it would be easy to create inputGeom from only a subset of terrain verts (within xz bounding area) as height data is distributed in a uniform xz plane grid (just make sure to sample one extra vert outside the bounding area)
+    /**
+      * Create inputGeom from terrain and entity polys that fall within specified bounding box, for rebuilding only tiles that fall within the box.
+      * For terrain, only the x-z bounding plane of the box is looked at (height is ignored), and only the necessary tris from the terrain are copied into inputGeom.
+      * For entities only simple bounding box tests happen for determining whether an entity should be added in its entirety to this inputGeom or not.
+      * Make sure to adapt your tileBounds fall together with the tilecache bounds so that they cover exactly the tiles you want to rebuild.
+      **/
+    //InputGeom(const Ogre::AxisAlignedBox &tileBounds, Ogre::TerrainGroup *terrainGroup, std::vector<Ogre::Entity*> srcMeshes = std::vector<Ogre::Entity*>());
 
     /**
       * Output inputGeom to obj wavefront file.
+      * This can be used to test your inputGeom in the original recast demo (which loads .obj files).
       **/
     void writeObj(Ogre::String filename);
 
@@ -115,19 +157,62 @@ public:
 
     ~InputGeom();
 
+    /**
+      * Retrieves the vertices stored within this inputGeom. The verts are an array of floats in which each
+      * subsequent three floats are in order the x, y and z coordinates of a vert. The size of this array is
+      * always a multiple of three and is exactly 3*getVertCount().
+      **/
     float* getVerts(void);
+
+    /**
+      * The number of vertices stored in this inputGeom.
+      **/
     int getVertCount(void);
+
+    /**
+      * Retrieves the tris stored in this inputGeom.
+      * A tri is defined by a sequence of three indexes which refer to an index position in the getVerts() array.
+      * Similar to getVerts, the size of this array is a multitude of 3 and is exactly 3*getTriCount().
+      **/
     int* getTris(void);
+
+    /**
+      * The number of triangles stored in this inputGeom.
+      **/
     int getTriCount(void);
+
+    /**
+      * Retrieve the normals calculated for this inputGeom. Note that the normals are not exact and are not meant for rendering,
+      * but they are good enough for navmesh calculation. Each normal corresponds to one vertex from getVerts() with the same index.
+      * The size of the normals array is 3*getVertCount().
+      **/
     float* getNormals(void);
 
+    /**
+      * The axis aligned bounding box minimum of this input Geom.
+      **/
     float* getMeshBoundsMin(void);
+
+    /**
+      * The axis aligned bounding box maximum of this input Geom.
+      **/
     float* getMeshBoundsMax(void);
 
+    /**
+      * Determines whether this inputGeom has no geometry stored.
+      * Returns true if this inputGeom has no geometry.
+      **/
     bool isEmpty(void);
 
+    /**
+      * Use this to verify whether the generated geometry in this inputGeom matches the geometry in your scene.
+      * Draws all inputGeom vertices as points in the scene.
+      **/
     void debugMesh(Ogre::SceneManager *sceneMgr);
 
+    /**
+      * Maximum number of convex volume obstacles that can be added to this inputGeom.
+      **/
     static const int MAX_VOLUMES = 256;
 
 
@@ -161,10 +246,21 @@ public:
                             const Ogre::Quaternion &orient = Ogre::Quaternion::IDENTITY,
                             const Ogre::Vector3 &scale = Ogre::Vector3::UNIT_SCALE);
 
+    /**
+      * Debug function for drawing a convex hull as lines in the scene.
+      **/
     static Ogre::ManualObject* drawConvexVolume(ConvexVolume *vol, Ogre::SceneManager* sceneMgr, Ogre::ColourValue color=Ogre::ColourValue(0.5, 0.5, 0.5));
 
+    /**
+      * The chunky tri mesh generated for this inputGeom.
+      * Chunky tri meshes are only used when building tiled navmeshes, and are not essential,
+      * just more optimized.
+      **/
     inline const rcChunkyTriMesh* getChunkyMesh() const { return m_chunkyMesh; }
 
+    /**
+      * Raycast this inputGeometry.
+      **/
     bool raycastMesh(float* src, float* dst, float& tmin);
 
     /**
@@ -173,9 +269,13 @@ public:
       **/
     int hitTestConvexVolume(const float* sp, const float* sq);
 
+    /**
+      * Retrieve the convex volume obstacle with specified index from this inputGeom.
+      **/
     ConvexVolume* getConvexVolume(int volIdx);
 
 
+// TODO off-mesh connections not implemented yet
     /// @name Off-Mesh connections.
     ///@{
     int getOffMeshConnectionCount() const { return m_offMeshConCount; }
@@ -196,6 +296,7 @@ public:
     const ConvexVolume* const* getConvexVolumes() const { return m_volumes; }
     int addConvexVolume(ConvexVolume *vol);
     bool deleteConvexVolume(int i, ConvexVolume** = NULL);
+    // Not implemented
     void drawConvexVolumes(struct duDebugDraw* dd, bool hilight = false);
     int getConvexVolumeId(ConvexVolume *convexHull);
     ///@}
@@ -238,19 +339,66 @@ private:
       **/
     void convertOgreEntities(void);
 
+    /**
+      * Convert ogre entities whose bounding box intersects the specified bounds
+      * to inputGeom.
+      **/
     void convertOgreEntities(Ogre::AxisAlignedBox &tileBounds);
 
+    /**
+      * Recast input vertices
+      **/
     float* verts;
+
+    /**
+      * Number of verts
+      * The actual size of the verts array is 3*nverts
+      **/
     int nverts;
+
+    /**
+      * Recast input tris
+      * Tris are index references to verts array
+      **/
     int* tris;
+
+    /**
+      * The number of tris
+      * The actual size of the tris array is 3*ntris
+      **/
     int ntris;
+
+    /**
+      * Normals calculated for verts
+      * Normals are not entirely accurate but good enough for recast use.
+      * Size of the normals array is 3*nverts
+      **/
     float* normals;
 
+    /**
+      * Axis aligned bounding box of this inputGeom minimum.
+      **/
     float* bmin;
+
+    /**
+      * Axis aligned bounding box of this inputGeom maximum.
+      **/
     float* bmax;
 
+    /**
+      * Ogre entities this inputGeom was constructed from.
+      **/
     std::vector<Ogre::Entity*> mSrcMeshes;
+
+    /**
+      * Reference node to which the absolute coordinates of the verts in this inputGeom was calculated.
+      * Is usually the scene rootnode.
+      **/
     Ogre::SceneNode *mReferenceNode;
+
+    /**
+      * Terrain pages from which this inputGeom was constructed.
+      **/
     Ogre::TerrainGroup *mTerrainGroup;
 
     /**
@@ -260,6 +408,7 @@ private:
     rcChunkyTriMesh *m_chunkyMesh;
 
 
+// Not implemented yet
     /// @name Off-Mesh connections.
     ///@{
     static const int MAX_OFFMESH_CONNECTIONS = 256;

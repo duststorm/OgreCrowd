@@ -288,6 +288,7 @@ InputGeom::InputGeom(Ogre::TerrainGroup *terrainGroup, std::vector<Ogre::Entity*
              // Calculate world coordinates for terrain tile vertex. Terrain vertices are defined in tile-local coordinates.
              // add the vertex to the buffer
              meshVertices[trnCount][u] = Ogre::Vector3((Scale * x) + DeltaX, mapptr[(MapSize * z) + x], (Scale * -z) + DeltaZ);
+// TODO calculating a lower resolution LOD from the terrain is probably done by sampling a smaller amount of height points from the mapptr array
 
              i += 3;
              ++u;
