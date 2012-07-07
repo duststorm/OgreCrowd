@@ -520,6 +520,12 @@ private:
 };
 
 
+// Advance declarations, needed for expressing friendship relation
+class OgreDetourTileCache;
+class OgreDetourCrowd;
+
+
+
 /**
   * This class serves as a wrapper between Ogre and Recast/Detour
   * It's not a full wrapper, but instead offers the main features needed
@@ -528,7 +534,16 @@ private:
 class OgreRecast
 {
 public:
+    /**
+      * Use static geometry for debug drawing the navmesh.
+      * This is only useful when drawing tiled navmeshes (detourTileCache) and when there are
+      * a lot of tiles, otherwise this will result in a too high batchcount.
+      **/
     static bool STATIC_GEOM_DEBUG;
+
+    /**
+      * Set to true to print verbose messages about debug drawing.
+      **/
     static bool VERBOSE;
 
     /**
@@ -543,6 +558,26 @@ public:
       * (STATIC_GEOM_DEBUG).
       **/
     void update(void);
+
+    /**
+      * The agent radius for which this navmesh is built.
+      **/
+    float getAgentRadius(void);
+
+    /**
+      * The agent height for which this navmesh is built.
+      **/
+    float getAgentHeight(void);
+
+    /**
+      * The amount with which the drawn debug path is offset from the ground
+      **/
+    float getPathOffsetFromGround(void);
+
+    /**
+      * The amount with which the drawn debug navmesh polys are offset from the ground.
+      **/
+    float getNavmeshOffsetFromGround(void);
 
    /**
      * Cleanup recast parameters and variables.
@@ -567,6 +602,10 @@ public:
      **/
    bool NavMeshBuild(std::vector<Ogre::Entity*> srcMeshesA);
 
+   /**
+     * Build a navmesh from the specified input geometry.
+     * @see{OgreRecast::NavMeshBuild(std::vector<Ogre::Entity*>)}
+     **/
    bool NavMeshBuild(InputGeom* input);
 
    /**
@@ -590,7 +629,8 @@ public:
    int FindPath(float* pStartPos, float* pEndPos, int nPathSlot, int nTarget);
 
    /**
-     * Same as above, but works with Ogre::Vector3 points.
+     * Find a path between start and end position, works with Ogre::Vector3 points.
+     * @see{OgreRecast::FindPath(float*, float*, int, int)}
      **/
    int FindPath(Ogre::Vector3 startPos, Ogre::Vector3 endPos, int nPathSlot, int nTarget);
 
@@ -625,8 +665,10 @@ public:
                              const int maxpolys, const unsigned short *regions, const int nvp,
                              const float cs, const float ch, const float *orig, bool colorRegions=true);
 
-   void drawPolyMesh(const struct rcPolyMesh &mesh, bool colorRegions=true);
 
+   /**
+     * Remove debug drawn navmesh for navmesh tile with specified (compressed detourtile) reference.
+     **/
    void removeDrawnNavmesh(unsigned int tileRef);
 
    /**
@@ -666,13 +708,36 @@ public:
      **/
    Ogre::String getPathFindErrorMsg(int errorCode);
 
+   /**
+     * The configuration of the recast navmesh.
+     **/
+   rcConfig getConfig(void);
+
+
+
+   // helper debug drawing stuff
+   Ogre::ManualObject* m_pRecastMOWalk ;
+   Ogre::ManualObject* m_pRecastMONeighbour ;
+   Ogre::ManualObject* m_pRecastMOBoundary ;
+   Ogre::ManualObject* m_pRecastMOPath ;
+   Ogre::SceneNode*      m_pRecastSN ;
+
+   Ogre::SceneManager* m_pSceneMgr;
+
+
+protected:
+   /**
+     * Draw the specified recast poly mesh to scene for debugging.
+     **/
+   void drawPolyMesh(const struct rcPolyMesh &mesh, bool colorRegions=true);
+
 
    unsigned char* m_triareas;
    rcHeightfield* m_solid;
    rcCompactHeightfield* m_chf;
    rcContourSet* m_cset;
    rcPolyMesh* m_pmesh;
-   rcConfig m_cfg;   
+   rcConfig m_cfg;
    rcPolyMeshDetail* m_dmesh;
 
    class InputGeom* m_geom;
@@ -707,14 +772,9 @@ public:
    unsigned int m_offMeshConId[MAX_OFFMESH_CONNECTIONS];
    int m_offMeshConCount;
 
+
    // helper debug drawing stuff
    int m_nAreaCount ;
-   Ogre::ManualObject* m_pRecastMOWalk ;
-   Ogre::ManualObject* m_pRecastMONeighbour ;
-   Ogre::ManualObject* m_pRecastMOBoundary ;
-   Ogre::ManualObject* m_pRecastMOPath ;
-   Ogre::SceneNode*      m_pRecastSN ;
-
    Ogre::StaticGeometry *m_sg;
    bool m_rebuildSg;
 
@@ -756,7 +816,6 @@ public:
 
 
    Ogre::LogManager* m_pLog;
-   Ogre::SceneManager* m_pSceneMgr;
 
 private:
    /**
@@ -764,6 +823,14 @@ private:
      * Does not retrieve faces, as it is intended to retrieve line drawings.
      **/
    std::vector<Ogre::Vector3> getManualObjectVertices(Ogre::ManualObject *man);
+
+
+
+   // Friend OgreDetourTileCache so it can access the navmesh of this component
+   friend class OgreDetourTileCache;
+
+   // Friend OgreDetourCrowd so it can access the navmesh of this component
+   friend class OgreDetourCrowd;
 };
 
 #endif // #ifndef __OgreRecast_h_

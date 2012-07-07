@@ -8,9 +8,7 @@ ConvexShapeObstacle::ConvexShapeObstacle(Ogre::Vector3 position, Ogre::Real offs
       mNode(0),
       mConvexHullDebug(0),
       mInputGeom(0),
-      mOffset(offset),
-      debugMin(0),
-      debugMax(0)
+      mOffset(offset)
 {
     // Randomly place a box or a pot as obstacle
     mNode = mSceneMgr->getRootSceneNode()->createChildSceneNode();

@@ -836,6 +836,31 @@ void OgreRecast::CreateRecastPolyMesh(const Ogre::String name, const unsigned sh
        Ogre::LogManager::getSingletonPtr()->logMessage("Added navmesh part "+name+" to the scene.");
 }
 
+float OgreRecast::getAgentRadius()
+{
+    return m_agentRadius;
+}
+
+float OgreRecast::getAgentHeight()
+{
+    return m_agentHeight;
+}
+
+float OgreRecast::getPathOffsetFromGround()
+{
+    return m_pathOffsetFromGround;
+}
+
+float OgreRecast::getNavmeshOffsetFromGround()
+{
+    return m_navMeshOffsetFromGround;
+}
+
+rcConfig OgreRecast::getConfig()
+{
+    return m_cfg;
+}
+
 void OgreRecast::update()
 {
     // Fully rebuild static geometry after a reset (when tiles should be removed)

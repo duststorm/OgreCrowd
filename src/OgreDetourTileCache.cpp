@@ -894,6 +894,7 @@ void OgreDetourTileCache::updateFromGeometry(InputGeom *inputGeom, const Ogre::A
     int ntouched = 0;
 //    m_tileCache->calcTightTileBounds();
     m_tileCache->queryTiles(bmin, bmax, touched, &ntouched, DT_MAX_TOUCHED_TILES);
+        // We use queryTiles to find affected tiles (within bounding box), however if no tiles are added in that area nothing is found
 
     // Rebuild affected tiles
 // TODO maybe defer this and timeslice it, like happend in dtTileCache with tempObstacle updates

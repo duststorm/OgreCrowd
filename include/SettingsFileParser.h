@@ -5,9 +5,17 @@
 
 #include <Ogre.h>
 
+/**
+  * Simple settings parser for the config file.
+  * Quickly put together mainly for purposes of this demo, so that settings
+  * can be changed without recompiling.
+  **/
 class SettingsFileParser
 {
 public:
+    /**
+      * Create a parser and parse the specified settings file.
+      **/
     SettingsFileParser(Ogre::String filePath);
 
     bool addOption(Ogre::String sectionName, Ogre::String name, Ogre::String value);

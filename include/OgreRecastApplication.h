@@ -25,9 +25,17 @@ This source file is part of the
 #include "OgreDetourTileCache.h"
 #include "Obstacle.h"
 
+/**
+  * This is the original demo application and the most simple one. I recommend starting with this one.
+  * This is also referred to as the "Dungeon demo". Shows the use of recast navmeshes in the familiar dungeon
+  * scene that comes with the official recast demo.
+  **/
 class OgreRecastApplication : public BaseApplication
 {
 public:
+    /**
+      * Create an instance of the Dungeon Demo.
+      **/
     OgreRecastApplication(void);
     virtual ~OgreRecastApplication(void);
 
@@ -36,6 +44,13 @@ public:
       **/
     static void loadConfig(Ogre::String configFileName);
 
+    /**
+      * Perform a ray query from the cursor (center of the screen) to the scene, with specified query mask.
+      * Will return true if something is hit, otherwise false.
+      * When clipToNavmesh is set to true it will try to find the nearest point on the navmesh near the intersection point, and fall back to returning the
+      * regular hitpoint otherwise. If set to false it will always just return the exact hitpoint.
+      * When rayHitObject is a valid pointer it will contain a reference to movable that was hit.
+      **/
     virtual bool queryCursorPosition(Ogre::Vector3 &rayHitPoint, unsigned long queryflags = NAVMESH_MASK, bool clipToNavmesh = true, Ogre::MovableObject **rayHitObject = NULL);
 
     /**
@@ -285,16 +300,41 @@ protected:
       **/
     Ogre::SceneNode *mNavMeshNode;
 
+    /**
+      * List of all entities used for debugging.
+      * There are hidden when debug drawing is disabled.
+      **/
     std::vector<Ogre::Entity*> mDebugEntities;
 
+    /**
+      * List of all temporary obstacles currently added to the scene.
+      **/
     std::vector<Obstacle*> mObstacles;
 
+    /**
+      * List of all walkable objects (pallets) added to the scene.
+      **/
     std::vector<Ogre::Entity*> mWalkableObjects;
 
+    /**
+      * List of all entities in the scene that are used to construct a navmesh from.
+      * (the dungeon and the pots)
+      **/
     std::vector<Ogre::Entity*> mNavmeshEnts;
 
+    /**
+      * Refers to the scenenode that holds the gate that can be opened and closed.
+      **/
     Ogre::SceneNode *mGate;
+
+    /**
+      * Convex hull of the gate, used for creating a convex obstacle when the gate is closed.
+      **/
     ConvexVolume *mGateHull;
+
+    /**
+      * Determines whether the gate is closed. True when the gate is closed, false when it is open.
+      **/
     bool mGateClosed;
 };
 

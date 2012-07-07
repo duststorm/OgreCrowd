@@ -1,6 +1,7 @@
 #include "CylinderObstacle.h"
 #include "OgreRecastApplication.h"
 
+
 CylinderObstacle::CylinderObstacle(Ogre::Vector3 position, OgreDetourTileCache *detourTileCache)
     : Obstacle(detourTileCache),
       mPosition(position),

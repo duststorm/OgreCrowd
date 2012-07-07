@@ -42,7 +42,7 @@ AnimateableCharacter::AnimateableCharacter(Ogre::String name, Ogre::SceneManager
 
     // Debug draw agent
     mDebugNode = mNode->createChildSceneNode(name+"AgentDebugNode");
-    mDebugNode->setPosition(0, mDetourCrowd->m_recast->m_navMeshEdgesOffsetFromGround, 0);
+    mDebugNode->setPosition(0, mDetourCrowd->m_recast->getNavmeshOffsetFromGround(), 0);
     Ogre::Entity* debugEnt = sceneMgr->createEntity(name+"AgentDebug", "Cylinder.mesh");
     debugEnt->setMaterialName("Cylinder/Wires/LightBlue");
     mDebugNode->attachObject(debugEnt);

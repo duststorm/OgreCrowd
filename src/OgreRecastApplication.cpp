@@ -184,7 +184,7 @@ void OgreRecastApplication::createScene(void)
         }
 
         // Create a convex obstacle for the gate using its world-coordinate bounding box
-        mGateHull = new ConvexVolume(InputGeom::getWorldSpaceBoundingBox(gateE), mRecast->m_agentRadius);
+        mGateHull = new ConvexVolume(InputGeom::getWorldSpaceBoundingBox(gateE), mRecast->getAgentRadius());
         // Note: it's important to choose a proper area type you want to mark with the polygon! I just set it to "unwalkable"
         mGateHull->area = RC_NULL_AREA;   // Set area described by convex polygon to "unwalkable"
         mGateHull->hmin = mGateHull->hmin - 0.3;    // Extend a bit downwards so it hits the ground (navmesh) for certain. (Maybe this is not necessary)
@@ -220,8 +220,8 @@ void OgreRecastApplication::createScene(void)
 
     // PLACE PATH BEGIN AND END MARKERS
     if(mDebugDraw) {
-        beginPos.y = beginPos.y + mRecast->m_navMeshOffsetFromGround;
-        endPos.y = endPos.y + mRecast->m_navMeshOffsetFromGround;
+        beginPos.y = beginPos.y + mRecast->getNavmeshOffsetFromGround();
+        endPos.y = endPos.y + mRecast->getNavmeshOffsetFromGround();
     }
     getOrCreateMarker("BeginPos", "Cylinder/Wires/DarkGreen")->setPosition(beginPos);
     getOrCreateMarker("EndPos", "Cylinder/Wires/Brown")->setPosition(endPos);
@@ -386,7 +386,7 @@ bool OgreRecastApplication::mousePressed( const OIS::MouseEvent &arg, OIS::Mouse
 
         if(markerNode != NULL) {
             if(mDebugDraw)
-                rayHitPoint.y = rayHitPoint.y + mRecast->m_navMeshOffsetFromGround;
+                rayHitPoint.y = rayHitPoint.y + mRecast->getNavmeshOffsetFromGround();
             markerNode->setPosition(rayHitPoint);
         }
 
@@ -710,7 +710,7 @@ Ogre::SceneNode* OgreRecastApplication::getOrCreateMarker(Ogre::String name, Ogr
         result->attachObject(ent);
 
         // Set marker scale to size of agent
-        result->setScale(mRecast->m_agentRadius*2, mRecast->m_agentHeight,mRecast->m_agentRadius*2);
+        result->setScale(mRecast->getAgentRadius()*2, mRecast->getAgentHeight(),mRecast->getAgentRadius()*2);
 
         ent->setQueryFlags(DEFAULT_MASK);   // Exclude from ray queries
     }
@@ -822,10 +822,11 @@ void OgreRecastApplication::setFollowTargetForCrowd(Ogre::Vector3 targetDestinat
 
 void OgreRecastApplication::setDestinationForAllAgents(Ogre::Vector3 destination, bool adjustExistingPath)
 {
+    // Set destination for all agents in the crowd
     mDetourCrowd->setMoveTarget(destination, adjustExistingPath);
         // TODO: there is a bug here that sometimes only the first agent will receive this target update
 
-    // Update the destination variable of each character (uses friend relationship with Character)
+    // Update the destination variable of each character to reflect the change to the crowd agents (uses friend relationship with Character)
     for(std::vector<Character*>::iterator iter = mCharacters.begin(); iter != mCharacters.end(); iter++) {
         (*iter)->setDestination(destination);   // This happens here because DetourCrowd does not manage Characters, only agents.
     }
@@ -842,7 +843,7 @@ bool OgreRecastApplication::queryCursorPosition(Ogre::Vector3 &rayHitPoint, unsi
 
         if ( Ogre::StringUtil::startsWith(hitObject->getName(), "recastmowalk", true) ) {
             // Compensate for the fact that the ray-queried navmesh is drawn a little above the ground
-            rayHitPoint.y = rayHitPoint.y - mRecast->m_navMeshOffsetFromGround;
+            rayHitPoint.y = rayHitPoint.y - mRecast->getNavmeshOffsetFromGround();
         } else if(clipToNavmesh) {
             // Queried point was not on navmesh, find nearest point on the navmesh (if not possible returns exact point)
             mRecast->findNearestPointOnNavmesh(rayHitPoint, rayHitPoint);
@@ -1001,11 +1002,11 @@ void OgreRecastApplication::setDebugVisibility(bool visible)
     Ogre::Vector3 beginPos= beginMarker->getPosition();
     Ogre::Vector3 endPos= endMarker->getPosition();
     if (visible) {
-        beginPos.y = beginPos.y + mRecast->m_navMeshEdgesOffsetFromGround;
-        endPos.y = endPos.y + mRecast->m_navMeshEdgesOffsetFromGround;
+        beginPos.y = beginPos.y + mRecast->getNavmeshOffsetFromGround();
+        endPos.y = endPos.y + mRecast->getNavmeshOffsetFromGround();
     } else {
-        beginPos.y = beginPos.y - mRecast->m_navMeshEdgesOffsetFromGround;
-        endPos.y = endPos.y - mRecast->m_navMeshEdgesOffsetFromGround;
+        beginPos.y = beginPos.y - mRecast->getNavmeshOffsetFromGround();
+        endPos.y = endPos.y - mRecast->getNavmeshOffsetFromGround();
     }
     beginMarker->setPosition(beginPos);
     endMarker->setPosition(endPos);

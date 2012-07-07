@@ -18,6 +18,13 @@
 class OgreDetourCrowd
 {
 public:
+    /**
+      * Initialize a detour crowd that will manage agents on the specified
+      * recast navmesh. It does not matter how this navmesh is constructed
+      * (either with OgreRecast directly or with DetourTileCache).
+      * Parameters such as agent dimensions will be taken from the specified
+      * recast component.
+      **/
     OgreDetourCrowd(OgreRecast *recast);
     ~OgreDetourCrowd(void);
 
@@ -185,7 +192,7 @@ public:
     dtObstacleAvoidanceDebugData* m_vod;
 
 
-    // Agent parameters
+    // Agent configuration parameters
     bool m_anticipateTurns;
     bool m_optimizeVis;
     bool m_optimizeTopo;

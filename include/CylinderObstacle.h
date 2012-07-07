@@ -13,6 +13,10 @@
 class CylinderObstacle : public Obstacle
 {
 public:
+    /**
+      * Construct a simple cylindrical obstacle with radius TEMP_OBSTACLE_RADIUS,
+      * at specified position.
+      **/
     CylinderObstacle(Ogre::Vector3 position, OgreDetourTileCache *detourTileCache);
     ~CylinderObstacle();
 

@@ -4,7 +4,8 @@
 
 
 /**
-  * This file sets up all definitions needed by Recast/Detour
+  * This file sets up all definitions needed by Recast/Detour.
+  * Most of it is just taken from the official demo application.
   **/
 
 // recast/detour stuff

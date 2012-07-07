@@ -13,11 +13,16 @@
 class Obstacle
 {
 public:
+    /**
+      * Construct an obstacle that will be added to the specified detour Tilecache.
+      **/
     Obstacle(OgreDetourTileCache *detourTileCache);
     virtual ~Obstacle();
 
     /**
       * No use at the moment.
+      * The future plan was to use it to do deferred updates of obstacle position/rotation.
+      * Not sure whether it has much use, however.
       **/
     virtual void update(long time) = 0;
 

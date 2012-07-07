@@ -14,6 +14,12 @@ class OgreRecastApplication;    //Advance declaration
 class Character
 {
 public:
+    /**
+      * Create a character with specified name, for which entities will be drawn on the specified scene manager.
+      * detourCrowd specifies the detour crowd manager on which an agent for this character will be created
+      * (make sure you don't create more characters than MAX_AGENTS).
+      * Position defines initial position the character has to be placed on (should be a valid position on the navmesh).
+      **/
     Character(Ogre::String name, Ogre::SceneManager* sceneMgr, OgreDetourCrowd* detourCrowd, Ogre::Vector3 position = Ogre::Vector3::ZERO);
 
     /**
@@ -43,7 +49,14 @@ public:
     virtual Ogre::Real getAgentRadius(void);
 
     /**
-      * Update this character for drawing a new frame
+      * Update this character for drawing a new frame.
+      * Updates one tick in the render loop.
+      * In order for the agents to be updated, you first need to call the detourCrowd
+      * update function.
+      * What is updated specifically is up to a specific implementation of Character,
+      * but at the very least the position in the scene should be updated to reflect
+      * the detour agent position (possibly with additional physics engine clipping
+      * and collision testing).
       **/
     virtual void update(Ogre::Real timeSinceLastFrame) = 0;
 
@@ -146,7 +159,8 @@ public:
     virtual Ogre::Vector3 getLookingDirection(void);
 
     /**
-      * Set to true to show visual recast debugging geometry.
+      * Set to true to show visual recast debugging geometry to represent
+      * the agent of this character..
       * Will be initialized to OgreRecastApplication::getDebugDrawing()
       * at character construction.
       **/
@@ -174,6 +188,13 @@ public:
       **/
     void setDetourTileCache(OgreDetourTileCache* dtTileCache);
 
+    /**
+      * Makes the character clip to the terrain height of the specified
+      * terrain set. Specify NULL as terrainGroup to disable.
+      * Height clipping only happens for the visiual character entity,
+      * the position of the detour crowd agent that controls it is
+      * not changed.
+      **/
     void clipToTerrain(Ogre::TerrainGroup *terrainGroup);
 
 protected:
@@ -184,6 +205,9 @@ protected:
 
     /**
       * Set destination member variable directly without updating the agent state.
+      * Usually you should call updateDestination() externally, unless you are controlling
+      * the agents directly and need to update the corresponding character class to reflect
+      * the change in state (see OgreRecastApplication friendship).
       **/
     void setDestination(Ogre::Vector3 destination);
 
@@ -264,10 +288,23 @@ protected:
       **/
     dtTileRef mTempObstacle;
 
-
+    /**
+      * Helper to fix the height of the character to the terrain height after
+      * a position update. Only the visual character entity's height will be
+      * altered, not that of the detour crowd agent that controls it.
+      **/
     virtual void clipToTerrainHeight(void);
 
+    /**
+      * The terraingroup the character height will be clipped to.
+      * Set to NULL to disable this feature.
+      **/
     Ogre::TerrainGroup *mClipTo;
+
+    /**
+      * Ray query used to query the terrain height when terrain clipping is
+      * enabled. This value is stored as a member for optimization.
+      **/
     Ogre::RaySceneQuery *mRaySceneQuery;
 
 

@@ -40,7 +40,7 @@ OgreDetourCrowd::OgreDetourCrowd(OgreRecast *recast)
     dtCrowd* crowd = m_crowd;
             if (nav && crowd && crowd->getAgentCount() == 0)
             {
-                    crowd->init(MAX_AGENTS, m_recast->m_agentRadius, nav);
+                    crowd->init(MAX_AGENTS, m_recast->getAgentRadius(), nav);
 
                     // Make polygons with 'disabled' flag invalid.
                     crowd->getEditableFilter()->setExcludeFlags(SAMPLE_POLYFLAGS_DISABLED);
@@ -92,12 +92,12 @@ OgreDetourCrowd::~OgreDetourCrowd()
 
 Ogre::Real OgreDetourCrowd::getAgentHeight()
 {
-    return m_recast->m_agentHeight;
+    return m_recast->getAgentHeight();
 }
 
 Ogre::Real OgreDetourCrowd::getAgentRadius()
 {
-    return m_recast->m_agentRadius;
+    return m_recast->getAgentRadius();
 }
 
 void OgreDetourCrowd::updateTick(const float dt)

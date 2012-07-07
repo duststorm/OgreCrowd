@@ -191,8 +191,8 @@ void OgreRecastTerrainApplication::createScene()
 
     // PLACE PATH BEGIN AND END MARKERS
     if(mDebugDraw) {
-        beginPos.y = beginPos.y + mRecast->m_navMeshOffsetFromGround;
-        endPos.y = endPos.y + mRecast->m_navMeshOffsetFromGround;
+        beginPos.y = beginPos.y + mRecast->getNavmeshOffsetFromGround();
+        endPos.y = endPos.y + mRecast->getNavmeshOffsetFromGround();
     }
     getOrCreateMarker("BeginPos", "Cylinder/Wires/DarkGreen")->setPosition(beginPos);
     getOrCreateMarker("EndPos", "Cylinder/Wires/Brown")->setPosition(endPos);
@@ -346,8 +346,8 @@ bool OgreRecastTerrainApplication::keyPressed( const OIS::KeyEvent &arg )
             float boxSize = 50;
 
             Ogre::AxisAlignedBox box;
-            box.setMinimum(rayHitPoint.x - boxSize/2, mRecast->m_cfg.bmin[1], rayHitPoint.z - boxSize/2);
-            box.setMaximum(rayHitPoint.x + boxSize/2, mRecast->m_cfg.bmax[1], rayHitPoint.z + boxSize/2);
+            box.setMinimum(rayHitPoint.x - boxSize/2, mRecast->getConfig().bmin[1], rayHitPoint.z - boxSize/2);
+            box.setMaximum(rayHitPoint.x + boxSize/2, mRecast->getConfig().bmax[1], rayHitPoint.z + boxSize/2);
 
 // TODO eventually you will run out of memory (either because of GPU memory of inefficient debug drawing geometry, or CPU ram due to tilecache and navmesh becoming too large). Add features for caching out unused tiles.
             // Build tiles around cursor

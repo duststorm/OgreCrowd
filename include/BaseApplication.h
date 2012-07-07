@@ -34,6 +34,10 @@ This source file is part of the
 #include <SdkTrays.h>
 #include <SdkCameraMan.h>
 
+/**
+  * Practically unchanged (except for some minor details) version of the Ogre3d sample
+  * application framework baseclass.
+  **/
 class BaseApplication : public Ogre::FrameListener, public Ogre::WindowEventListener, public OIS::KeyListener, public OIS::MouseListener, OgreBites::SdkTrayListener
 {
 public:
@@ -44,10 +48,13 @@ public:
 
     /**
       * Set to true to prevent the application from locking/grabbing the mouse when stopping at breakpoints using
-      * a debugger.
+      * a debugger. Probably only useful on linux and MAX OS.
       **/
     static bool DISABLE_MOUSE_GRAB;
 
+    /**
+      * Set to true to restore config from ogre.cfg if it is found. Set to false to always pop up the configuration window.
+      **/
     static bool RESTORE_CONFIG;
 
 protected:
