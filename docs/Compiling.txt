@@ -1,0 +1,17 @@
+Compiling the OgreRecast demo
+-----------------------------
+
+The project currently contains a qtcreator and visual studio 2010 project file, which can be used for building. A CMake setup is on the todo list.
+
+Either build the application in the project root folder, or copy the following files to the distribution folder:
+
+OgreRecastDemo.cfg
+resources.cfg
+resources/
+README
+
+For the windows build you will need to copy the Ogre .dlls and the usual dependencies (such as OIS.dll, cg.dll) to the distribution folder.
+
+The application is strongly based on the ogre tutorial framework so you can mostly follow the instructions for setting up a build environment for the tutorial applications.
+The Ogre Appwizards should get you started easily too.
+There are no extra dependencies except for those that Ogre and the tutorial applications require. All detournavigation sources are directly included into the project, so it suffices to add all headers and source files to your project or build config.

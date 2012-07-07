@@ -1,0 +1,77 @@
+Getting started with the OgreRecast demo
+----------------------------------------
+
+What files are what?
+
+All classes directly in the src/ folder, along with the headers directly in the 
+include/ folder belong to the recast with Ogre integration demo.
+All other subfolders of src/ and include/ contain the original source files from
+the recastnavigation library, and are mainly unaltered.
+
+The recastnavigation sources are unaltered except for some minor changes to 
+include paths. The exact differences from the official recastnavigation trunk 
+can be seen in the file "patchRecastnavigationSvn.patch". 
+This patch can also be used to update the recast code with future versions, the 
+"updateRecastnavigationSvn.sh" script can help you automate this.
+
+
+Files in this package. Where to look first?
+
+OgreRecastApplication			The first demo application you should look at
+									Also called the "Dungeon demo".
+									It's a good idea to start with the 
+									createScene() function, look at the mouse
+									and key input handlers and work your way
+									from there. Everything is exhaustively
+									commented.
+OgreRecastTerrainApplication	More advanced demo with Terrain. Inherits a lot
+									from the previous demo.	
+BaseApplication					Almost unaltered tutorial application baseclass.
+
+
+OgreRecast						Ogre wrapper for recast and detour. Allows you
+									to construct a simple solo navmesh and plan
+									paths using detour. This is the simple way
+									of building navmeshes. Look at DetourTile-
+									Cache for a more expansive method.
+OgreDetourCrowd					Manages agents in a crowd. When using it you
+									don't need to use detour directly for path-
+									planning. DetourCrowd takes care of that.
+OgreDetourTileCache				Allows for a more complex way of navmesh builds.
+									Tiled navmeshes are constructed from
+									compressed partially built tiles stored in
+									the cache. Allows placing of temporary
+									obstacles and streaming in and out of tiles.
+
+
+RecastInputGeom					Data helper class that converts ogre entities
+									and terrain and stores it in a format that
+									recast can understand.
+RecastConvexHull				Convex hulls can be used for marking areas on
+									the navmesh (statically with solo navmesh,
+									or at runtime using the tilecache) and for
+									marking temporary obstacles on the navmesh.
+
+
+Character						Character controller baseclass. Does the inter-
+									action between a character in the scene and
+									a detourCrowd agent that steers it.
+TestCharacter					Simple example of how a character controlled by
+									a crowd agent can be implemented.
+AnimateableCharacter			More complex character example. Uses an animated
+									human mesh.
+
+
+Obstacle						Obstacle baseclass that allows to construct and
+									manage a dynamic obstacle on a dtTileCache
+									constructed navmesh.
+CylinderObstacle				Cylindrical obstacle, the most simple type of
+									obstacle.
+ConvexShapeObstacle				A convex shaped obstacle. Can be shaped to any
+									mesh that could block the path as obstacle.
+
+
+SettingsFileParser				Very basic config file parser for parsing 
+									OgreRecast.cfg. Not much to see here.
+
+
