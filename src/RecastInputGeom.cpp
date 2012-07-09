@@ -1235,14 +1235,21 @@ void InputGeom::debugMesh(Ogre::SceneManager *sceneMgr)
 {
     // Debug navmesh points
     Ogre::ManualObject *manual = sceneMgr->createManualObject("InputGeomDebug");
-    manual->begin("dungeon", Ogre::RenderOperation::OT_POINT_LIST);
+
+    // Draw inputGeom as triangles
+    manual->begin("recastdebug", Ogre::RenderOperation::OT_TRIANGLE_LIST);
+    for (int i = 0; i<ntris*3; i++) {
+        int triIdx = tris[i];
+        manual->position(verts[3*triIdx], verts[3*triIdx+1], verts[3*triIdx+2]);
+    }
+
+    /*
+    // Alternative drawing method: draw only the vertices
+    manual->begin("recastdebug", Ogre::RenderOperation::OT_TRIANGLE_LIST);
     for (int i = 0; i<nverts*3; i+=3) {
         manual->position(verts[i], verts[i+1], verts[i+2]);
     }
-
-    for (int i = 0; i<ntris*3; i++) {
-        manual->index(tris[i]);
-    }
+    */
 
     manual->end();
     sceneMgr->getRootSceneNode()->createChildSceneNode()->attachObject(manual);

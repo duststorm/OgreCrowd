@@ -73,7 +73,7 @@ void OgreRecastTerrainApplication::createScene()
     ConvexVolume bb = ConvexVolume(mGeom->getBoundingBox());
     InputGeom::drawConvexVolume(&bb, mSceneMgr);
     // Uncomment to verify rasterized terrain mesh
-//    geom->debugMesh(mSceneMgr);
+    mGeom->debugMesh(mSceneMgr);
     if(SINGLE_NAVMESH) {
         // Simple recast navmesh build example
         // For large terrain meshes this is not recommended, as the build takes a very long time
