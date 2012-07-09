@@ -94,8 +94,10 @@ void OgreRecastTerrainApplication::createScene()
     // Debug draw the recast bounding box around the terrain tile
     ConvexVolume bb = ConvexVolume(mGeom->getBoundingBox());
     InputGeom::drawConvexVolume(&bb, mSceneMgr);
+
     // Uncomment to verify rasterized terrain mesh
 //    mGeom->debugMesh(mSceneMgr);
+
     if(SINGLE_NAVMESH) {
         // Simple recast navmesh build example
         // For large terrain meshes this is not recommended, as the build takes a very long time
@@ -158,6 +160,11 @@ void OgreRecastTerrainApplication::createScene()
         // Select a small area to build the initial part of the navmesh from
         areaToLoad.setMinimum(Ogre::Vector3(-TERRAIN_TILE_SIZE/5, 0, -TERRAIN_TILE_SIZE/2));
         areaToLoad.setMaximum(Ogre::Vector3(-TERRAIN_TILE_SIZE/5.217, terrainHeightScale, -TERRAIN_TILE_SIZE/2.0689));
+
+        // Disable dtTileCache debug drawing to improve performance.
+        // Don't do this when OgreRecast::STATIC_GEOM_DEBUG is false as the
+        // demo will depend on the navmesh geometry being in the scene!
+        mDetourTileCache->DEBUG_DRAW = false;
 
         mDetourTileCache->buildTiles(mGeom, &areaToLoad);    // Only build a few tiles
 

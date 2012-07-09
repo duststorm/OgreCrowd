@@ -537,6 +537,28 @@ public:
       **/
     OgreRecast *m_recast;
 
+
+    /**
+     * Max number of layers a tile can have
+     **/
+    static const int EXPECTED_LAYERS_PER_TILE;
+
+    /**
+     * Max number of (temp) obstacles that can be added to the tilecache
+     **/
+    static const int MAX_OBSTACLES;
+
+    /**
+     *
+     * Extra padding added to the border size of tiles (together with agent radius)
+     **/
+    static const float BORDER_PADDING;
+
+    /**
+      * Set to false to disable debug drawing. Improves performance.
+      **/
+    static float DEBUG_DRAW;
+
 protected:
 
     /**

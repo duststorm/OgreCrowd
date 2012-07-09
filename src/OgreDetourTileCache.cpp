@@ -6,13 +6,16 @@
 ///// Static config parameters //////
 
 // Max number of layers a tile can have
-static const int EXPECTED_LAYERS_PER_TILE = 4;
+const int OgreDetourTileCache::EXPECTED_LAYERS_PER_TILE = 4;
 
 // Max number of (temp) obstacles that can be added to the tilecache
-static const int MAX_OBSTACLES = 128;
+const int OgreDetourTileCache::MAX_OBSTACLES = 128;
 
 // Extra padding added to the border size of tiles (together with agent radius)
-static const float BORDER_PADDING = 3;
+const float OgreDetourTileCache::BORDER_PADDING = 3;
+
+// Set to false to disable debug drawing. Improves performance.
+float OgreDetourTileCache::DEBUG_DRAW = true;
 
 /////////////////////////////////////
 
@@ -729,6 +732,9 @@ void OgreDetourTileCache::drawNavMesh()
 
 void OgreDetourTileCache::drawDetail(const int tx, const int ty)
 {
+    if (!DEBUG_DRAW)
+        return; // Don't debug draw for huge performance gain!
+
     struct TileCacheBuildContext
     {
         inline TileCacheBuildContext(struct dtTileCacheAlloc* a) : layer(0), lcset(0), lmesh(0), alloc(a) {}
@@ -1033,7 +1039,8 @@ bool OgreDetourTileCache::removeTile(dtCompressedTileRef tileRef)
 
 
     // Remove debug geometry that belongs to this tile from scene
-    m_recast->removeDrawnNavmesh(tileRef);
+    if(DEBUG_DRAW)
+        m_recast->removeDrawnNavmesh(tileRef);
 
     return true;
 }
