@@ -485,6 +485,9 @@ bool OgreRecastTerrainApplication::frameRenderingQueued(const Ogre::FrameEvent &
     // Update navmesh debug drawing
     mRecast->update();
 
+    // Make sure line drawings are hidden if debug is off
+    mNavMeshNode->setVisible(mDebugDraw);
+
     return OgreRecastApplication::frameRenderingQueued(evt);
 }
 
