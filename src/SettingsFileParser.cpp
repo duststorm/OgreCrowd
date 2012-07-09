@@ -16,6 +16,12 @@ SettingsFileParser::SettingsFileParser(Ogre::String filePath)
     mComplexObstacles = true;
     mTerrain = false;
 
+    mTerrainTilesX = 1;
+    mTerrainTilesZ = 1;
+    mTerrainTileSize = 12000.0f;
+    mTerrainTileResolution = 513;
+    mTerrainHeightScale = 1.0f;
+
     // Load settings from config file
     Ogre::ConfigFile settingsFile = Ogre::ConfigFile();
     settingsFile.loadDirect(filePath);
@@ -84,7 +90,20 @@ bool SettingsFileParser::addOption(Ogre::String sectionName, Ogre::String option
     } else if(equals(optionName, "Terrain Demo")) {
         mTerrain = getBool(optionValue);
         return true;
+
+
+    } else if(equals(optionName, "Terrain Tiles X")) {
+        mTerrainTilesX = (int) getReal(optionValue);
+    } else if(equals(optionName, "Terrain Tiles Z")) {
+        mTerrainTilesZ = (int) getReal(optionValue);
+    } else if(equals(optionName, "Terrain Tile Size")) {
+        mTerrainTileSize = getReal(optionValue);
+    } else if(equals(optionName, "Terrain Height Scale")) {
+        mTerrainHeightScale = getReal(optionValue);
+    } else if(equals(optionName, "Terrain Tile Resolution")) {
+        mTerrainTileResolution = getReal(optionValue);
     }
+
 
     std::cout << "Warning: Unknown option \"" << optionName << "\" specified in " << mFilePath << " file." << std::endl;
     return false;

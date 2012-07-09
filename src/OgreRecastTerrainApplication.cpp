@@ -5,18 +5,18 @@
 // Number of terrain tiles to generate. If setting higher than 1, make sure that terrain
 // tile size is not too high. The total size of the world is still limited because of allocation
 // limits in detourTileCache
-const size_t OgreRecastTerrainApplication::TERRAIN_TILES_X = 1;
-const size_t OgreRecastTerrainApplication::TERRAIN_TILES_Y = 1;
+size_t OgreRecastTerrainApplication::TERRAIN_TILES_X = 1;
+size_t OgreRecastTerrainApplication::TERRAIN_TILES_Z = 1;
 
 // TODO make detourTileCache coordinates localized to area currently in screen
 
 // World size of one terrain tile
-const float OgreRecastTerrainApplication::TERRAIN_TILE_SIZE = 12000.0f;
+float OgreRecastTerrainApplication::TERRAIN_TILE_SIZE = 12000.0f;
 // Determines number of vertices in one terrain tile
-const Ogre::uint16 OgreRecastTerrainApplication::TERRAIN_TILE_RESOLUTION = 513;
+Ogre::uint16 OgreRecastTerrainApplication::TERRAIN_TILE_RESOLUTION = 513;
 
 // Scale of terrain height, relative to terrain tile size. Set to 1 for regular scale.
-const float OgreRecastTerrainApplication::TERRAIN_HEIGHT_SCALE = 1.0f;
+float OgreRecastTerrainApplication::TERRAIN_HEIGHT_SCALE = 1.0f;
 
 
 OgreRecastTerrainApplication::OgreRecastTerrainApplication()
@@ -43,7 +43,7 @@ void OgreRecastTerrainApplication::createScene()
     light->setSpecularColour(Ogre::ColourValue(0.4, 0.4, 0.4));
     mSceneMgr->setAmbientLight(Ogre::ColourValue(0.2, 0.2, 0.2));
     float terrainScaleX = TERRAIN_TILES_X * TERRAIN_TILE_SIZE/2;
-    float terrainScaleZ = TERRAIN_TILES_Y * TERRAIN_TILE_SIZE/2;
+    float terrainScaleZ = TERRAIN_TILES_Z * TERRAIN_TILE_SIZE/2;
     float terrainHeightScale = TERRAIN_TILE_SIZE/20 * TERRAIN_HEIGHT_SCALE;
     mCamera->setPosition(-terrainScaleX/1.897539208, terrainHeightScale/0.667386703, -terrainScaleZ/0.965507253);
 //    mCamera->setPosition(-3161.99, 866.029, -6214.35);
@@ -71,7 +71,7 @@ void OgreRecastTerrainApplication::createScene()
     configureTerrainDefaults(light);
 
     for (long x = 0; x < TERRAIN_TILES_X; ++x)
-        for (long y = 0; y < TERRAIN_TILES_Y; ++y)
+        for (long y = 0; y < TERRAIN_TILES_Z; ++y)
             defineTerrain(x, y);
 
     // sync load since we want everything in place when we start
@@ -493,7 +493,11 @@ void OgreRecastTerrainApplication::setDebugVisibility(bool visible)
     OgreRecastApplication::setDebugVisibility(visible);
 
     if(OgreRecast::STATIC_GEOM_DEBUG) {
-        Ogre::StaticGeometry *sg = mSceneMgr->getStaticGeometry("NavmeshDebugStaticGeom");
-        sg->setVisible(visible);
+        try {
+            Ogre::StaticGeometry *sg = mSceneMgr->getStaticGeometry("NavmeshDebugStaticGeom");
+            sg->setVisible(visible);
+        } catch (Ogre::Exception e) {
+            // Do nothing
+        }
     }
 }

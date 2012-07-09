@@ -1030,6 +1030,12 @@ void OgreRecastApplication::loadConfig(Ogre::String configFileName)
         OgreRecastApplication::TEMP_OBSTACLE_STEERING = sfp.mTempObstacleSteering;
         OgreRecastApplication::COMPLEX_OBSTACLES = sfp.mComplexObstacles;
         OgreRecastApplication::TERRAIN = sfp.mTerrain;
+
+        OgreRecastTerrainApplication::TERRAIN_TILES_X = sfp.mTerrainTilesX;
+        OgreRecastTerrainApplication::TERRAIN_TILES_Z = sfp.mTerrainTilesZ;
+        OgreRecastTerrainApplication::TERRAIN_TILE_SIZE = sfp.mTerrainTileSize;
+        OgreRecastTerrainApplication::TERRAIN_HEIGHT_SCALE = sfp.mTerrainHeightScale;
+        OgreRecastTerrainApplication::TERRAIN_TILE_RESOLUTION = sfp.mTerrainTileResolution;
     } catch (Ogre::Exception e) {
         std::cout << "WARNING: Could not find file " << configFileName << ". Using default settings." << std::endl;
     }

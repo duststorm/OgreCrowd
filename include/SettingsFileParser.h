@@ -49,6 +49,12 @@ public:
 
     bool mRestoreConfig;
     bool mLockMouse;
+
+    int mTerrainTilesX;
+    int mTerrainTilesZ;
+    float mTerrainTileSize;
+    int mTerrainTileResolution;
+    float mTerrainHeightScale;
 };
 
 
