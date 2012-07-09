@@ -164,7 +164,7 @@ void OgreRecastTerrainApplication::createScene()
         // Disable dtTileCache debug drawing to improve performance.
         // Don't do this when OgreRecast::STATIC_GEOM_DEBUG is false as the
         // demo will depend on the navmesh geometry being in the scene!
-        mDetourTileCache->DEBUG_DRAW = false;
+//        mDetourTileCache->DEBUG_DRAW = false;
 
         mDetourTileCache->buildTiles(mGeom, &areaToLoad);    // Only build a few tiles
 
