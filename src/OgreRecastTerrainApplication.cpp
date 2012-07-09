@@ -1,6 +1,24 @@
 #include "OgreRecastTerrainApplication.h"
 #include <Terrain/OgreTerrain.h>
 
+
+// Number of terrain tiles to generate. If setting higher than 1, make sure that terrain
+// tile size is not too high. The total size of the world is still limited because of allocation
+// limits in detourTileCache
+const size_t OgreRecastTerrainApplication::TERRAIN_TILES_X = 1;
+const size_t OgreRecastTerrainApplication::TERRAIN_TILES_Y = 1;
+
+// TODO make detourTileCache coordinates localized to area currently in screen
+
+// World size of one terrain tile
+const float OgreRecastTerrainApplication::TERRAIN_TILE_SIZE = 12000.0f;
+// Determines number of vertices in one terrain tile
+const Ogre::uint16 OgreRecastTerrainApplication::TERRAIN_TILE_RESOLUTION = 513;
+
+// Scale of terrain height, relative to terrain tile size. Set to 1 for regular scale.
+const float OgreRecastTerrainApplication::TERRAIN_HEIGHT_SCALE = 1.0f;
+
+
 OgreRecastTerrainApplication::OgreRecastTerrainApplication()
     : mTerrainsImported(false),
       mTerrainGroup(NULL),
@@ -24,7 +42,11 @@ void OgreRecastTerrainApplication::createScene()
     light->setDiffuseColour(Ogre::ColourValue::White);
     light->setSpecularColour(Ogre::ColourValue(0.4, 0.4, 0.4));
     mSceneMgr->setAmbientLight(Ogre::ColourValue(0.2, 0.2, 0.2));
-    mCamera->setPosition(-3161.99, 866.029, -6214.35);
+    float terrainScaleX = TERRAIN_TILES_X * TERRAIN_TILE_SIZE/2;
+    float terrainScaleZ = TERRAIN_TILES_Y * TERRAIN_TILE_SIZE/2;
+    float terrainHeightScale = TERRAIN_TILE_SIZE/20 * TERRAIN_HEIGHT_SCALE;
+    mCamera->setPosition(-terrainScaleX/1.897539208, terrainHeightScale/0.667386703, -terrainScaleZ/0.965507253);
+//    mCamera->setPosition(-3161.99, 866.029, -6214.35);
     mCamera->setOrientation(Ogre::Quaternion(0.21886, -0.0417, -0.9576, -0.1826));
     mCamera->setNearClipDistance(0.1);
     mCamera->setFarClipDistance(50000);
@@ -43,13 +65,13 @@ void OgreRecastTerrainApplication::createScene()
 
     // Create navigateable terrain
     mTerrainGlobals = OGRE_NEW Ogre::TerrainGlobalOptions();
-    mTerrainGroup = OGRE_NEW Ogre::TerrainGroup(mSceneMgr, Ogre::Terrain::ALIGN_X_Z, 513, 12000.0f);
+    mTerrainGroup = OGRE_NEW Ogre::TerrainGroup(mSceneMgr, Ogre::Terrain::ALIGN_X_Z, TERRAIN_TILE_RESOLUTION, TERRAIN_TILE_SIZE);
     mTerrainGroup->setFilenameConvention(Ogre::String("OgreRecastTerrain"), Ogre::String("dat"));
     mTerrainGroup->setOrigin(Ogre::Vector3::ZERO);
     configureTerrainDefaults(light);
 
-    for (long x = 0; x <= 0; ++x)
-        for (long y = 0; y <= 0; ++y)
+    for (long x = 0; x < TERRAIN_TILES_X; ++x)
+        for (long y = 0; y < TERRAIN_TILES_Y; ++y)
             defineTerrain(x, y);
 
     // sync load since we want everything in place when we start
@@ -73,7 +95,7 @@ void OgreRecastTerrainApplication::createScene()
     ConvexVolume bb = ConvexVolume(mGeom->getBoundingBox());
     InputGeom::drawConvexVolume(&bb, mSceneMgr);
     // Uncomment to verify rasterized terrain mesh
-    mGeom->debugMesh(mSceneMgr);
+//    mGeom->debugMesh(mSceneMgr);
     if(SINGLE_NAVMESH) {
         // Simple recast navmesh build example
         // For large terrain meshes this is not recommended, as the build takes a very long time
@@ -132,15 +154,14 @@ void OgreRecastTerrainApplication::createScene()
         mDetourTileCache = new OgreDetourTileCache(mRecast, 48);
         mDetourTileCache->configure(mGeom);
         Ogre::AxisAlignedBox areaToLoad;
-//        areaToLoad.setMaximum(geom->getBoundingBox().getMaximum());
-//        areaToLoad.setMinimum(Ogre::Vector3(5000, 0, 5000));
 
-//        areaToLoad.setMinimum(geom->getBoundingBox().getMinimum());
-//        areaToLoad.setMaximum(Ogre::Vector3(-5800, geom->getBoundingBox().getMaximum().y, -5800));
+        // Select a small area to build the initial part of the navmesh from
+        areaToLoad.setMinimum(Ogre::Vector3(-TERRAIN_TILE_SIZE/5, 0, -TERRAIN_TILE_SIZE/2));
+        areaToLoad.setMaximum(Ogre::Vector3(-TERRAIN_TILE_SIZE/5.217, terrainHeightScale, -TERRAIN_TILE_SIZE/2.0689));
 
-        areaToLoad.setMinimum(Ogre::Vector3(-2400, 0, -6000));
-        areaToLoad.setMaximum(Ogre::Vector3(-2300, mGeom->getBoundingBox().getMaximum().y, -5800));
         mDetourTileCache->buildTiles(mGeom, &areaToLoad);    // Only build a few tiles
+
+        // This builds all of the tiles in the navmesh. Unmanageable with such big terrain sizes
         /*
         if(mDetourTileCache->TileCacheBuild(geom)) {
             mDetourTileCache->drawNavMesh();
@@ -150,7 +171,6 @@ void OgreRecastTerrainApplication::createScene()
         }
         */
     }
-
 
     // You can save out the input geom to wavefront .obj like so:
     // This can be used, for example, for testing in the official demo that comes with recast
@@ -251,9 +271,9 @@ void OgreRecastTerrainApplication::configureTerrainDefaults(Ogre::Light* light)
 
     // Configure default import settings for if we use imported image
     Ogre::Terrain::ImportData& defaultimp = mTerrainGroup->getDefaultImportSettings();
-    defaultimp.terrainSize = 513;
-    defaultimp.worldSize = 12000.0f;
-    defaultimp.inputScale = 600; // due terrain.png is 8 bpp
+    defaultimp.terrainSize = TERRAIN_TILE_RESOLUTION;
+    defaultimp.worldSize = TERRAIN_TILE_SIZE;
+    defaultimp.inputScale = TERRAIN_HEIGHT_SCALE * TERRAIN_TILE_SIZE/20; // was originally 600 due terrain.png is 8 bpp (with tile world size 12000)
     defaultimp.minBatchSize = 33;
     defaultimp.maxBatchSize = 65;
 

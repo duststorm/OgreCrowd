@@ -179,7 +179,7 @@ InputGeom::InputGeom(Ogre::TerrainGroup *terrainGroup, std::vector<Ogre::Entity*
     while(ti.hasMoreElements())
     {
          trn = ti.getNext()->instance;
-         Ogre::AxisAlignedBox bb = trn->getAABB();
+         Ogre::AxisAlignedBox bb = trn->getWorldAABB();
          Ogre::Vector3 min = bb.getMinimum();
          if(min.x < bmin[0])
              bmin[0]= min.x;
@@ -229,32 +229,10 @@ InputGeom::InputGeom(Ogre::TerrainGroup *terrainGroup, std::vector<Ogre::Entity*
          // calculate where we need to move/place our vertices
          float DeltaPos = (WorldSize / 2.0f);
 
-         float DeltaX = 0;
-         float DeltaZ = 0;
-// TODO this hardcoded behaviour has to go! Supports only up to 4 terrain pages
-         switch(trnCount)
-         {
-         case 0:
-             DeltaX = -6000;
-             DeltaZ = 6000;
-             break;
-         case 1:
-             DeltaX = -6000;
-             DeltaZ = -6000;
-             break;
-         case 2:
-             DeltaX = 6000;
-             DeltaZ = 6000;
-             break;
-         case 3:
-             DeltaX = 6000;
-             DeltaZ = -6000;
-             break;
-         default:
-             DeltaX = 0;
-             DeltaZ = 0;
-         }
-
+         // Determine world offset position for this terrain tile
+         Ogre::AxisAlignedBox tileBox = trn->getWorldAABB();
+         float DeltaX = tileBox.getMinimum().x;
+         float DeltaZ = tileBox.getMaximum().z;
 
          float Scale = WorldSize / (float)(MapSize - 1);
 

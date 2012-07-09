@@ -26,6 +26,35 @@ public:
       **/
     virtual void setDebugVisibility(bool visible);
 
+    /**
+      * The number of terrain tiles to generate in the demo
+      * in X dimension. Should be >= 1.
+      **/
+    static const size_t TERRAIN_TILES_X;
+    /**
+      * The number of terrain tiles to generate in the demo
+      * in Y dimension (actually Z dimension in world coordinates).
+      * Should be >= 1.
+      **/
+    static const size_t TERRAIN_TILES_Y;
+    /**
+      * World size of one terrain tile.
+      **/
+    static const float TERRAIN_TILE_SIZE;
+    /**
+      * The size of each terrain down one edge in vertices (2^n+1).
+      **/
+    static const Ogre::uint16 TERRAIN_TILE_RESOLUTION;
+    /**
+      * Scale of terrain height (input scale of heightmap), relative
+      * to TERRAIN_TILE_SIZE.
+      * Set to 1 for regular scale, higher for higher mountains, lower
+      * for flatter terrain.
+      * Must be a value > 0.
+      * I recommend values between 0.1 and 10.
+      **/
+    static const float TERRAIN_HEIGHT_SCALE;
+
 protected:
 
     /**
