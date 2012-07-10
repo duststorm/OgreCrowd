@@ -580,7 +580,7 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
 
             // There are two alternatives for updating the tilecache:
             // Always udpate tiles, even if they were not in the tilecache before
-            InputGeom geom = InputGeom(detourInputGeometry/*, mDetourTileCache->getTileAlignedBox(bb)*/);
+            InputGeom geom = InputGeom(detourInputGeometry, mDetourTileCache->getTileAlignedBox(bb));
             mDetourTileCache->buildTiles(&geom, &bb);
             // Or: Only update tiles that were previously built in the tilecache (there is no speed difference from buildTiles)
 //            mDetourTileCache->updateFromGeometry(detourInputGeometry, bb);
