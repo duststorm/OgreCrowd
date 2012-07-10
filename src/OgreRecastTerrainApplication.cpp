@@ -376,6 +376,7 @@ bool OgreRecastTerrainApplication::keyPressed( const OIS::KeyEvent &arg )
             box.setMinimum(rayHitPoint.x - boxSize/2, mRecast->getConfig().bmin[1], rayHitPoint.z - boxSize/2);
             box.setMaximum(rayHitPoint.x + boxSize/2, mRecast->getConfig().bmax[1], rayHitPoint.z + boxSize/2);
 
+// TODO stop storing the complete inputGeom, query terrain and needed entities when necessary
 // TODO eventually you will run out of memory (either because of GPU memory of inefficient debug drawing geometry, or CPU ram due to tilecache and navmesh becoming too large). Add features for caching out unused tiles.
             // Build tiles around cursor
             mDetourTileCache->buildTiles(mGeom, &box);

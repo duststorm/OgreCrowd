@@ -143,7 +143,6 @@ InputGeom::InputGeom(std::vector<Ogre::Entity*> srcMeshes, const Ogre::AxisAlign
 
 
     // Set the area where the navigation mesh will be build to the tileBounds parameter.
-    // TODO is this a good idea?
     bmin = new float[3];
     bmax = new float[3];
     OgreRecast::OgreVect3ToFloatA(tileBounds.getMinimum(), bmin);
@@ -507,53 +506,51 @@ InputGeom::InputGeom(const Ogre::AxisAlignedBox &tileBounds, Ogre::TerrainGroup 
       tris(0)
 {
     // PARTS OF THE FOLLOWING CODE WERE TAKEN AND MODIFIED FROM AN OGRE3D FORUM POST
-    const int numNodes = srcMeshes.size();
 
-    // Calculate bounds around all entities
+    // Set reference node for entities
     if(mSrcMeshes.size() > 0) {
-        // Set reference node
-        mReferenceNode = mSrcMeshes[0]->getParentSceneNode()->getCreator()->getRootSceneNode();
-
-        // Calculate entity bounds
-        // Set the area where the navigation mesh will be build.
-        // Using bounding box of source mesh and specified cell size
-        calculateExtents();
-    } else {
-        bmin = new float[3]; bmin[0] = FLT_MAX; bmin[1] = FLT_MAX; bmin[2] = FLT_MAX;
-        bmax = new float[3]; bmax[0] = FLT_MIN; bmax[1] = FLT_MIN; bmax[2] = FLT_MIN;
+        Ogre::Entity* ent = mSrcMeshes[0];
+        mReferenceNode = ent->getParentSceneNode()->getCreator()->getRootSceneNode();
     }
 
-    // Calculate terrain bounds
+    // Set the area where the navigation mesh will be build to the tileBounds parameter.
+    bmin = new float[3];
+    bmax = new float[3];
+    OgreRecast::OgreVect3ToFloatA(tileBounds.getMinimum(), bmin);
+    OgreRecast::OgreVect3ToFloatA(tileBounds.getMaximum(), bmax);
+
+    // Calculate intersecting terrain pages
     Ogre::TerrainGroup::TerrainIterator ti = terrainGroup->getTerrainIterator();
     Ogre::Terrain* trn;
-    size_t trnCount = 0;
+    std::vector<Ogre::Terrain*> terrainPages;
     while(ti.hasMoreElements())
     {
          trn = ti.getNext()->instance;
          Ogre::AxisAlignedBox bb = trn->getWorldAABB();
-         Ogre::Vector3 min = bb.getMinimum();
-         if(min.x < bmin[0])
-             bmin[0]= min.x;
-         if(min.y < bmin[1])
-             bmin[1]= min.y;
-         if(min.z < bmin[2])
-             bmin[2]= min.z;
 
-         Ogre::Vector3 max = bb.getMaximum();
-         if(max.x > bmax[0])
-             bmax[0]= max.x;
-         if(max.y > bmax[1])
-             bmax[1]= max.y;
-         if(max.z > bmax[2])
-             bmax[2]= max.z;
-
-         trnCount++;
+         if(tileBounds.intersects(bb))
+             terrainPages.push_back(trn);
     }
+
+    // Get intersecting entities
+    std::vector<Ogre::Entity*> selectedEntities;
+    Ogre::AxisAlignedBox bb;
+    Ogre::Matrix4 transform;
+    for(std::vector<Ogre::Entity*>::iterator iter = mSrcMeshes.begin(); iter != mSrcMeshes.end(); iter++) {
+        transform = mReferenceNode->_getFullTransform().inverse() * (*iter)->getParentSceneNode()->_getFullTransform();
+        bb = (*iter)->getBoundingBox();
+        bb.transform(transform);    // Transform to world coordinates
+        if( bb.intersects(tileBounds) )
+            selectedEntities.push_back(*iter);
+    }
+    mSrcMeshes.clear();
+    mSrcMeshes = selectedEntities;
 
     //if (trnCount == 0)
         // TODO return with error?
 
-    size_t pagesTotal = trnCount;
+    size_t numNodes = mSrcMeshes.size();
+    size_t pagesTotal = terrainPages.size();
     const size_t totalMeshes = pagesTotal + numNodes;
 
     nverts = 0;
@@ -567,11 +564,10 @@ InputGeom::InputGeom(const Ogre::AxisAlignedBox &tileBounds, Ogre::TerrainGroup 
 
     //---------------------------------------------------------------------------------
     // TERRAIN DATA BUILDING
-    ti = terrainGroup->getTerrainIterator();
-    trnCount = 0;
-    while(ti.hasMoreElements())
+    size_t trnCount = 0;
+    for(std::vector<Ogre::Terrain*>::iterator iter = terrainPages.begin(); iter != terrainPages.end(); iter++)
     {
-         trn = ti.getNext()->instance;
+         trn = *iter;
 
          // get height data, world size, map size
          float *mapptr = trn->getHeightData();
@@ -595,6 +591,7 @@ InputGeom::InputGeom(const Ogre::AxisAlignedBox &tileBounds, Ogre::TerrainGroup 
          // TO BE ABLE TO WORK FOR RECAST AND IN THE CONTEXT OF
          // THIS DEMO APPLICATION
 
+// TODO only retrieve vertices in x-z plane of tilebounds
          // build vertices
          meshVertices[trnCount] = new Ogre::Vector3[(MapSize*MapSize)];
 
@@ -938,103 +935,8 @@ void InputGeom::convertOgreEntities(const Ogre::AxisAlignedBox &tileBounds)
     mSrcMeshes.clear();
     mSrcMeshes = selectedEntities;
 
-    //Convert all vertices and triangles to recast format for entities that intersect the tileBounds box
-    const int numNodes = mSrcMeshes.size();
-    size_t *meshVertexCount = new size_t[numNodes];
-    size_t *meshIndexCount = new size_t[numNodes];
-    Ogre::Vector3 **meshVertices = new Ogre::Vector3*[numNodes];
-    unsigned long **meshIndices = new unsigned long*[numNodes];
 
-    nverts = 0;
-    ntris = 0;
-    size_t i = 0;
-    for(std::vector<Ogre::Entity*>::iterator iter = mSrcMeshes.begin(); iter != mSrcMeshes.end(); iter++) {
-        transform = mReferenceNode->_getFullTransform().inverse() * (*iter)->getParentSceneNode()->_getFullTransform();
-        bb = (*iter)->getBoundingBox();
-        bb.transform(transform);    // Transform to world coordinates
-        if( ! bb.intersects(tileBounds) )
-            continue;
-
-        getMeshInformation((*iter)->getMesh(), meshVertexCount[i], meshVertices[i], meshIndexCount[i], meshIndices[i]);
-        //total number of verts
-        nverts += meshVertexCount[i];
-        //total number of indices
-        ntris += meshIndexCount[i];
-
-        i++;
-    }
-
-    // DECLARE RECAST DATA BUFFERS USING THE INFO WE GRABBED ABOVE
-    verts = new float[nverts*3];// *3 as verts holds x,y,&z for each verts in the array
-    tris = new int[ntris];// tris in recast is really indices like ogre
-
-    //convert index count into tri count
-    ntris = ntris/3; //although the tris array are indices the ntris is actual number of triangles, eg. indices/3;
-
-    //copy all meshes verticies into single buffer and transform to world space relative to parentNode
-    int vertsIndex = 0;
-    int prevVerticiesCount = 0;
-    int prevIndexCountTotal = 0;
-    i = 0;
-    for (std::vector<Ogre::Entity*>::iterator iter = mSrcMeshes.begin(); iter != mSrcMeshes.end(); iter++) {
-        Ogre::Entity *ent = *iter;
-        //find the transform between the reference node and this node
-        Ogre::Matrix4 transform = mReferenceNode->_getFullTransform().inverse() * ent->getParentSceneNode()->_getFullTransform();
-        Ogre::Vector3 vertexPos;
-        for (size_t j = 0 ; j < meshVertexCount[i] ; j++)
-        {
-            vertexPos = transform*meshVertices[i][j];
-            verts[vertsIndex] = vertexPos.x;
-            verts[vertsIndex+1] = vertexPos.y;
-            verts[vertsIndex+2] = vertexPos.z;
-            vertsIndex+=3;
-        }
-
-        for (size_t j = 0 ; j < meshIndexCount[i] ; j++)
-        {
-            tris[prevIndexCountTotal+j] = meshIndices[i][j]+prevVerticiesCount;
-        }
-        prevIndexCountTotal += meshIndexCount[i];
-        prevVerticiesCount += meshVertexCount[i];
-
-        i++;
-    }
-
-    //delete tempory arrays
-    //TODO These probably could member varibles, this would increase performance slightly
-    delete[] meshVertices;
-    delete[] meshIndices;
-
-    // calculate normals data for Recast - im not 100% sure where this is required
-    // but it is used, Ogre handles its own Normal data for rendering, this is not related
-    // to Ogre at all ( its also not correct lol )
-    // TODO : fix this
-    normals = new float[ntris*3];
-    for (int i = 0; i < ntris*3; i += 3)
-    {
-        const float* v0 = &verts[tris[i]*3];
-        const float* v1 = &verts[tris[i+1]*3];
-        const float* v2 = &verts[tris[i+2]*3];
-        float e0[3], e1[3];
-        for (int j = 0; j < 3; ++j)
-        {
-            e0[j] = (v1[j] - v0[j]);
-            e1[j] = (v2[j] - v0[j]);
-        }
-        float* n = &normals[i];
-        n[0] = ((e0[1]*e1[2]) - (e0[2]*e1[1]));
-        n[1] = ((e0[2]*e1[0]) - (e0[0]*e1[2]));
-        n[2] = ((e0[0]*e1[1]) - (e0[1]*e1[0]));
-
-        float d = sqrtf(n[0]*n[0] + n[1]*n[1] + n[2]*n[2]);
-        if (d > 0)
-        {
-            d = 1.0f/d;
-            n[0] *= d;
-            n[1] *= d;
-            n[2] *= d;
-        }
-    }
+    convertOgreEntities();
 }
 
 void InputGeom::calculateExtents()
