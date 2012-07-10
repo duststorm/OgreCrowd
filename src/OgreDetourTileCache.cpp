@@ -15,28 +15,32 @@ const int OgreDetourTileCache::MAX_OBSTACLES = 128;
 const float OgreDetourTileCache::BORDER_PADDING = 3;
 
 // Set to false to disable debug drawing. Improves performance.
-float OgreDetourTileCache::DEBUG_DRAW = true;
+bool OgreDetourTileCache::DEBUG_DRAW = true;
+
+// Set to true to draw bounding boxes around rebuilt tiles.
+bool OgreDetourTileCache::DEBUG_DRAW_REBUILT_BB = false;
 
 /////////////////////////////////////
 
 OgreDetourTileCache::OgreDetourTileCache(OgreRecast *recast, int tileSize)
     : m_recast(recast),
       m_tileSize(tileSize - (tileSize%8)),  // Make sure tilesize is a multiple of 8
-    m_keepInterResults(false),
-    m_tileCache(0),
-    m_cacheBuildTimeMs(0),
-    m_cacheCompressedSize(0),
-    m_cacheRawSize(0),
-    m_cacheLayerCount(0),
-    m_cacheBuildMemUsage(0),
-    m_maxTiles(0),
-    m_maxPolysPerTile(0),
-    m_cellSize(0),
-    m_tcomp(0),
-    m_geom(0),
-    m_th(0),
-    m_tw(0),
-    mChangedConvexVolumesCount(0)
+      m_keepInterResults(false),
+      m_tileCache(0),
+      m_cacheBuildTimeMs(0),
+      m_cacheCompressedSize(0),
+      m_cacheRawSize(0),
+      m_cacheLayerCount(0),
+      m_cacheBuildMemUsage(0),
+      m_maxTiles(0),
+      m_maxPolysPerTile(0),
+      m_cellSize(0),
+      m_tcomp(0),
+      m_geom(0),
+      m_th(0),
+      m_tw(0),
+      mChangedConvexVolumesCount(0),
+      mDebugRebuiltBB(0)
 {
     m_talloc = new LinearAllocator(32000);
     m_tcomp = new FastLZCompressor;
@@ -877,7 +881,7 @@ int OgreDetourTileCache::addConvexShapeObstacle(ConvexVolume *obstacle)
 void OgreDetourTileCache::updateFromGeometry(std::vector<Ogre::Entity*> srcMeshes, const Ogre::AxisAlignedBox &areaToUpdate)
 {
     // Build recast/detour input geometry only for the area to update
-    InputGeom geom = InputGeom(srcMeshes, areaToUpdate);
+    InputGeom geom = InputGeom(srcMeshes, getTileAlignedBox(areaToUpdate));
         // TODO do I need geometry to extend a bit out of the bounds for navmesh tiles to always properly connect to the rest?
 
     updateFromGeometry(&geom);
@@ -887,10 +891,22 @@ void OgreDetourTileCache::updateFromGeometry(InputGeom *inputGeom, const Ogre::A
 {
     // Use bounding box from inputgeom if no area was explicitly specified
     Ogre::AxisAlignedBox updateArea;
-    if(!areaToUpdate)
+    if(!areaToUpdate) {
         updateArea = inputGeom->getBoundingBox();
-    else
-        updateArea = *areaToUpdate;
+    } else {
+        updateArea = getTileAlignedBox(*areaToUpdate);
+    }
+
+    // Debug drawing of bounding area that is updated
+    // Remove previous debug drawn bounding box of rebuilt area
+    if(mDebugRebuiltBB) {
+        mDebugRebuiltBB->detachFromParent();
+        m_recast->m_pSceneMgr->destroyManualObject(mDebugRebuiltBB);
+        mDebugRebuiltBB = NULL;
+    }
+    if(DEBUG_DRAW_REBUILT_BB)
+        mDebugRebuiltBB = InputGeom::drawBoundingBox(updateArea, m_recast->m_pSceneMgr);
+
 
     // Determine which navmesh tiles have to be updated
     float bmin[3], bmax[3];
@@ -898,7 +914,6 @@ void OgreDetourTileCache::updateFromGeometry(InputGeom *inputGeom, const Ogre::A
     OgreRecast::OgreVect3ToFloatA(updateArea.getMaximum(), bmax);
     dtCompressedTileRef touched[DT_MAX_TOUCHED_TILES];
     int ntouched = 0;
-//    m_tileCache->calcTightTileBounds();
     m_tileCache->queryTiles(bmin, bmax, touched, &ntouched, DT_MAX_TOUCHED_TILES);
         // We use queryTiles to find affected tiles (within bounding box), however if no tiles are added in that area nothing is found
 
@@ -922,17 +937,14 @@ void OgreDetourTileCache::updateFromGeometry(InputGeom *inputGeom, const Ogre::A
     }
 }
 
-void OgreDetourTileCache::buildTiles(InputGeom *inputGeom, const Ogre::AxisAlignedBox *areaToUpdate)
-{
-    // Use bounding box from inputgeom if no area was explicitly specified
-    Ogre::AxisAlignedBox updateArea;
-    if(!areaToUpdate)
-        updateArea = inputGeom->getBoundingBox();
-    else
-        updateArea = *areaToUpdate;
 
-    // Verify whether area to update falls within tilecache bounds, otherwise clip
-    Ogre::Vector3 min = areaToUpdate->getMinimum();
+TileSelection OgreDetourTileCache::getTileSelection(const Ogre::AxisAlignedBox &selectionArea)
+{
+// TODO Account for origin? Have a look at dtTileCache::queryTiles()
+    TileSelection result;
+
+    // Verify whether area to select falls within tilecache bounds, otherwise clip
+    Ogre::Vector3 min = selectionArea.getMinimum();
     if (min.x < m_cfg.bmin[0])
         min.x = m_cfg.bmin[0];
     if (min.z < m_cfg.bmin[2])
@@ -942,7 +954,7 @@ void OgreDetourTileCache::buildTiles(InputGeom *inputGeom, const Ogre::AxisAlign
     if (min.z > m_cfg.bmax[2])
         min.z = m_cfg.bmax[2];
 
-    Ogre::Vector3 max = areaToUpdate->getMaximum();
+    Ogre::Vector3 max = selectionArea.getMaximum();
     if (max.x < m_cfg.bmin[0])
         max.x = m_cfg.bmin[0];
     if (max.z < m_cfg.bmin[2])
@@ -953,49 +965,93 @@ void OgreDetourTileCache::buildTiles(InputGeom *inputGeom, const Ogre::AxisAlign
         max.z = m_cfg.bmax[2];
 
 
-    // Determine which navmesh tiles have to be built
-    // Total width of the tilecache in world units
-    float xWidth = m_cfg.bmax[0] - m_cfg.bmin[0];
-    float zWidth = m_cfg.bmax[2] - m_cfg.bmin[2];
-
     // Width of one tile in world units
-    float tileXWidth = xWidth/m_tw; // This is tileSize*cellSize
-    float tileZWidth = zWidth/m_th;
+    float tileWidth = m_tileSize*m_cellSize;
 
     // Calculate tile index range that falls within bounding box
-    int minTx = (min.x - m_cfg.bmin[0]) / tileXWidth;
-    int maxTx = (max.x - m_cfg.bmin[0]) / tileXWidth;
-    int minTy = (min.z - m_cfg.bmin[2]) / tileZWidth;
-    int maxTy = (max.z - m_cfg.bmin[2]) / tileZWidth;
+    result.minTx = (min.x - m_cfg.bmin[0]) / tileWidth;
+    result.maxTx = (max.x - m_cfg.bmin[0]) / tileWidth;
+    result.minTy = (min.z - m_cfg.bmin[2]) / tileWidth;
+    result.maxTy = (max.z - m_cfg.bmin[2]) / tileWidth;
         // TODO you can also go the other route: using cellsize and tilesize
 
+// Let's assume these will be correct for a small performance gain
+/*
     // Assert tx and ty are within index bounds, otherwise clip
-    if (minTx < 0)
-        minTx = 0;
-    if (maxTx < 0)
-        maxTx = 0;
-    if (minTx > m_tw)
-        minTx = m_tw;
-    if (maxTx > m_tw)
-        maxTx = m_tw;
+    if (result.minTx < 0)
+        result.minTx = 0;
+    if (result.maxTx < 0)
+        result.maxTx = 0;
+    if (result.minTx > m_tw)
+        result.minTx = m_tw;
+    if (result.maxTx > m_tw)
+        result.maxTx = m_tw;
 
-    if (minTy < 0)
-        minTy = 0;
-    if (maxTy < 0)
-        maxTy = 0;
-    if (minTy > m_th)
-        minTy = m_th;
-    if (maxTy > m_th)
-        maxTy = m_th;
+    if (result.minTy < 0)
+        result.minTy = 0;
+    if (result.maxTy < 0)
+        result.maxTy = 0;
+    if (result.minTy > m_th)
+        result.minTy = m_th;
+    if (result.maxTy > m_th)
+        result.maxTy = m_th;
+*/
 
-    int tilesToBuildX = maxTx - minTx;
-    int tilesToBuildY = maxTy - minTy;
+    // Calculate proper bounds aligned to tile bounds
+    min.x = m_cfg.bmin[0] + (result.minTx * tileWidth);
+    min.y = m_cfg.bmin[1];
+    min.z = m_cfg.bmin[2] + (result.minTy * tileWidth);
+
+    max.x = m_cfg.bmin[0] + ((result.maxTx+1) * tileWidth);
+    max.y = m_cfg.bmax[1];
+    max.z = m_cfg.bmin[2] + ((result.maxTy+1) * tileWidth);
+// TODO does this box need to be offset a little further with borders?
+
+
+    // Return result
+    result.bounds.setMinimum(min);
+    result.bounds.setMaximum(max);
+
+    return result;
+}
+
+Ogre::AxisAlignedBox OgreDetourTileCache::getTileAlignedBox(const Ogre::AxisAlignedBox &selectionArea)
+{
+    return getTileSelection(selectionArea).bounds;
+}
+
+void OgreDetourTileCache::buildTiles(InputGeom *inputGeom, const Ogre::AxisAlignedBox *areaToUpdate)
+{
+    // Use bounding box from inputgeom if no area was explicitly specified
+    Ogre::AxisAlignedBox updateArea;
+    if(!areaToUpdate)
+        updateArea = inputGeom->getBoundingBox();
+    else
+        updateArea = *areaToUpdate;
+
+    // Select tiles to build or rebuild
+    TileSelection selection = getTileSelection(*areaToUpdate);
+
+
+    // Debug drawing of bounding area that is updated
+    // Remove previous debug drawn bounding box of rebuilt area
+    if(mDebugRebuiltBB) {
+        mDebugRebuiltBB->detachFromParent();
+        m_recast->m_pSceneMgr->destroyManualObject(mDebugRebuiltBB);
+        mDebugRebuiltBB = NULL;
+    }
+    if(DEBUG_DRAW_REBUILT_BB)
+        mDebugRebuiltBB = InputGeom::drawBoundingBox(selection.bounds, m_recast->m_pSceneMgr);
+
+
+    int tilesToBuildX = (selection.maxTx - selection.minTx)+1;  // Tile ranges are inclusive
+    int tilesToBuildY = (selection.maxTy - selection.minTy)+1;
     if(tilesToBuildX * tilesToBuildY > 5)
         Ogre::LogManager::getSingletonPtr()->logMessage("Building "+Ogre::StringConverter::toString(tilesToBuildX)+" x "+Ogre::StringConverter::toString(tilesToBuildY)+" navmesh tiles.");
 
     // Build tiles
-    for (int ty = minTy; ty < maxTy; ty++) {
-        for (int tx = minTx; tx < maxTx; tx++) {
+    for (int ty = selection.minTy; ty <= selection.maxTy; ty++) {
+        for (int tx = selection.minTx; tx <= selection.maxTx; tx++) {
             buildTile(tx, ty, inputGeom);
         }
     }

@@ -31,7 +31,7 @@ struct rcChunkyTriMeshNode
 struct rcChunkyTriMesh
 {
         inline rcChunkyTriMesh() : nodes(0), tris(0) {};
-        inline ~rcChunkyTriMesh() { delete [] nodes; delete [] tris; }
+        inline ~rcChunkyTriMesh() { if(nodes) delete [] nodes; if(tris) delete [] tris; }
 
         rcChunkyTriMeshNode* nodes;
         int nnodes;
@@ -90,7 +90,9 @@ public:
       * is stored. Note: this is not done optimally, only bounding box intersections are used. But tile building
       * is further optimized due to the use of the chunky tri mesh structure that is built within this inputGeom.
       * Further this constructor is the same as @see{InputGeom(std::vector<Ogre::Entity*>)}
-      * Make sure to adapt your tileBounds fall together with the tilecache bounds so that they cover exactly the tiles you want to rebuild.
+      * Make sure to adapt your tileBounds fall together with the tilecache bounds so that they cover exactly the
+      * tiles you want to rebuild!! Don't call this with an arbitrary bounding box!
+      * Use OgreDetourTileCache::getTileAlignedBox() instead.
       **/
     InputGeom(std::vector<Ogre::Entity*> srcMeshes, const Ogre::AxisAlignedBox &tileBounds);
 
@@ -101,14 +103,13 @@ public:
       **/
     InputGeom(Ogre::TerrainGroup *terrainGroup, std::vector<Ogre::Entity*> srcMeshes = std::vector<Ogre::Entity*>());
 
-// TODO it would be easy to create inputGeom from only a subset of terrain verts (within xz bounding area) as height data is distributed in a uniform xz plane grid (just make sure to sample one extra vert outside the bounding area)
     /**
       * Create inputGeom from terrain and entity polys that fall within specified bounding box, for rebuilding only tiles that fall within the box.
       * For terrain, only the x-z bounding plane of the box is looked at (height is ignored), and only the necessary tris from the terrain are copied into inputGeom.
       * For entities only simple bounding box tests happen for determining whether an entity should be added in its entirety to this inputGeom or not.
       * Make sure to adapt your tileBounds fall together with the tilecache bounds so that they cover exactly the tiles you want to rebuild.
       **/
-    //InputGeom(const Ogre::AxisAlignedBox &tileBounds, Ogre::TerrainGroup *terrainGroup, std::vector<Ogre::Entity*> srcMeshes = std::vector<Ogre::Entity*>());
+    InputGeom(const Ogre::AxisAlignedBox &tileBounds, Ogre::TerrainGroup *terrainGroup, std::vector<Ogre::Entity*> srcMeshes = std::vector<Ogre::Entity*>());
 
     /**
       * Output inputGeom to obj wavefront file.
@@ -248,8 +249,17 @@ public:
 
     /**
       * Debug function for drawing a convex hull as lines in the scene.
+      * Returns the manual object added to the scene.
+      * It's possible to specify a custom color for the drawn lines, default is grey.
       **/
     static Ogre::ManualObject* drawConvexVolume(ConvexVolume *vol, Ogre::SceneManager* sceneMgr, Ogre::ColourValue color=Ogre::ColourValue(0.5, 0.5, 0.5));
+
+    /**
+      * Debug function for drawing a bounding box as lines in the scene.
+      * Returns the manual object added to the scene.
+      * It's possible to specify a custom color for the drawn lines, default is grey.
+      **/
+    static Ogre::ManualObject* drawBoundingBox(Ogre::AxisAlignedBox box, Ogre::SceneManager *sceneMgr, Ogre::ColourValue color=Ogre::ColourValue(0.5, 0.5, 0.5));
 
     /**
       * The chunky tri mesh generated for this inputGeom.
@@ -343,7 +353,7 @@ private:
       * Convert ogre entities whose bounding box intersects the specified bounds
       * to inputGeom.
       **/
-    void convertOgreEntities(Ogre::AxisAlignedBox &tileBounds);
+    void convertOgreEntities(const Ogre::AxisAlignedBox &tileBounds);
 
     /**
       * Recast input vertices

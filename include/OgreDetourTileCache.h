@@ -12,6 +12,16 @@ const float TEMP_OBSTACLE_RADIUS = 1.0f;
 const float TEMP_OBSTACLE_HEIGHT = 2.0f;
 
 
+struct TileSelection
+{
+    Ogre::AxisAlignedBox bounds;
+    int minTx;
+    int maxTx;
+    int minTy;
+    int maxTy;
+};
+
+
 /**
   * Struct to store a request to add or remove
   * a convex obstacle to the tilecache as a deferred
@@ -313,6 +323,32 @@ public:
     bool configure(InputGeom *inputGeom);
 
     /**
+      * Find tiles that (partially or completely) intersect the specified bounding area.
+      * The selectionArea has to be in world units.
+      * TileCache needs to be configured before this method can work (needs to know world size
+      * of tilecache).
+      * TileSelection contains bounding box aligned to the tile bounds and tx ty index ranges
+      * for the affected tiles. Note that tile ranges are inclusive! (eg. if minTx=1 and maxTx=1
+      * then tile at x=1 has to be rebuilt)
+      * It is not necessary for tiles to be already built in order for
+      * them to be included in the selection.
+      * Make sure you use the included bounding box instead of an arbitrary selection bounding
+      * box to bound inputGeom used for rebuilding tiles. Or you might not include all geometry
+      * needed to rebuild all affected tiles correctly.
+      **/
+    TileSelection getTileSelection(const Ogre::AxisAlignedBox &selectionArea);
+
+    /**
+      * Returns a bounding box that matches the tile bounds of this cache and that is at least
+      * as large as the specified selectionArea bounding box. Height (y) coordinates will be set
+      * to the min and max height of this tilecache. (tile selection only happens in x-z plane).
+      * Use this function to get correct bounding boxes to cull your inputGeom or scene geometry
+      * with for tile rebuilding.
+      **/
+    Ogre::AxisAlignedBox getTileAlignedBox(const Ogre::AxisAlignedBox &selectionArea);
+
+
+    /**
       * Build all tiles of the tilecache and construct a recast navmesh from the
       * specified entities. These entities need to be already added to the scene so that
       * their world position and orientation can be calculated.
@@ -324,14 +360,28 @@ public:
       * The specified ogre entities need to be added to a scenenode in the scene before this
       * method is called.
       * The resulting navmesh will be created in the OgreRecast module, at OgreRecast::m_navMesh;
+      *
+      * Will issue a configure() call so the entities specified will determine the world bounds
+      * of the tilecache.
       **/
     bool TileCacheBuild(std::vector<Ogre::Entity*> srcMeshes);
 
     /**
       * Build all navmesh tiles from specified input geom.
+      *
+      * Will issue a configure() call so the inputGeom specified will determine the world bounds
+      * of the tilecache. Therefore you must specify the inputGeom for the entire world.
+      *
       * @see OgreDetourTileCache::TileCacheBuild(std::vector<Ogre::Entity*>)
       **/
     bool TileCacheBuild(InputGeom *inputGeom);
+
+// TODO maybe provide isLoaded(tx, ty) method
+
+// TODO create better distinction between loading compressed tiles in cache and building navmesh from them?
+
+// TODO are both updateFromGeometry() and buildTiles() necessary, or can update be dropped? It might be confusing.
+
 
     /**
       * Build or rebuild a cache tile at the specified x and y position in the tile grid.
@@ -342,11 +392,9 @@ public:
       * At the moment this will issue an immediate update of the navmesh at the
       * corresponding tiles. (the alternative is adding a request that is processed as deferred command)
       *
-      * By default the input geometry stored in this tilecache will be used (the one initially
-      * used to build the navmesh), but you can specify a different one if you want to rebuild
-      * tiles from a changed scene.
+      * Note that you can speed this up by building an inputGeom from only the area that is rebuilt.
+      * Don't use an arbitrary bounding box for culling the inputGeom, but use getTileAlignedBox() instead!
       **/
-// TODO maybe in the future I don't want to store inputgeom anymore, at the moment it's only used for adding convex shapes (what really should be done from compressed tiles instead of rebuilding from input geom) The whole navmesh can be stored as compressed tiles, the input geom does not need to be stored.
     bool buildTile(const int tx, const int ty, InputGeom *inputGeom);
 
     /**
@@ -355,6 +403,10 @@ public:
       * The tiles are built or rebuilt no matter whether there was already a tile at that position in the grid
       * or not. If there previously was a tile in the specified grid position, it is first removed from the
       * tilecache and replaced with the new one.
+      *
+      * Make sure that the specified inputGeom is either the inputGeom of the complete scene (inefficient) or is
+      * built with a tile aligned bounding box (getTileAlignedBox())! The areaToUpdate value can be arbitrary,
+      * but will be converted to a tile aligned box.
       *
       * At the moment this will issue an immediate update of the navmesh at the
       * corresponding tiles. (the alternative is adding a request that is processed as deferred command)
@@ -368,6 +420,9 @@ public:
       *
       * Only has effect if there are already tiles loaded for that area! Otherwise you should use buildTile()
       * or buildTiles().
+      *
+      * This function can be safely used with arbitrary bounding boxes, as the inputGeom will be built with
+      * a bounding box that is tile aligned (getTileAlignedBox(areaToUpdate)).
       *
       * @see{OgreDetourTileCache::updateFromGeometry(InputGeom*, const Ogre::AxisAlignedBox*}
       **/
@@ -557,7 +612,12 @@ public:
     /**
       * Set to false to disable debug drawing. Improves performance.
       **/
-    static float DEBUG_DRAW;
+    static bool DEBUG_DRAW;
+
+    /**
+      * Set to true to draw the bounding box of the tile areas that were rebuilt.
+      **/
+    static bool DEBUG_DRAW_REBUILT_BB;
 
 protected:
 
@@ -590,6 +650,7 @@ protected:
       * In the future this variable will probably disappear.
       **/
     InputGeom* m_geom;
+// TODO maybe in the future I don't want to store inputgeom anymore, at the moment it's only used for adding convex shapes (what really should be done from compressed tiles instead of rebuilding from input geom) The whole navmesh can be stored as compressed tiles, the input geom does not need to be stored.
 
     /**
       * Set to true to keep intermediary results from navmesh build for debugging purposes.
@@ -666,6 +727,12 @@ protected:
       **/
     ConvexVolume* mChangedConvexVolumes[InputGeom::MAX_VOLUMES];    // TODO is this really MAX_VOLUMES? would be more like MAX_REQUESTS
     int mChangedConvexVolumesCount;
+
+    /**
+      * Pointer to debug drawn bounding box of rebuilt tiles.
+      * Used when DEBUG_DRAW_REBUILT_BB is true.
+      **/
+    Ogre::ManualObject* mDebugRebuiltBB;
 };
 
 #endif // OGREDETOURTILECACHE_H

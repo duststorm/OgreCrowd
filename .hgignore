@@ -15,9 +15,3 @@ OgreRecastDemod
 *~
 *.orig
 *.obj
-bin/*
-obj/*
-*.suo
-*.vcxproj.user
-*.sdf
-junk/*

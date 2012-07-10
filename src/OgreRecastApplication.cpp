@@ -574,7 +574,16 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
             // Extend the bounds a bit downwards, because they need to hit the navmesh surface in order to detect that the tile has to be rebuilt.
             // In other words: 3 is the maximum height an obstacle can be above the ground.
             bb.setMinimumY(bb.getMinimum().y - 3);
-            mDetourTileCache->updateFromGeometry(detourInputGeometry, bb);
+
+            // Enable to see the tile area that was rebuilt
+            OgreDetourTileCache::DEBUG_DRAW_REBUILT_BB = true;
+
+            // There are two alternatives for updating the tilecache:
+            // Always udpate tiles, even if they were not in the tilecache before
+            InputGeom geom = InputGeom(detourInputGeometry/*, mDetourTileCache->getTileAlignedBox(bb)*/);
+            mDetourTileCache->buildTiles(&geom, &bb);
+            // Or: Only update tiles that were previously built in the tilecache (there is no speed difference from buildTiles)
+//            mDetourTileCache->updateFromGeometry(detourInputGeometry, bb);
         }
     }
 
