@@ -413,29 +413,12 @@ public:
       **/
     void buildTiles(InputGeom *inputGeom, const Ogre::AxisAlignedBox *areaToUpdate = NULL);
 
-
     /**
-      * Update tiles of the tilecache and build their corresponding navmesh from specified input entities
-      * and only tiles within the specified bounding box.
-      *
-      * Only has effect if there are already tiles loaded for that area! Otherwise you should use buildTile()
-      * or buildTiles().
-      *
-      * This function can be safely used with arbitrary bounding boxes, as the inputGeom will be built with
-      * a bounding box that is tile aligned (getTileAlignedBox(areaToUpdate)).
-      *
-      * @see{OgreDetourTileCache::updateFromGeometry(InputGeom*, const Ogre::AxisAlignedBox*}
+      * Build or rebuild tile from list of entities.
+      * @see{buildTiles(InputGeom*, const Ogre::AxisAlignedBox*)}
       **/
-    void updateFromGeometry(std::vector<Ogre::Entity*> srcMeshes, const Ogre::AxisAlignedBox &areaToUpdate);
+    void buildTiles(std::vector<Ogre::Entity*> srcEntities, const Ogre::AxisAlignedBox *areaToUpdate = NULL);
 
-    /**
-      * Update tiles of the tilecache and build their corresponding navmesh from specified input geometry
-      * and only tiles within the specified bounding box.
-      *
-      * Only has effect if there are already tiles loaded for that area! Otherwise you should use buildTile()
-      * or buildTiles().
-      **/
-    void updateFromGeometry(InputGeom *inputGeom, const Ogre::AxisAlignedBox *areaToUpdate = NULL);
 
 // TODO maybe also add a unloadAllTilesExcept(boundingBox) method
 

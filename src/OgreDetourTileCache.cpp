@@ -878,65 +878,6 @@ int OgreDetourTileCache::addConvexShapeObstacle(ConvexVolume *obstacle)
     return result;
 }
 
-void OgreDetourTileCache::updateFromGeometry(std::vector<Ogre::Entity*> srcMeshes, const Ogre::AxisAlignedBox &areaToUpdate)
-{
-    // Build recast/detour input geometry only for the area to update
-    InputGeom geom = InputGeom(srcMeshes, getTileAlignedBox(areaToUpdate));
-        // TODO do I need geometry to extend a bit out of the bounds for navmesh tiles to always properly connect to the rest?
-
-    updateFromGeometry(&geom);
-}
-
-void OgreDetourTileCache::updateFromGeometry(InputGeom *inputGeom, const Ogre::AxisAlignedBox *areaToUpdate)
-{
-    // Use bounding box from inputgeom if no area was explicitly specified
-    Ogre::AxisAlignedBox updateArea;
-    if(!areaToUpdate) {
-        updateArea = inputGeom->getBoundingBox();
-    } else {
-        updateArea = getTileAlignedBox(*areaToUpdate);
-    }
-
-    // Debug drawing of bounding area that is updated
-    // Remove previous debug drawn bounding box of rebuilt area
-    if(mDebugRebuiltBB) {
-        mDebugRebuiltBB->detachFromParent();
-        m_recast->m_pSceneMgr->destroyManualObject(mDebugRebuiltBB);
-        mDebugRebuiltBB = NULL;
-    }
-    if(DEBUG_DRAW_REBUILT_BB)
-        mDebugRebuiltBB = InputGeom::drawBoundingBox(updateArea, m_recast->m_pSceneMgr);
-
-
-    // Determine which navmesh tiles have to be updated
-    float bmin[3], bmax[3];
-    OgreRecast::OgreVect3ToFloatA(updateArea.getMinimum(), bmin);
-    OgreRecast::OgreVect3ToFloatA(updateArea.getMaximum(), bmax);
-    dtCompressedTileRef touched[DT_MAX_TOUCHED_TILES];
-    int ntouched = 0;
-    m_tileCache->queryTiles(bmin, bmax, touched, &ntouched, DT_MAX_TOUCHED_TILES);
-        // We use queryTiles to find affected tiles (within bounding box), however if no tiles are added in that area nothing is found
-
-    // Rebuild affected tiles
-// TODO maybe defer this and timeslice it, like happend in dtTileCache with tempObstacle updates
-    for (int i = 0; i < ntouched; ++i)
-    {
-// TODO when you do deffered commands, make sure you issue a rebuild for a tile only once per update, so remove doubles from the request queue (this is what contains() is for in dtTileCache)
-        // Retrieve coordinates of tile that has to be rebuilt
-        const dtCompressedTile* tile = m_tileCache->getTileByRef(touched[i]);
-
-        // If it is null, tile is already rebuilt (and has a new ref ID)
-        if(tile) {
-            int tx = tile->header->tx;
-            int ty = tile->header->ty;
-            tile = NULL;
-
-// TODO we actually want a buildTile method with a tileRef as input param. As this method does a bounding box intersection with tiles again, which might result in multiple tiles being rebuilt (which will lead to nothing because only one tile is removed..), and we determined which tiles to bebuild already, anyway (using queryTiles)
-            buildTile(tx, ty, inputGeom);
-        }
-    }
-}
-
 
 TileSelection OgreDetourTileCache::getTileSelection(const Ogre::AxisAlignedBox &selectionArea)
 {
@@ -1029,8 +970,12 @@ void OgreDetourTileCache::buildTiles(InputGeom *inputGeom, const Ogre::AxisAlign
     else
         updateArea = *areaToUpdate;
 
-    // Select tiles to build or rebuild
-    TileSelection selection = getTileSelection(*areaToUpdate);
+    // Reduce bounding area a little with one cell in size, to be sure that if it was already tile-aligned, we don't select an extra tile
+    updateArea.setMinimum( updateArea.getMinimum() + Ogre::Vector3(m_cellSize, 0, m_cellSize) );
+    updateArea.setMaximum( updateArea.getMaximum() - Ogre::Vector3(m_cellSize, 0, m_cellSize) );
+
+    // Select tiles to build or rebuild (builds a tile-aligned BB)
+    TileSelection selection = getTileSelection(updateArea);
 
 
     // Debug drawing of bounding area that is updated
@@ -1055,6 +1000,12 @@ void OgreDetourTileCache::buildTiles(InputGeom *inputGeom, const Ogre::AxisAlign
             buildTile(tx, ty, inputGeom);
         }
     }
+}
+
+void OgreDetourTileCache::buildTiles(std::vector<Ogre::Entity*> srcEntities, const Ogre::AxisAlignedBox *areaToUpdate)
+{
+    InputGeom geom = InputGeom(srcEntities, getTileAlignedBox(*areaToUpdate));
+    buildTiles(&geom);
 }
 
 void OgreDetourTileCache::unloadTiles(const Ogre::AxisAlignedBox &areaToUpdate)

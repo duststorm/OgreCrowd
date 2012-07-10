@@ -402,7 +402,6 @@ bool OgreRecastTerrainApplication::keyPressed( const OIS::KeyEvent &arg )
                 Ogre::SceneNode *houseNode = mSceneMgr->getRootSceneNode()->createChildSceneNode();
                 houseNode->attachObject(houseEnt);
                 houseNode->rotate(Ogre::Vector3::UNIT_Y, Ogre::Degree(Ogre::Math::RangeRandom(0, 360)));
-                float houseHeight = houseEnt->getBoundingBox().getSize().y;
                 float scale = 2.5;
                 houseNode->setScale(scale, scale, scale);
                 houseNode->setPosition(rayHitPoint);
@@ -411,14 +410,13 @@ bool OgreRecastTerrainApplication::keyPressed( const OIS::KeyEvent &arg )
 
             // Get bounding box of the entity. All navmesh tiles touching it will have to be rebuilt.
             Ogre::AxisAlignedBox bb = InputGeom::getWorldSpaceBoundingBox(houseEnt);
+            bb = mDetourTileCache->getTileAlignedBox(bb);
 
-            // Recreate recast input geometry data with terrain and all extra entities
-            if(mGeom)
-                delete mGeom;
-            mGeom = new InputGeom(mTerrainGroup, mNavmeshEnts);
+            // Create partial input geom only for the tiles we want to rebuild
+            InputGeom geom = InputGeom(bb, mTerrainGroup, mNavmeshEnts);
 
-            // Rebuild tiles that touch bounding box
-            mDetourTileCache->updateFromGeometry(mGeom, &bb);
+            // Rebuild tiles that touch inputGeom bounding box
+            mDetourTileCache->buildTiles(&geom);
         }
     }
 

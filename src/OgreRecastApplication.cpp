@@ -563,27 +563,18 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
             mWalkableObjects.push_back(palletE);
 
             // Create a list containing both navmesh entities and obstacles, as well as all created walkable objects
-            std::vector<Ogre::Entity*> detourInputGeometry;
-            detourInputGeometry.insert(detourInputGeometry.end(), mNavmeshEnts.begin(), mNavmeshEnts.end());
-            detourInputGeometry.insert(detourInputGeometry.end(), mWalkableObjects.begin(), mWalkableObjects.end());
+            std::vector<Ogre::Entity*> detourInputs;
+            detourInputs.insert(detourInputs.end(), mNavmeshEnts.begin(), mNavmeshEnts.end());
+            detourInputs.insert(detourInputs.end(), mWalkableObjects.begin(), mWalkableObjects.end());
 // TODO I actually want this inputgeom to be reused also when adding a (convex) temp obstacle, but maybe the best way is adding a proper addConvexObstacle method to ogreDtTileCache
 
             // Rebuild the tiles overlapping the bounding box of the added object
             Ogre::AxisAlignedBox bb = InputGeom::getWorldSpaceBoundingBox(palletE);
 
-            // Extend the bounds a bit downwards, because they need to hit the navmesh surface in order to detect that the tile has to be rebuilt.
-            // In other words: 3 is the maximum height an obstacle can be above the ground.
-            bb.setMinimumY(bb.getMinimum().y - 3);
-
             // Enable to see the tile area that was rebuilt
             OgreDetourTileCache::DEBUG_DRAW_REBUILT_BB = true;
 
-            // There are two alternatives for updating the tilecache:
-            // Always udpate tiles, even if they were not in the tilecache before
-            InputGeom geom = InputGeom(detourInputGeometry, mDetourTileCache->getTileAlignedBox(bb));
-            mDetourTileCache->buildTiles(&geom, &bb);
-            // Or: Only update tiles that were previously built in the tilecache (there is no speed difference from buildTiles)
-//            mDetourTileCache->updateFromGeometry(detourInputGeometry, bb);
+            mDetourTileCache->buildTiles(detourInputs, &bb);
         }
     }
 
@@ -599,17 +590,15 @@ bool OgreRecastApplication::keyPressed( const OIS::KeyEvent &arg )
                 mWalkableObjects.erase(std::remove(mWalkableObjects.begin(), mWalkableObjects.end(), rayHitObject));
 
                 // Create a list containing both navmesh entities and obstacles, as well as all created walkable objects
-                std::vector<Ogre::Entity*> detourInputGeometry;
-                detourInputGeometry.insert(detourInputGeometry.end(), mNavmeshEnts.begin(), mNavmeshEnts.end());
-                detourInputGeometry.insert(detourInputGeometry.end(), mWalkableObjects.begin(), mWalkableObjects.end());
+                std::vector<Ogre::Entity*> detourInputs;
+                detourInputs.insert(detourInputs.end(), mNavmeshEnts.begin(), mNavmeshEnts.end());
+                detourInputs.insert(detourInputs.end(), mWalkableObjects.begin(), mWalkableObjects.end());
                                             // the hit pallet is removed from this list
 
                 // Rebuild the tiles overlapping the bounding box, with the pallet removed
                 Ogre::AxisAlignedBox bb = InputGeom::getWorldSpaceBoundingBox(rayHitObject);
 
-                // For the same reasons as with adding, we need to extend the bounds a bit downwards.
-                bb.setMinimumY(bb.getMinimum().y - 3);
-                mDetourTileCache->updateFromGeometry(detourInputGeometry, bb);  // Update tile again, this time without the pallet
+                mDetourTileCache->buildTiles(detourInputs, &bb);  // Update tile again, this time without the pallet
 
                 // Remove pallet entity from scene and destroy it
                 rayHitObject->getParentSceneNode()->detachObject(rayHitObject);
