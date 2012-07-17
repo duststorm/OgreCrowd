@@ -66,7 +66,7 @@ void OgreRecastTerrainApplication::createScene()
     // Create navigateable terrain
     mTerrainGlobals = OGRE_NEW Ogre::TerrainGlobalOptions();
     mTerrainGroup = OGRE_NEW Ogre::TerrainGroup(mSceneMgr, Ogre::Terrain::ALIGN_X_Z, TERRAIN_TILE_RESOLUTION, TERRAIN_TILE_SIZE);
-    mTerrainGroup->setFilenameConvention(Ogre::String("OgreRecastTerrain"), Ogre::String("dat"));
+    mTerrainGroup->setFilenameConvention(Ogre::String("OgreRecastTerrain"), Ogre::String("ogt"));
     mTerrainGroup->setOrigin(Ogre::Vector3::ZERO);
     configureTerrainDefaults(light);
 
