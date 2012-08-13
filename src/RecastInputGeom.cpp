@@ -886,6 +886,8 @@ void InputGeom::convertOgreEntities()
     //TODO These probably could member varibles, this would increase performance slightly
     delete[] meshVertices;
     delete[] meshIndices;
+    delete[] meshVertexCount;
+    delete[] meshIndexCount;
 
     // calculate normals data for Recast - im not 100% sure where this is required
     // but it is used, Ogre handles its own Normal data for rendering, this is not related
