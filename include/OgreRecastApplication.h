@@ -136,6 +136,12 @@ public:
     static bool TERRAIN;
 
     /**
+      * Determines whether paged crowds demo will be shown. If true the paged demo will
+      * run, if false TERRAIN determines whether terrain or dungeon demo will be run.
+      **/
+    static bool PAGED;
+
+    /**
       * Sets recast visual debugging geometry in the scene to visible (true) or hide
       * it (false).
       **/

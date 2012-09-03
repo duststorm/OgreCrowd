@@ -288,10 +288,7 @@ bool OgreDetourTileCache::TileCacheBuild(InputGeom *inputGeom)
 
 bool OgreDetourTileCache::buildTile(const int tx, const int ty, InputGeom *inputGeom)
 {
-    if (tx < 0 || tx >= m_tw)
-        return false;
-
-    if (ty < 0 || ty >= m_th)
+    if (! isWithinBounds(tx, ty))
         return false;
 
 //TODO maybe I want to keep these values up to date
@@ -307,7 +304,7 @@ bool OgreDetourTileCache::buildTile(const int tx, const int ty, InputGeom *input
 
     dtStatus status;
 
-    // I don't know exactly why this can still be multiple tiles (??)
+    // I don't know exactly why this can still be multiple tiles (??) (maybe because there could be tiles on multiple layers)
     for (int i = 0; i < ntiles; ++i)
     {
         TileCacheData* tile = &tiles[i];
@@ -566,17 +563,56 @@ void OgreDetourTileCache::handleUpdate(const float dt)
 }
 
 
-void OgreDetourTileCache::getTilePos(const float* pos, int& tx, int& ty)
+void OgreDetourTileCache::getTileAtPos(const float* pos, int& tx, int& ty)
 {
 //    if (!m_geom) return;
 // TODO is it correct to read from OgreRecast cfg here?
     const float* bmin = m_recast->m_cfg.bmin;
 
-    const float ts = m_tileSize*m_cellSize;
+    const float ts = getTileSize();
     tx = (int)((pos[0] - bmin[0]) / ts);
     ty = (int)((pos[2] - bmin[2]) / ts);
 }
 
+Ogre::Vector2 OgreDetourTileCache::getTileAtPos(const Ogre::Vector3 pos)
+{
+    float position[3];
+    OgreRecast::OgreVect3ToFloatA(pos, position);
+    int tx; int ty;
+
+    getTileAtPos(position, tx, ty);
+
+    return Ogre::Vector2(tx, ty);
+}
+
+bool OgreDetourTileCache::tileExists(int tx, int ty)
+{
+    if(!isWithinBounds(tx,ty))
+        return false;
+
+    dtCompressedTileRef tiles;
+    int nTiles = m_tileCache->getTilesAt(tx, ty, &tiles, 1);
+
+    // Return wheter a tile exists on some layer at grid position (tx,ty)
+    return nTiles > 0;
+}
+
+bool OgreDetourTileCache::isWithinBounds(int tx, int ty)
+{
+    if (tx < 0 || tx >= m_tw)
+        return false;
+
+    if (ty < 0 || ty >= m_th)
+        return false;
+
+    return true;
+}
+
+bool OgreDetourTileCache::isWithinBounds(Ogre::Vector3 pos)
+{
+    Ogre::Vector2 tpos = getTileAtPos(pos);
+    isWithinBounds((int)tpos.x, (int)tpos.y);
+}
 
 void OgreDetourTileCache::clearAllTempObstacles()
 {
@@ -907,7 +943,7 @@ TileSelection OgreDetourTileCache::getTileSelection(const Ogre::AxisAlignedBox &
 
 
     // Width of one tile in world units
-    float tileWidth = m_tileSize*m_cellSize;
+    float tileWidth = getTileSize();
 
     // Calculate tile index range that falls within bounding box
     result.minTx = (min.x - m_cfg.bmin[0]) / tileWidth;
@@ -952,6 +988,30 @@ TileSelection OgreDetourTileCache::getTileSelection(const Ogre::AxisAlignedBox &
     // Return result
     result.bounds.setMinimum(min);
     result.bounds.setMaximum(max);
+
+    return result;
+}
+
+Ogre::AxisAlignedBox OgreDetourTileCache::getTileBounds(int tx, int ty)
+{
+    const float* bmin = m_recast->m_cfg.bmin;
+    const float ts = getTileSize();
+
+
+    Ogre::AxisAlignedBox result;
+
+
+    result.setMinimum(
+                bmin[0] + tx * ts,
+                bmin[1],
+                bmin[2] + ty * ts
+                );
+
+    result.setMaximum(
+                bmin[0] + (tx+1) * ts,
+                m_recast->m_cfg.bmax[1],
+                bmin[2] + (ty+1) * ts
+                );
 
     return result;
 }

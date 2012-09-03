@@ -23,8 +23,13 @@ Character::Character(Ogre::String name, Ogre::SceneManager *sceneMgr, OgreDetour
     mClipTo(0),
     mRaySceneQuery(0)
 {
-    mAgentID = mDetourCrowd->addAgent(position);
-    mAgent = mDetourCrowd->getAgent(mAgentID);
+// TODO maybe create mNode in this consructor instead of in subclasses
+    load(position);
+}
+
+Character::~Character()
+{
+    unLoad();
 }
 
 int Character::getAgentID()
@@ -42,14 +47,14 @@ Ogre::Entity* Character::getEntity()
     return mEnt;
 }
 
-Ogre::SceneNode* Character::getNode()
+Ogre::SceneNode* Character::getNode(void) const
 {
     return mNode;
 }
 
-Ogre::Vector3 Character::getDestination()
+Ogre::Vector3 Character::getDestination() const
 {
-    if (mAgentControlled)
+    if (mAgentControlled && isLoaded())
         return mDestination;
 
     return Ogre::Vector3::ZERO;     // TODO this is not ideal
@@ -57,7 +62,7 @@ Ogre::Vector3 Character::getDestination()
 
 void Character::setPosition(Ogre::Vector3 position)
 {
-    if(!mAgentControlled) {
+    if(!mAgentControlled || !isLoaded()) {
         getNode()->setPosition(position);
         return;
     }
@@ -70,12 +75,13 @@ void Character::setPosition(Ogre::Vector3 position)
     mDetourCrowd->removeAgent(mAgentID);
     mAgentID = mDetourCrowd->addAgent(position);
 
-    getNode()->setPosition(position);
+    if(getNode())   // TODO remove this check by initing mNode in this class' constructor
+        getNode()->setPosition(position);
 }
 
 void Character::updateDestination(Ogre::Vector3 destination, bool updatePreviousPath)
 {
-    if(!mAgentControlled)
+    if(!mAgentControlled || !isLoaded())
         return;
 
     // Find position on navmesh
@@ -88,13 +94,16 @@ void Character::updateDestination(Ogre::Vector3 destination, bool updatePrevious
     mManualVelocity = Ogre::Vector3::ZERO;
 }
 
-Ogre::Vector3 Character::getPosition()
+Ogre::Vector3 Character::getPosition() const
 {
     return getNode()->getPosition();
 }
 
 void Character::updatePosition(Ogre::Real timeSinceLastFrame)
 {
+    if(!isLoaded())
+        return;
+
     if (mAgentControlled) {
         Ogre::Vector3 agentPos;
         OgreRecast::FloatAToOgreVect3(getAgent()->npos, agentPos);
@@ -155,7 +164,7 @@ void Character::clipToTerrainHeight()
 }
 
 
-bool Character::destinationReached()
+bool Character::destinationReached() const
 {
     Ogre::Vector3 pos = getPosition();
     Ogre::Vector3 dest = getDestination();
@@ -167,7 +176,7 @@ bool Character::destinationReached()
 
 void Character::setDestination(Ogre::Vector3 destination)
 {
-    if (!mAgentControlled)
+    if (!mAgentControlled || !isLoaded())
         return;
 
     mDestination = destination;
@@ -177,7 +186,7 @@ void Character::setDestination(Ogre::Vector3 destination)
 
 void Character::stop()
 {
-    if(!mAgentControlled) {
+    if(!mAgentControlled || !isLoaded()) {
         mManualVelocity = Ogre::Vector3::ZERO;
         mStopped = true;
         return;
@@ -209,12 +218,15 @@ void Character::setVelocity(Ogre::Vector3 velocity)
     mStopped = false;
     mDestination = Ogre::Vector3::ZERO;     // TODO this is not ideal
 
-    if(mAgentControlled)
+    if(mAgentControlled && isLoaded())
         mDetourCrowd->requestVelocity(getAgentID(), mManualVelocity);
 }
 
 Ogre::Vector3 Character::getVelocity()
 {
+    if(!isLoaded())
+        return Ogre::Vector3::ZERO;
+
     if(mAgentControlled) {
         Ogre::Vector3 velocity;
         OgreRecast::FloatAToOgreVect3(getAgent()->nvel, velocity);
@@ -231,12 +243,18 @@ Ogre::Real Character::getSpeed()
 
 Ogre::Real Character::getMaxSpeed()
 {
-    return getAgent()->params.maxSpeed;
+    if(isLoaded())
+        return getAgent()->params.maxSpeed;
+    else
+        return 0.0f;
 }
 
 Ogre::Real Character::getMaxAcceleration()
 {
-    return getAgent()->params.maxAcceleration;
+    if(isLoaded())
+        return getAgent()->params.maxAcceleration;
+    else
+        return 0.0f;
 }
 
 bool Character::isMoving()
@@ -244,12 +262,12 @@ bool Character::isMoving()
     return !mStopped || getSpeed() != 0;
 }
 
-Ogre::Real Character::getAgentHeight(void)
+Ogre::Real Character::getAgentHeight(void) const
 {
     return mDetourCrowd->getAgentHeight();
 }
 
-Ogre::Real Character::getAgentRadius(void)
+Ogre::Real Character::getAgentRadius(void) const
 {
     return mDetourCrowd->getAgentRadius();
 }
@@ -284,4 +302,46 @@ bool Character::isAgentControlled()
 void Character::setDetourTileCache(OgreDetourTileCache *dtTileCache)
 {
     mDetourTileCache = dtTileCache;
+}
+
+void Character::load()
+{
+    if(isLoaded())
+        return; // nothing to do
+
+    load(getPosition());
+}
+
+void Character::load(Ogre::Vector3 position)
+{
+    if(isLoaded()) {
+        setPosition(position);
+    } else {
+        mAgentID = mDetourCrowd->addAgent(position);
+        mAgent = mDetourCrowd->getAgent(mAgentID);
+    }
+
+    setPosition(position);
+    show();
+}
+
+void Character::unLoad()
+{
+    mDetourCrowd->removeAgent(getAgentID());
+    mAgentID = -1;
+    mAgent = NULL;
+
+    hide();
+}
+
+void Character::show()
+{
+    if(getNode())
+        getNode()->setVisible(true);
+}
+
+void Character::hide()
+{
+    if(getNode())
+        getNode()->setVisible(false);
 }

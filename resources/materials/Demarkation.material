@@ -1,0 +1,36 @@
+material Demarkation 
+{
+    receive_shadows off
+    
+    technique Default
+    {
+        pass Default
+        {
+        	scene_blend alpha_blend
+         	alpha_rejection greater 128
+         	depth_write off
+
+		    texture_unit ColorMap
+		    {
+		    	// Create a color by multiplying a grayscale + alpha texture with a chosen color
+		        texture Demarkation.png
+		        // The final parameter in this line specifies the color
+		        colour_op_ex modulate src_texture src_manual 1 0 0.1
+		    }
+        }
+    }
+}
+
+material number_grid
+{
+	technique
+	{
+		pass
+		{
+			texture_unit
+			{
+				texture number_grid.png
+			}
+		}
+	}
+}

@@ -128,7 +128,8 @@ SOURCES += src/BaseApplication.cpp \
     src/CylinderObstacle.cpp \
     src/ConvexShapeObstacle.cpp \
     src/OgreRecastTerrainApplication.cpp \
-    src/SettingsFileParser.cpp
+    src/SettingsFileParser.cpp \
+    src/OgreRecastPagedCrowdApplication.cpp
 HEADERS += include/BaseApplication.h \
     include/OgreRecastApplication.h \
     include/OgreRecastDefinitions.h \
@@ -165,4 +166,5 @@ HEADERS += include/BaseApplication.h \
     include/CylinderObstacle.h \
     include/ConvexShapeObstacle.h \
     include/OgreRecastTerrainApplication.h \
-    include/SettingsFileParser.h
+    include/SettingsFileParser.h \
+    include/OgreRecastPagedCrowdApplication.h

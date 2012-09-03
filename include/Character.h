@@ -22,6 +22,8 @@ public:
       **/
     Character(Ogre::String name, Ogre::SceneManager* sceneMgr, OgreDetourCrowd* detourCrowd, Ogre::Vector3 position = Ogre::Vector3::ZERO);
 
+    ~Character();
+
     /**
       * The delta offset an agent must be from its destination before considering the destination reached.
       * Set this as the squared value of the actual delta value (squared distance is calculated for perfocmance).
@@ -31,7 +33,7 @@ public:
     /**
       * The scenenode this character is attached to
       **/
-    virtual Ogre::SceneNode* getNode(void);
+    virtual Ogre::SceneNode* getNode(void) const;
 
     /**
       * The entity that represents this character in the scene
@@ -41,12 +43,12 @@ public:
     /**
       * The height of the agent for this character.
       **/
-    virtual Ogre::Real getAgentHeight(void);
+    virtual Ogre::Real getAgentHeight(void) const;
 
     /**
       * The radius of the agent for this character.
       **/
-    virtual Ogre::Real getAgentRadius(void);
+    virtual Ogre::Real getAgentRadius(void) const;
 
     /**
       * Update this character for drawing a new frame.
@@ -71,7 +73,7 @@ public:
     /**
      * The destination set for this character.
      **/
-    virtual Ogre::Vector3 getDestination(void);
+    virtual Ogre::Vector3 getDestination(void) const;
 
     /**
       * Place character at new position.
@@ -84,7 +86,7 @@ public:
       * The current position of the agent.
       * Is only up to date once update() has been called in a frame.
       **/
-    virtual Ogre::Vector3 getPosition(void);
+    virtual Ogre::Vector3 getPosition(void) const;
 
     /**
       * Index ID identifying the agent of this character in the crowd
@@ -99,7 +101,7 @@ public:
     /**
       * Returns true when this character has reached its set destination.
       **/
-    virtual bool destinationReached(void);
+    virtual bool destinationReached(void) const;
 
     /**
       * Request to set a manual velocity for this character, to control it
@@ -196,6 +198,19 @@ public:
       * not changed.
       **/
     void clipToTerrain(Ogre::TerrainGroup *terrainGroup);
+
+    bool isLoaded(void) const { return mAgentID >= 0; }
+
+    void load(void);
+
+    void load(Ogre::Vector3 position);
+
+    void unLoad(void);
+
+    void show(void);
+
+    void hide(void);
+
 
 protected:
     /**

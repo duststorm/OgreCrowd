@@ -15,6 +15,7 @@ SettingsFileParser::SettingsFileParser(Ogre::String filePath)
     mTempObstacleSteering = true;
     mComplexObstacles = true;
     mTerrain = false;
+    mPaged = false;
 
     mTerrainTilesX = 1;
     mTerrainTilesZ = 1;
@@ -89,6 +90,9 @@ bool SettingsFileParser::addOption(Ogre::String sectionName, Ogre::String option
         return true;
     } else if(equals(optionName, "Terrain Demo")) {
         mTerrain = getBool(optionValue);
+        return true;
+    } else if(equals(optionName, "Paged Crowds Demo")) {
+        mPaged = getBool(optionValue);
         return true;
 
 

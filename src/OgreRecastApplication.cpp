@@ -25,6 +25,7 @@ This source file is part of the
 #include "RecastInputGeom.h"
 #include "OgreRecastTerrainApplication.h"
 #include "SettingsFileParser.h"
+#include "OgreRecastPagedCrowdApplication.h"
 
 
 //--- SETTINGS ------------------------------------------------------------------------
@@ -54,6 +55,9 @@ bool OgreRecastApplication::COMPLEX_OBSTACLES = true;
 
 // Set to true to demo navmesh on terrain
 bool OgreRecastApplication::TERRAIN = false;
+
+// Set to true to run paged crowds demo
+bool OgreRecastApplication::PAGED = false;
 
 //-------------------------------------------------------------------------------------
 
@@ -1028,6 +1032,7 @@ void OgreRecastApplication::loadConfig(Ogre::String configFileName)
         OgreRecastApplication::TEMP_OBSTACLE_STEERING = sfp.mTempObstacleSteering;
         OgreRecastApplication::COMPLEX_OBSTACLES = sfp.mComplexObstacles;
         OgreRecastApplication::TERRAIN = sfp.mTerrain;
+        OgreRecastApplication::PAGED = sfp.mPaged;
 
         OgreRecastTerrainApplication::TERRAIN_TILES_X = sfp.mTerrainTilesX;
         OgreRecastTerrainApplication::TERRAIN_TILES_Z = sfp.mTerrainTilesZ;
@@ -1061,12 +1066,14 @@ extern "C" {
         OgreRecastApplication::loadConfig("OgreRecast.cfg");
 
         // Create application object
-        OgreRecastApplication *app = NULL;
-        if(OgreRecastApplication::TERRAIN) {
+        BaseApplication *app = NULL;
+        if(OgreRecastApplication::PAGED)
+            app = new OgreRecastPagedCrowdApplication();
+        else if(OgreRecastApplication::TERRAIN)
             app = new OgreRecastTerrainApplication();
-        } else {
+        else
             app = new OgreRecastApplication();
-        }
+
 
         try {
             app->go();

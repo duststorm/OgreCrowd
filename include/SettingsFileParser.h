@@ -46,6 +46,7 @@ public:
     bool mTempObstacleSteering;
     bool mComplexObstacles;
     bool mTerrain;
+    bool mPaged;
 
     bool mRestoreConfig;
     bool mLockMouse;

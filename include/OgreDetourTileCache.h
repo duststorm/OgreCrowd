@@ -275,6 +275,7 @@ struct BuildContext
 };
 
 
+// TODO put in class context
 /**
   * Calculate the memory space used by the tilecache.
   **/
@@ -346,6 +347,18 @@ public:
       * with for tile rebuilding.
       **/
     Ogre::AxisAlignedBox getTileAlignedBox(const Ogre::AxisAlignedBox &selectionArea);
+
+    /**
+      * Returns the world-space bounds of the tile at specified grid position.
+      * Make sure that tx and ty satisfy isWithinBounds(tx, ty).
+      **/
+    Ogre::AxisAlignedBox getTileBounds(int tx, int ty);
+
+    /**
+      * The size of one tile in world units.
+      * This equals the number of cells per tile, multiplied with the cellsize.
+      **/
+    inline Ogre::Real getTileSize(void) { return m_tileSize*m_cellSize; }
 
 
     /**
@@ -429,9 +442,30 @@ public:
     void unloadTiles(const Ogre::AxisAlignedBox &areaToUpdate);
 
     /**
-      * Gets world position of tile with specified index.
+      * Gets grid coordinates of the tile that contains the specified world position.
       **/
-    void getTilePos(const float* pos, int& tx, int& ty);
+    void getTileAtPos(const float* pos, int& tx, int& ty);
+
+    /**
+      * Gets grid coordinates of the tile that contains the specified world position.
+      **/
+    Ogre::Vector2 getTileAtPos(const Ogre::Vector3 pos);
+
+    /**
+      * Determines whether there is a tile loaded at the specified grid position.
+      **/
+    bool tileExists(int tx, int ty);
+
+    /**
+      * Determines whether the specified grid index is within the outer bounds of this tilecache.
+      **/
+    bool isWithinBounds(int tx, int ty);
+
+    /**
+      * Determines whether the specified world position is within the outer bounds of this tilecache,
+      * ie the coordinates are contained within a tile that is within the cache bounds.
+      **/
+    bool isWithinBounds(Ogre::Vector3 pos);
 
     /**
       * Update (tick) the tilecache.

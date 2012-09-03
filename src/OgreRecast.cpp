@@ -10,7 +10,8 @@ OgreRecast::OgreRecast(Ogre::SceneManager* sceneMgr, OgreRecastConfigParams conf
     : m_pSceneMgr(sceneMgr),
     m_pRecastSN(NULL),
       m_sg(NULL),
-      m_rebuildSg(false)
+      m_rebuildSg(false),
+      mFilter(0)
 {
    // Init recast stuff in a safe state
    
@@ -34,6 +35,20 @@ OgreRecast::OgreRecast(Ogre::SceneManager* sceneMgr, OgreRecastConfigParams conf
 
 
    m_pLog = Ogre::LogManager::getSingletonPtr();
+
+
+   // Set default size of box around points to look for nav polygons
+   mExtents[0] = 32.0f; mExtents[1] = 32.0f; mExtents[2] = 32.0f;
+
+   // Setup the default query filter
+   mFilter = new dtQueryFilter();
+   mFilter->setIncludeFlags(0xFFFF) ;
+   mFilter->setExcludeFlags(0);
+   // Area flags for polys to consider in search, and their cost
+   mFilter->setAreaCost(SAMPLE_POLYAREA_GROUND, 1.0f);       // TODO have a way of configuring the filter
+   mFilter->setAreaCost(DT_TILECACHE_WALKABLE_AREA, 1.0f);
+
+
 
    // Set configuration
    configure(configParams);
@@ -552,7 +567,6 @@ bool OgreRecast::NavMeshBuild(InputGeom* input)
 int OgreRecast::FindPath(float* pStartPos, float* pEndPos, int nPathSlot, int nTarget)
 {
    dtStatus status ;
-   float pExtents[3]={32.0f, 32.0f, 32.0f} ; // size of box around start/end points to look for nav polygons
    dtPolyRef StartPoly ;
    float StartNearest[3] ;
    dtPolyRef EndPoly ;
@@ -563,22 +577,15 @@ int OgreRecast::FindPath(float* pStartPos, float* pEndPos, int nPathSlot, int nT
    int nVertCount=0 ;
 
 
-   // setup the filter
-   dtQueryFilter Filter;
-   Filter.setIncludeFlags(0xFFFF) ;
-   Filter.setExcludeFlags(0) ;
-   Filter.setAreaCost(SAMPLE_POLYAREA_GROUND, 1.0f);
-   Filter.setAreaCost(DT_TILECACHE_WALKABLE_AREA, 1.0f);
-
    // find the start polygon
-   status=m_navQuery->findNearestPoly(pStartPos, pExtents, &Filter, &StartPoly, StartNearest) ;
+   status=m_navQuery->findNearestPoly(pStartPos, mExtents, mFilter, &StartPoly, StartNearest) ;
    if((status&DT_FAILURE) || (status&DT_STATUS_DETAIL_MASK)) return -1 ; // couldn't find a polygon
 
    // find the end polygon
-   status=m_navQuery->findNearestPoly(pEndPos, pExtents, &Filter, &EndPoly, EndNearest) ;
+   status=m_navQuery->findNearestPoly(pEndPos, mExtents, mFilter, &EndPoly, EndNearest) ;
    if((status&DT_FAILURE) || (status&DT_STATUS_DETAIL_MASK)) return -2 ; // couldn't find a polygon
 
-   status=m_navQuery->findPath(StartPoly, EndPoly, StartNearest, EndNearest, &Filter, PolyPath, &nPathCount, MAX_PATHPOLY) ;
+   status=m_navQuery->findPath(StartPoly, EndPoly, StartNearest, EndNearest, mFilter, PolyPath, &nPathCount, MAX_PATHPOLY) ;
    if((status&DT_FAILURE) || (status&DT_STATUS_DETAIL_MASK)) return -3 ; // couldn't create a path
    if(nPathCount==0) return -4 ; // couldn't find a path
 
@@ -1030,18 +1037,55 @@ static float frand()
 
 Ogre::Vector3 OgreRecast::getRandomNavMeshPoint()
 {
-    // setup the filter
-    dtQueryFilter Filter;
-    Filter.setIncludeFlags(0xFFFF) ;
-    Filter.setExcludeFlags(0) ;
-    Filter.setAreaCost(SAMPLE_POLYAREA_GROUND, 1.0f) ;
-    Filter.setAreaCost(DT_TILECACHE_WALKABLE_AREA, 1.0f);
-
     float resultPoint[3];
     dtPolyRef resultPoly;
-    m_navQuery->findRandomPoint(&Filter, frand, &resultPoly, resultPoint);
+    m_navQuery->findRandomPoint(mFilter, frand, &resultPoly, resultPoint);
 
     return Ogre::Vector3(resultPoint[0], resultPoint[1], resultPoint[2]);
+}
+
+dtQueryFilter OgreRecast::getFilter()
+{
+    return *mFilter;    // Copy-on-return
+}
+
+void OgreRecast::setFilter(const dtQueryFilter filter)
+{
+    *mFilter = filter;    // Copy
+        // TODO will this work? As I'm making a shallow copy of a class that contains pointers
+}
+
+Ogre::Vector3 OgreRecast::getPointExtents()
+{
+    Ogre::Vector3 result;
+    FloatAToOgreVect3(mExtents, result);
+    return result;
+}
+
+void OgreRecast::setPointExtents(Ogre::Vector3 extents)
+{
+    OgreVect3ToFloatA(extents, mExtents);
+}
+
+Ogre::Vector3 OgreRecast::getRandomNavMeshPointInCircle(Ogre::Vector3 center, Ogre::Real radius)
+{
+    // First find nearest navmesh poly to center
+    float pt[3];
+    OgreVect3ToFloatA(center, pt);
+    float rPt[3];
+    dtPolyRef navmeshPoly;
+    dtStatus status=m_navQuery->findNearestPoly(pt, mExtents, mFilter, &navmeshPoly, rPt);
+    if((status&DT_FAILURE) || (status&DT_STATUS_DETAIL_MASK))
+        return center; // couldn't find a polygon
+
+
+    // Then start searching at this poly for a random point within specified radius
+    dtPolyRef resultPoly;
+    m_navQuery->findRandomPointAroundCircle(navmeshPoly, pt, radius, mFilter, frand, &resultPoly, rPt);
+    Ogre::Vector3 resultPt;
+    FloatAToOgreVect3(rPt, resultPt);
+
+    return resultPt;
 }
 
 Ogre::String OgreRecast::getPathFindErrorMsg(int errorCode)
@@ -1069,22 +1113,11 @@ Ogre::String OgreRecast::getPathFindErrorMsg(int errorCode)
 
 bool OgreRecast::findNearestPointOnNavmesh(Ogre::Vector3 position, Ogre::Vector3 &resultPt)
 {
-    // You can modify these settings if you want
-    float pExtents[3]={32.0f, 32.0f, 32.0f} ; // size of box around start/end points to look for nav polygons
-
-    // setup the filter
-    dtQueryFilter Filter;
-    Filter.setIncludeFlags(0xFFFF) ;
-    Filter.setExcludeFlags(0) ;
-    Filter.setAreaCost(SAMPLE_POLYAREA_GROUND, 1.0f);
-    Filter.setAreaCost(DT_TILECACHE_WALKABLE_AREA, 1.0f);
-    ////
-
     float pt[3];
     OgreVect3ToFloatA(position, pt);
     float rPt[3];
     dtPolyRef navmeshPoly;
-    dtStatus status=m_navQuery->findNearestPoly(pt, pExtents, &Filter, &navmeshPoly, rPt);
+    dtStatus status=m_navQuery->findNearestPoly(pt, mExtents, mFilter, &navmeshPoly, rPt);
     if((status&DT_FAILURE) || (status&DT_STATUS_DETAIL_MASK))
         return false; // couldn't find a polygon
 

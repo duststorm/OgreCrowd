@@ -579,6 +579,17 @@ public:
       **/
     float getNavmeshOffsetFromGround(void);
 
+    /**
+      * Size of each cell (the length of one dimension on the x-y plane) in world
+      * units.
+      **/
+    float getCellSize(void) { return m_cellSize; }
+
+    /**
+      * Height in world units of one navmesh cell.
+      **/
+    float getCellHeight(void) { return m_cellHeight; }
+
    /**
      * Cleanup recast parameters and variables.
      * This does not clean up the objects related to debug drawing.
@@ -679,6 +690,32 @@ public:
    void CreateRecastPathLine(int nPathSlot);
 
    /**
+     * Returns the poly filter that will be used for all (random) point and nearest poly searches,
+     * as well as for pathfinding.
+     **/
+   dtQueryFilter getFilter(void);
+
+   /**
+     * Set the poly filter that will be used for all (random) point and nearest poly searches,
+     * as well as for pathfinding.
+     **/
+   void setFilter(const dtQueryFilter filter);
+
+   /**
+     * Get the offset size (box) around points used to look for nav polygons.
+     * This offset is used in all search for points on the navmesh.
+     * The maximum offset that a specified point can be off from the navmesh.
+     **/
+   Ogre::Vector3 getPointExtents(void);
+
+   /**
+     * Set the offset size (box) around points used to look for nav polygons.
+     * This offset is used in all search for points on the navmesh.
+     * The maximum offset that a specified point can be off from the navmesh.
+     **/
+   void setPointExtents(Ogre::Vector3 extents);
+
+   /**
      * Find a point on the navmesh closest to the specified point position, within predefined
      * bounds.
      * Returns true if such a point is found (returned as resultPt), returns false
@@ -690,6 +727,15 @@ public:
      * Returns a random point on the navmesh.
      **/
    Ogre::Vector3 getRandomNavMeshPoint();
+
+   /**
+     * Returns a random point on the navmesh that is within the circle of specified radius
+     * and center. Will return a random point within each navmesh polygon that touches the
+     * circle (so the exact point could in fact be a little outside of the specified circle).
+     * Returns center when no random point can be found (eg. center is too far from a navmesh
+     * poly).
+     **/
+   Ogre::Vector3 getRandomNavMeshPointInCircle(Ogre::Vector3 center, Ogre::Real radius);
 
    /**
      * Convenience function for converting between Ogre::Vector3
@@ -814,6 +860,17 @@ protected:
    **/
    PATHDATA m_PathStore[MAX_PATHSLOT];
 
+   /**
+     * The poly filter that will be used for all (random) point and nearest poly searches.
+     **/
+   dtQueryFilter *mFilter;
+
+   /**
+     * The offset size (box) around points used to look for nav polygons.
+     * This offset is used in all search for points on the navmesh.
+     * The maximum offset that a specified point can be off from the navmesh.
+     **/
+   float mExtents[3];
 
    Ogre::LogManager* m_pLog;
 
