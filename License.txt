@@ -1,4 +1,5 @@
-OgreRecast (http://www.ogre3d.org/forums/viewtopic.php?f=11&t=69781) is made available under the MIT License.
+OgreCrowd (http://www.ogre3d.org/forums/viewtopic.php?f=11&t=69781) is made 
+available under the MIT License.
 
 Copyright (c) 2012 Jonas Hauquier
 
