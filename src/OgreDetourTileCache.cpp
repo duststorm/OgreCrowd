@@ -614,6 +614,29 @@ bool OgreDetourTileCache::isWithinBounds(Ogre::Vector3 pos)
     isWithinBounds((int)tpos.x, (int)tpos.y);
 }
 
+TileSelection OgreDetourTileCache::getBounds()
+{
+    TileSelection result;
+
+    result.minTx = 0;
+    result.minTy = 0;
+    result.maxTx = m_tw-1;    // TODO off by one?
+    result.maxTy = m_th-1;
+
+    result.bounds = getWorldSpaceBounds();
+
+    return result;
+}
+
+Ogre::AxisAlignedBox OgreDetourTileCache::getWorldSpaceBounds()
+{
+    Ogre::AxisAlignedBox result;
+    result.setMinimum(m_cfg.bmin[0], m_cfg.bmin[1], m_cfg.bmin[2]);
+    result.setMaximum(m_cfg.bmax[0], m_cfg.bmax[1], m_cfg.bmax[2]);
+
+    return result;
+}
+
 void OgreDetourTileCache::clearAllTempObstacles()
 {
     if (!m_tileCache)

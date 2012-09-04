@@ -467,6 +467,11 @@ public:
       **/
     bool isWithinBounds(Ogre::Vector3 pos);
 
+    Ogre::AxisAlignedBox getWorldSpaceBounds(void);
+
+    TileSelection getBounds(void);
+
+
     /**
       * Update (tick) the tilecache.
       * You must call this method in your render loop continuously to dynamically

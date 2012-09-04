@@ -23,6 +23,7 @@ public:
 
 
 // TODO move this struct to OgreDetourTileCache??
+// TODO functionality corresponds largely to OgreDetourTileCache::TileSelection, merge them without breaking anything
     struct NavmeshTileSet
     {
         int xMin;   // Min tile X index (inclusive)
@@ -99,9 +100,10 @@ protected:
 
     void unloadAgents(int tx, int ty);
 
+    // Make sure tileExists(tx,ty) !!
     Ogre::Vector3 placeAgent(Character* character, int tx, int ty);
 
-    void placeAgentOnRandomTile(Character *character);
+    void placeAgentOnRandomBorderTile(Character *character);
 
     Ogre::Vector3 getRandomPositionInNavmeshTile(int tx, int ty);
 
@@ -115,6 +117,21 @@ protected:
 
     Ogre::String tileToStr(int tx, int ty);
 
+    Ogre::String tileToStr(Ogre::Vector2 tilePos);
+
+    Ogre::Vector3 assignAgentDestination(Character* character);
+
+    void updateDebugInfo(void);
+
+    int getNbLoadedTiles(void);
+
+    int getNbBorderTiles(void);
+
+    void unloadAgentsOutsideArea(NavmeshTileSet area);
+
+    NavmeshTileSet getExistingArea(NavmeshTileSet area);
+
+    void updateBorderTiles(void);
 
 
     /**
@@ -196,6 +213,8 @@ protected:
     bool mGoingDown;
     bool mGoingLeft;
     bool mGoingRight;
+
+    std::vector<Ogre::Vector2> mBorderTiles;
 
 };
 
