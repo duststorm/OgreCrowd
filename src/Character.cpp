@@ -1,6 +1,6 @@
 /*
-    OgreRecast
-    ----------
+    OgreCrowd
+    ---------
 
     Copyright (c) 2012 Jonas Hauquier
 
