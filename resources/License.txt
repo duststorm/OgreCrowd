@@ -18,9 +18,9 @@ dragonsnail of Artifex Terra 3D donated to the Ogre community. The specific
 license under which they are released can be found in a separate license file 
 in this folder.
 
-The other meshes are my work, in particular Cylinder.mesh and textures and 
-GameChar-male and its textures, the Pot mesh, Box mesh, as well as the overlay 
-cursor.
+The other meshes are my work, in particular Cylinder.mesh and textures, 
+Demarkation.mesh and textures, GameChar-male and its textures, the Pot mesh, 
+Box mesh, as well as the overlay cursor.
 The GameChar-male mesh was achieved with makehuman.org and Blender 2.62, to both 
 projects goes sincere thanks and recognition.
 These models and their textures are released under the CC0 license.
