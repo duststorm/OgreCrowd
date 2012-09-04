@@ -1,4 +1,6 @@
-OgreRecast is a set of libraries for integrating the Recast navigation library (http://code.google.com/p/recastnavigation) with Ogre3D (http://www.ogre3d.org).
+OgreCrowd is a set of libraries for integrating the Recast navigation library 
+(http://code.google.com/p/recastnavigation) with Ogre3D (http://www.ogre3d.org).
+It allows to create interactive crowds of characters in a 3D scene.
 
 By Duststorm, thanks to the snippets from mkultra333 (http://www.ogre3d.org/forums/viewtopic.php?f=5&t=62079) and Paul Wilson (http://www.ogre3d.org/forums/viewtopic.php?f=11&t=57487).
 
