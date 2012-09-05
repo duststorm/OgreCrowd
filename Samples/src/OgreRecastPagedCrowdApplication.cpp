@@ -33,7 +33,7 @@
 
 */
 
-#include "include/OgreRecastPagedCrowdApplication.h"
+#include "OgreRecastPagedCrowdApplication.h"
 #include "OgreRecastApplication.h"
 #include "AnimateableCharacter.h"
 #include "TestCharacter.h"

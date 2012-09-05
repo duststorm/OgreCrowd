@@ -74,6 +74,7 @@ macx {
 
 # Load project internal includes
 INCLUDEPATH += include
+INCLUDEPATH += Samples/include
 
 # Load external dependencies included in project folder
 # INCLUDEPATH += dependencies/include
@@ -89,8 +90,8 @@ CONFIG(release, debug|release):LIBS *= -lOgreMain
 
 # Project files
 message("--- Project Input Files ---")
-SOURCES += src/BaseApplication.cpp \
-    src/OgreRecastApplication.cpp \
+SOURCES += Samples/src/BaseApplication.cpp \
+    Samples/src/OgreRecastApplication.cpp \
     src/OgreRecast.cpp \
     src/Detour/DetourAlloc.cpp \
     src/Detour/DetourNavMeshQuery.cpp \
@@ -127,12 +128,12 @@ SOURCES += src/BaseApplication.cpp \
     src/Obstacle.cpp \
     src/CylinderObstacle.cpp \
     src/ConvexShapeObstacle.cpp \
-    src/OgreRecastTerrainApplication.cpp \
-    src/SettingsFileParser.cpp \
-    src/OgreRecastPagedCrowdApplication.cpp \
+    Samples/src/OgreRecastTerrainApplication.cpp \
+    Samples/src/SettingsFileParser.cpp \
+    Samples/src/OgreRecastPagedCrowdApplication.cpp \
     src/OgreRecastNavmeshPruner.cpp
-HEADERS += include/BaseApplication.h \
-    include/OgreRecastApplication.h \
+HEADERS += Samples/include/BaseApplication.h \
+    Samples/include/OgreRecastApplication.h \
     include/OgreRecastDefinitions.h \
     include/OgreRecast.h \
     include/Detour/DetourCommon.h \
@@ -166,7 +167,7 @@ HEADERS += include/BaseApplication.h \
     include/Obstacle.h \
     include/CylinderObstacle.h \
     include/ConvexShapeObstacle.h \
-    include/OgreRecastTerrainApplication.h \
-    include/SettingsFileParser.h \
-    include/OgreRecastPagedCrowdApplication.h \
+    Samples/include/OgreRecastTerrainApplication.h \
+    Samples/include/SettingsFileParser.h \
+    Samples/include/OgreRecastPagedCrowdApplication.h \
     include/OgreRecastNavmeshPruner.h
