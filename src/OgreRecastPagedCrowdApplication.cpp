@@ -38,8 +38,10 @@
 #include "AnimateableCharacter.h"
 #include "TestCharacter.h"
 #include "RecastInputGeom.h"
+#include "OgreRecastNavmeshPruner.h"
 
 const Ogre::Real OgreRecastPagedCrowdApplication::CROWD_PAGE_UPDATE_DELTA = 1;
+const bool OgreRecastPagedCrowdApplication::EXTRACT_WALKABLE_AREAS = true;
 
 
 // TODO prune unreachable areas (and increase height of boxes again) (https://groups.google.com/forum/#!topic/recastnavigation/SKbh93zsP5M   and   http://digestingduck.blogspot.be/2010/03/sketch-for-hierarchical-pathfinding.html    and    https://groups.google.com/forum/?fromgroups=#!topic/recastnavigation/iUvLGMokj20   and    https://groups.google.com/forum/?fromgroups=#!topic/recastnavigation/WLMRcDjsxFc)
@@ -51,6 +53,10 @@ const Ogre::Real OgreRecastPagedCrowdApplication::CROWD_PAGE_UPDATE_DELTA = 1;
 // TODO incorporate instancing + hardware skinning
 
 // TODO make crowd wandering more purposeful by use of waypoints, maybe make the exact behaviour configurable
+
+// TODO fix bug where agents gets removed and re-added constantly
+
+// TODO make crowd wander more robust (periodically check liveliness of agents so they don't get stuck)
 
 
 // TODO this can also be DetourCrowd::MAX_AGENTS or allow setting of Max agents in detourCrowd
@@ -192,14 +198,24 @@ void OgreRecastPagedCrowdApplication::createScene(void)
     mNavmeshEnts.push_back(planeEnt);  // Add the ground plane
 
     // Add some random boxes
+    // (well, not completely random as we need to know which area to mark as "walkable")
+    Ogre::Real rotations[15] = {175.122f, -106.854f, 88.3572f, 65.4711f, -20.0449f, -14.5578f, -127.722f, 20.4753f, -42.361f, 58.9315f, 129.366f, -110.749f, 82.9775f, -57.9149f, 55.1907f};
+    Ogre::Vector3 positions[15] = {Ogre::Vector3(-24.3478, 0, -6.92418), Ogre::Vector3(-13.3589, 0, -10.2301), Ogre::Vector3(3.05032, 0, -26.2014), Ogre::Vector3(8.69059, 0 ,-39.3912),
+                                   Ogre::Vector3(-14.8654, 0, 10.5836), Ogre::Vector3(2.96917, 0, -38.2776), Ogre::Vector3(35.6507, 0, -7.31114), Ogre::Vector3(1.67711, 0, 11.7132),
+                                   Ogre::Vector3(19.2971, 0, 30.7451), Ogre::Vector3(25.6568, 0, -38.9435), Ogre::Vector3(-21.2673, 0, 8.05908), Ogre::Vector3(8.50251, 0, -33.025),
+                                   Ogre::Vector3(22.3011, 0, 23.2297), Ogre::Vector3(22.9099, 0, -37.1353), Ogre::Vector3(-6.50643, 0, -22.5862) };
     for(int i = 0; i < 15; i++) {
         Ogre::Entity *boxEnt = mSceneMgr->createEntity("Box_"+Ogre::StringConverter::toString(i), "Box.mesh");
         Ogre::SceneNode *boxNode = mSceneMgr->getRootSceneNode()->createChildSceneNode(boxEnt->getName()+"_Node");
         boxNode->attachObject(boxEnt);
-        boxNode->setPosition(Ogre::Math::RangeRandom(-40, 40), 0, Ogre::Math::RangeRandom(-40, 40));
-        boxNode->setScale(10, 2.5, 10);    // Don't make boxes higher than agents, or they can be placed inside boxes!
-            // TODO fix this by setting navmesh poly flags only walkable for parts connected directly to a waypoint
-        boxNode->yaw(Ogre::Degree(Ogre::Math::RangeRandom(0, 360)));
+        //boxNode->setPosition(Ogre::Math::RangeRandom(-40, 40), 0, Ogre::Math::RangeRandom(-40, 40));
+        boxNode->setPosition(positions[i]);
+        if(EXTRACT_WALKABLE_AREAS)
+            boxNode->setScale(10, 2.5, 10);
+        else
+            boxNode->setScale(10, 2.5, 10);    // Don't make boxes higher than agents, or they can be placed inside boxes!
+        //boxNode->yaw(Ogre::Degree(Ogre::Math::RangeRandom(0, 360)));
+        boxNode->yaw(Ogre::Radian(rotations[i]));
 
         mNavmeshEnts.push_back(boxEnt);     // Add to navmesh generation input
     }
@@ -221,6 +237,14 @@ void OgreRecastPagedCrowdApplication::createScene(void)
 
     // DETOUR CROWD (local steering for independent agents)
     mDetourCrowd = new OgreDetourCrowd(mRecast);        // TODO add option of specifying max crowd size?
+
+    if(EXTRACT_WALKABLE_AREAS) {
+        // Mark walkable area (where agents will be spawned)
+        OgreRecastNavmeshPruner *navMeshPruner = mRecast->getNavmeshPruner();
+        // Start tracing at the origin position on the navmesh, and include all areas that are reachable from there (there is no box in the center)
+        navMeshPruner->floodNavmesh(Ogre::Vector3::ZERO);
+        navMeshPruner->pruneSelected();
+    }
 
 
     // DETOUR CROWD PAGING

@@ -36,6 +36,7 @@
 #include "OgreRecast.h"
 #include "RecastInputGeom.h"
 #include "DetourTileCache/DetourTileCacheBuilder.h"
+#include "OgreRecastNavmeshPruner.h"
 
 
 bool OgreRecast::STATIC_GEOM_DEBUG = false;
@@ -46,7 +47,8 @@ OgreRecast::OgreRecast(Ogre::SceneManager* sceneMgr, OgreRecastConfigParams conf
     m_pRecastSN(NULL),
       m_sg(NULL),
       m_rebuildSg(false),
-      mFilter(0)
+      mFilter(0),
+      mNavmeshPruner(0)
 {
    // Init recast stuff in a safe state
    
@@ -1148,11 +1150,16 @@ Ogre::String OgreRecast::getPathFindErrorMsg(int errorCode)
 
 bool OgreRecast::findNearestPointOnNavmesh(Ogre::Vector3 position, Ogre::Vector3 &resultPt)
 {
+    dtPolyRef navmeshPoly;
+    return findNearestPolyOnNavmesh(position, resultPt, navmeshPoly);
+}
+
+bool OgreRecast::findNearestPolyOnNavmesh(Ogre::Vector3 position, Ogre::Vector3 &resultPt, dtPolyRef &resultPoly)
+{
     float pt[3];
     OgreVect3ToFloatA(position, pt);
     float rPt[3];
-    dtPolyRef navmeshPoly;
-    dtStatus status=m_navQuery->findNearestPoly(pt, mExtents, mFilter, &navmeshPoly, rPt);
+    dtStatus status=m_navQuery->findNearestPoly(pt, mExtents, mFilter, &resultPoly, rPt);
     if((status&DT_FAILURE) || (status&DT_STATUS_DETAIL_MASK))
         return false; // couldn't find a polygon
 
@@ -1212,3 +1219,13 @@ void OgreRecast::removeDrawnNavmesh(unsigned int tileRef)
     }
 }
 
+OgreRecastNavmeshPruner* OgreRecast::getNavmeshPruner()
+{
+    // Store singleton instance
+    if (!mNavmeshPruner)
+        mNavmeshPruner = new OgreRecastNavmeshPruner(this, m_navMesh);
+            // TODO does m_navMesh object not change when navmesh is rebuilt?
+
+    // Return navmesh pruner for this recast mesh
+    return mNavmeshPruner;
+}

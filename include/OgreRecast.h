@@ -40,6 +40,8 @@
 #include <Ogre.h>
 #include "RecastInputGeom.h"
 
+class OgreRecastNavmeshPruner;
+
 /**
   * Configuration parameters for recast navmesh building.
   * A lot of the descripions of the parameters are not mine but come from the very
@@ -758,6 +760,8 @@ public:
      **/
    bool findNearestPointOnNavmesh(Ogre::Vector3 position, Ogre::Vector3 &resultPt);
 
+   bool findNearestPolyOnNavmesh(Ogre::Vector3 position, Ogre::Vector3 &resultPt, dtPolyRef &resultPoly);
+
    /**
      * Returns a random point on the navmesh.
      **/
@@ -793,6 +797,8 @@ public:
      * The configuration of the recast navmesh.
      **/
    rcConfig getConfig(void);
+
+   OgreRecastNavmeshPruner* getNavmeshPruner(void);
 
 
 
@@ -908,6 +914,8 @@ protected:
    float mExtents[3];
 
    Ogre::LogManager* m_pLog;
+
+   OgreRecastNavmeshPruner *mNavmeshPruner;
 
 private:
    /**

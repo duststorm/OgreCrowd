@@ -94,6 +94,8 @@ public:
     static const Ogre::Real RADIUS_EPSILON;
     static const Ogre::Real TOPDOWN_CAMERA_HEIGHT;
 
+    static const bool EXTRACT_WALKABLE_AREAS;
+
 protected:
     /**
       * Initialise the scene and everything needed for pathfinding and steering.
