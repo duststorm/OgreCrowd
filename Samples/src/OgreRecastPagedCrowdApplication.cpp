@@ -44,19 +44,19 @@ const Ogre::Real OgreRecastPagedCrowdApplication::CROWD_PAGE_UPDATE_DELTA = 1;
 const bool OgreRecastPagedCrowdApplication::EXTRACT_WALKABLE_AREAS = true;
 
 
-// TODO prune unreachable areas (and increase height of boxes again) (https://groups.google.com/forum/#!topic/recastnavigation/SKbh93zsP5M   and   http://digestingduck.blogspot.be/2010/03/sketch-for-hierarchical-pathfinding.html    and    https://groups.google.com/forum/?fromgroups=#!topic/recastnavigation/iUvLGMokj20   and    https://groups.google.com/forum/?fromgroups=#!topic/recastnavigation/WLMRcDjsxFc)
-
 // TODO extract CrowdInstancer class
-
-// TODO larger scale demo (and more interesting scene)
 
 // TODO incorporate instancing + hardware skinning
 
+// TODO larger scale demo (and more interesting scene)
+
 // TODO make crowd wandering more purposeful by use of waypoints, maybe make the exact behaviour configurable
 
-// TODO fix bug where agents gets removed and re-added constantly
 
 // TODO make crowd wander more robust (periodically check liveliness of agents so they don't get stuck)
+
+
+// TODO consider this alternative way of placing new agents that walked off the grid: place them on the outer edge of the page, not just on a border tile
 
 
 // TODO this can also be DetourCrowd::MAX_AGENTS or allow setting of Max agents in detourCrowd
@@ -113,7 +113,7 @@ OgreRecastPagedCrowdApplication::OgreRecastPagedCrowdApplication()
 // TODO make sure crowdSize is a multiple of nbPagedTiles?
 
     mCharacters.reserve(mCrowdSize);
-    mUnassignedCharacters.reserve(mCrowdSize /*mCrowdSize*mNbTilesInBorder*/);
+    mUnassignedCharacters.reserve(mCrowdSize);
     mAssignedCharacters.reserve(mCrowdSize);
     mBorderTiles.reserve(mNbTilesInBorder);
 }
@@ -139,6 +139,7 @@ void OgreRecastPagedCrowdApplication::initAgents()
                     //Ogre::Vector3 position = getRandomPositionInNavmeshTileSet(NavmeshTileSet);
                     Ogre::Vector3 position = getRandomPositionInNavmeshTile(x, y);
                     Character *character;
+// TODO make configurable which type of character is exactly instanced (maybe allow keeping sets of different populations)
                     if(OgreRecastApplication::HUMAN_CHARACTERS)
                         character = new AnimateableCharacter("Character_"+Ogre::StringConverter::toString(nbAgents), mSceneMgr, mDetourCrowd, false, position);
                     else
@@ -211,7 +212,7 @@ void OgreRecastPagedCrowdApplication::createScene(void)
         //boxNode->setPosition(Ogre::Math::RangeRandom(-40, 40), 0, Ogre::Math::RangeRandom(-40, 40));
         boxNode->setPosition(positions[i]);
         if(EXTRACT_WALKABLE_AREAS)
-            boxNode->setScale(10, 2.5, 10);
+            boxNode->setScale(10, 10, 10);
         else
             boxNode->setScale(10, 2.5, 10);    // Don't make boxes higher than agents, or they can be placed inside boxes!
         //boxNode->yaw(Ogre::Degree(Ogre::Math::RangeRandom(0, 360)));
@@ -280,9 +281,6 @@ bool OgreRecastPagedCrowdApplication::frameRenderingQueued(const Ogre::FrameEven
     // Perform navmesh updates
     mDetourTileCache->handleUpdate(evt.timeSinceLastFrame);
 
-    // Update paged crowd
-    updatePagedCrowd(evt.timeSinceLastFrame);
-
     // Update crowd agents
     mDetourCrowd->updateTick(evt.timeSinceLastFrame);
 
@@ -299,6 +297,8 @@ bool OgreRecastPagedCrowdApplication::frameRenderingQueued(const Ogre::FrameEven
         }
     }
 
+    // Update paged crowd
+    updatePagedCrowd(evt.timeSinceLastFrame);
 
     if(mTopDownCamera) {
         // build our acceleration vector based on keyboard input composite
@@ -371,9 +371,10 @@ bool OgreRecastPagedCrowdApplication::updatePagedCrowd(Ogre::Real timeSinceLastF
         for(std::vector<Character*>::iterator iter = mAssignedCharacters.begin(); iter != mAssignedCharacters.end(); iter++) {
             Character *character = *iter;
             if(walkedOffGrid(character)) {
+                Ogre::Vector3 oldPos = character->getPosition();
                 // Place agent in new random border tile
                 placeAgentOnRandomBorderTile(character);
-                debugPrint("Placed agent on random tile "+tileToStr(mDetourTileCache->getTileAtPos(character->getPosition()))+"  "+Ogre::StringConverter::toString(character->getPosition()));
+                debugPrint("Agent "+Ogre::StringConverter::toString(character->getAgentID())+" walked off grid ("+Ogre::StringConverter::toString(oldPos)+"   "+tileToStr(mDetourTileCache->getTileAtPos(oldPos))+") placed on new random tile "+tileToStr(mDetourTileCache->getTileAtPos(character->getPosition()))+"  "+Ogre::StringConverter::toString(character->getPosition()));
             }
         }
     }

@@ -109,6 +109,7 @@ void Character::setPosition(Ogre::Vector3 position)
     // Remove agent from crowd and re-add at position
     mDetourCrowd->removeAgent(mAgentID);
     mAgentID = mDetourCrowd->addAgent(position);
+    mAgent = mDetourCrowd->getAgent(mAgentID);
 
     if(getNode())   // TODO remove this check by initing mNode in this class' constructor
         getNode()->setPosition(position);
@@ -140,10 +141,12 @@ void Character::updatePosition(Ogre::Real timeSinceLastFrame)
         return;
 
     if (mAgentControlled) {
-        Ogre::Vector3 agentPos;
-        OgreRecast::FloatAToOgreVect3(getAgent()->npos, agentPos);
+        if(getAgent()->active) {
+            Ogre::Vector3 agentPos;
+            OgreRecast::FloatAToOgreVect3(getAgent()->npos, agentPos);
 
-        getNode()->setPosition(agentPos);
+            getNode()->setPosition(agentPos);
+        }
     } else {
         // Move character manually to new position
         if(getVelocity().isZeroLength())
