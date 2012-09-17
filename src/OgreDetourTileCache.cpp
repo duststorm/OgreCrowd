@@ -646,7 +646,7 @@ bool OgreDetourTileCache::isWithinBounds(int tx, int ty)
 bool OgreDetourTileCache::isWithinBounds(Ogre::Vector3 pos)
 {
     Ogre::Vector2 tpos = getTileAtPos(pos);
-    isWithinBounds((int)tpos.x, (int)tpos.y);
+    return isWithinBounds((int)tpos.x, (int)tpos.y);
 }
 
 TileSelection OgreDetourTileCache::getBounds()

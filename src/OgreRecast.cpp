@@ -36,7 +36,7 @@
 #include "OgreRecast.h"
 #include "RecastInputGeom.h"
 #include "DetourTileCache/DetourTileCacheBuilder.h"
-#include "OgreRecastNavmeshPruner.h"
+#include "include/OgreRecastNavmeshPruner.h"
 
 
 bool OgreRecast::STATIC_GEOM_DEBUG = false;
@@ -44,11 +44,12 @@ bool OgreRecast::VERBOSE = true;
 
 OgreRecast::OgreRecast(Ogre::SceneManager* sceneMgr, OgreRecastConfigParams configParams)
     : m_pSceneMgr(sceneMgr),
-    m_pRecastSN(NULL),
+      m_pRecastSN(NULL),
       m_sg(NULL),
       m_rebuildSg(false),
       mFilter(0),
-      mNavmeshPruner(0)
+      mNavmeshPruner(0),
+      m_ctx(0)
 {
    // Init recast stuff in a safe state
    
@@ -86,6 +87,12 @@ OgreRecast::OgreRecast(Ogre::SceneManager* sceneMgr, OgreRecastConfigParams conf
    mFilter->setAreaCost(DT_TILECACHE_WALKABLE_AREA, 1.0f);
 
 
+   // Init path store. MaxVertex 0 means empty path slot
+   for(int i = 0; i < MAX_PATHSLOT; i++) {
+       m_PathStore[i].MaxVertex = 0;
+       m_PathStore[i].Target = 0;
+   }
+
 
    // Set configuration
    configure(configParams);
@@ -116,7 +123,10 @@ void OgreRecast::RecastCleanup()
    dtFreeNavMeshQuery(m_navQuery);
    m_navQuery = 0 ;
 
-   if(m_ctx) delete m_ctx ;
+   if(m_ctx){
+       delete m_ctx;
+       m_ctx = 0;
+   }
 }
 
 
@@ -131,8 +141,10 @@ void OgreRecast::configure(OgreRecastConfigParams params)
     // Smaller cellsizes are the most accurate at finding all the places we could go, but are also slow to generate.
     // Might be suitable for pre-generated meshes. Though it also produces a lot more polygons.
 
-    if(m_ctx)
+    if(m_ctx) {
         delete m_ctx;
+        m_ctx = 0;
+    }
     m_ctx=new rcContext(true);
 
     m_cellSize = params.getCellSize();
@@ -658,8 +670,29 @@ int OgreRecast::FindPath(Ogre::Vector3 startPos, Ogre::Vector3 endPos, int nPath
     return FindPath(start,end,nPathSlot,nTarget);
 }
 
+std::vector<Ogre::Vector3> OgreRecast::getPath(int pathSlot)
+{
+    std::vector<Ogre::Vector3> result;
+    if(pathSlot < 0 || pathSlot >= MAX_PATHSLOT || m_PathStore[pathSlot].MaxVertex <= 0)
+        return result;
+
+    PATHDATA *path = &(m_PathStore[pathSlot]);
+    result.reserve(path->MaxVertex);
+    for(int i = 0; i < path->MaxVertex; i++) {
+        result.push_back(Ogre::Vector3(path->PosX[i], path->PosY[i], path->PosZ[i]));
+    }
+
+    return result;
+}
 
 
+int OgreRecast::getTarget(int pathSlot)
+{
+    if(pathSlot < 0 || pathSlot >= MAX_PATHSLOT)
+        return 0;
+
+    return m_PathStore[pathSlot].Target;
+}
 
 
 

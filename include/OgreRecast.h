@@ -683,6 +683,20 @@ public:
    int FindPath(Ogre::Vector3 startPos, Ogre::Vector3 endPos, int nPathSlot, int nTarget);
 
    /**
+     * Retrieve the path at specified slot defined as a line along an ordered set of 3D positions.
+     * The path has a maximum length of MAX_PATHVERT, and is an empty list in case no path is
+     * defined or an invalid pathSlot index is given.
+     **/
+   std::vector<Ogre::Vector3> getPath(int pathSlot);
+
+   /**
+     * The ID number identifying the target for the path at specified slot. Targets have
+     * no meaning for OgreRecast but you can use them to give them their own meanings.
+     * Returns 0 when a faulty pathSlot is given.
+     **/
+   int getTarget(int pathSlot);
+
+   /**
      * Draw the nav mesh for debug purposes. The navmesh is converted to an Ogre::Mesh and
      * put inside the scene for rendering.
      **/
