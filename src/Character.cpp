@@ -202,6 +202,10 @@ bool Character::destinationReached()
     if(!isLoaded())
         return false;
 
+    if(getPosition().squaredDistance(getDestination()) <= Character::DESTINATION_RADIUS)
+        return true;
+
+
     return mDetourCrowd->destinationReached(getAgent(), Character::DESTINATION_RADIUS);
 }
 

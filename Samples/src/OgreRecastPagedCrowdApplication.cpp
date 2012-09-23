@@ -46,6 +46,7 @@ const bool OgreRecastPagedCrowdApplication::EXTRACT_WALKABLE_AREAS = true;
 
 bool OgreRecastPagedCrowdApplication::INSTANCED_CROWD = false;
 
+// TODO fix bug where a lot of agents are located on world origin
 
 // TODO extract CrowdInstancer class
 
