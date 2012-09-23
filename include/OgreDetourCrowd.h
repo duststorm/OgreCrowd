@@ -123,6 +123,10 @@ public:
       **/
     static Ogre::Vector3 calcVel(Ogre::Vector3 position, Ogre::Vector3 target, Ogre::Real speed);
 
+    static float getDistanceToGoal(const dtCrowdAgent* agent, const float maxRange);
+
+    static bool destinationReached(const dtCrowdAgent* agent, const float maxDistanceFromTarget);
+
     /**
       * Update method for the crowd manager. Will calculate new positions for moving agents.
       * Call this method in your frameloop every frame to make your agents move.

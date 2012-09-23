@@ -71,11 +71,6 @@ public:
     virtual Ogre::SceneNode* getNode(void) const;
 
     /**
-      * The entity that represents this character in the scene
-      **/
-    virtual Ogre::Entity* getEntity(void);
-
-    /**
       * The height of the agent for this character.
       **/
     virtual Ogre::Real getAgentHeight(void) const;
@@ -136,7 +131,7 @@ public:
     /**
       * Returns true when this character has reached its set destination.
       **/
-    virtual bool destinationReached(void) const;
+    virtual bool destinationReached(void);
 
     /**
       * Request to set a manual velocity for this character, to control it
@@ -236,15 +231,19 @@ public:
 
     bool isLoaded(void) const { return mAgentID >= 0; }
 
-    void load(void);
+    virtual void load(void);
 
-    void load(Ogre::Vector3 position);
+    virtual void load(Ogre::Vector3 position);
 
-    void unLoad(void);
+    virtual void unLoad(void);
 
-    void show(void);
+    virtual void show(void);
 
-    void hide(void);
+    virtual void hide(void);
+
+    virtual Ogre::Vector3 getRelativeLookingDirection(void);
+
+    virtual void setRelativeLookingDirection(Ogre::Vector3 direction);
 
 
 protected:
@@ -265,11 +264,6 @@ protected:
       * Scene manager that manages this character.
      **/
     Ogre::SceneManager *mSceneMgr;
-
-    /**
-      * Main entity that represents this character.
-      **/
-    Ogre::Entity *mEnt;
 
     /**
       * Node in which this character is.
@@ -356,6 +350,8 @@ protected:
       * enabled. This value is stored as a member for optimization.
       **/
     Ogre::RaySceneQuery *mRaySceneQuery;
+
+    Ogre::Vector3 mLookingDirection;
 
 
     // Friend the application class to allow setDestinationForAllAgents to update character destination values

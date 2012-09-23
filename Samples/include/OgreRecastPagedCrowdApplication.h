@@ -96,6 +96,8 @@ public:
 
     static const bool EXTRACT_WALKABLE_AREAS;
 
+    static bool INSTANCED_CROWD;
+
 protected:
     /**
       * Initialise the scene and everything needed for pathfinding and steering.
@@ -252,6 +254,8 @@ protected:
     bool mGoingRight;
 
     std::vector<Ogre::Vector2> mBorderTiles;
+
+    Ogre::InstanceManager* mInstanceManager;
 
 };
 

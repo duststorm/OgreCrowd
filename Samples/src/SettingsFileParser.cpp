@@ -51,6 +51,7 @@ SettingsFileParser::SettingsFileParser(Ogre::String filePath)
     mComplexObstacles = true;
     mTerrain = false;
     mPaged = false;
+    mInstancedCrowd = false;
 
     mTerrainTilesX = 1;
     mTerrainTilesZ = 1;
@@ -129,18 +130,27 @@ bool SettingsFileParser::addOption(Ogre::String sectionName, Ogre::String option
     } else if(equals(optionName, "Paged Crowds Demo")) {
         mPaged = getBool(optionValue);
         return true;
+    } else if(equals(optionName, "Instanced Crowd Characters")) {
+        mInstancedCrowd = getBool(optionValue);
+        return true;
+
 
 
     } else if(equals(optionName, "Terrain Tiles X")) {
         mTerrainTilesX = (int) getReal(optionValue);
+        return true;
     } else if(equals(optionName, "Terrain Tiles Z")) {
         mTerrainTilesZ = (int) getReal(optionValue);
+        return true;
     } else if(equals(optionName, "Terrain Tile Size")) {
         mTerrainTileSize = getReal(optionValue);
+        return true;
     } else if(equals(optionName, "Terrain Height Scale")) {
         mTerrainHeightScale = getReal(optionValue);
+        return true;
     } else if(equals(optionName, "Terrain Tile Resolution")) {
         mTerrainTileResolution = getReal(optionValue);
+        return true;
     }
 
 

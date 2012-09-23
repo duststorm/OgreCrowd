@@ -37,7 +37,7 @@
 #include "OgreRecastApplication.h"
 
 // Remember: this value should be squared and should be strictly >0 !
-const Ogre::Real Character::DESTINATION_RADIUS = 0.1 * 0.1;
+const Ogre::Real Character::DESTINATION_RADIUS = 1 * 1;
     // TODO it's also possible to calculate this relative to the agent radius
 
 
@@ -45,7 +45,6 @@ Character::Character(Ogre::String name, Ogre::SceneManager *sceneMgr, OgreDetour
     : mName(name),
     mSceneMgr(sceneMgr),
     mDetourCrowd(detourCrowd),
-    mEnt(NULL),
     mNode(NULL),
     mAgent(NULL),
     mAgentID(-1),
@@ -56,7 +55,8 @@ Character::Character(Ogre::String name, Ogre::SceneManager *sceneMgr, OgreDetour
     mDetourTileCache(NULL),
     mTempObstacle(0),
     mClipTo(0),
-    mRaySceneQuery(0)
+    mRaySceneQuery(0),
+    mLookingDirection(Ogre::Vector3::UNIT_X)
 {
 // TODO maybe create mNode in this consructor instead of in subclasses
     load(position);
@@ -75,11 +75,6 @@ int Character::getAgentID()
 const dtCrowdAgent* Character::getAgent()
 {
     return mAgent;
-}
-
-Ogre::Entity* Character::getEntity()
-{
-    return mEnt;
 }
 
 Ogre::SceneNode* Character::getNode(void) const
@@ -202,14 +197,12 @@ void Character::clipToTerrainHeight()
 }
 
 
-bool Character::destinationReached() const
+bool Character::destinationReached()
 {
-    Ogre::Vector3 pos = getPosition();
-    Ogre::Vector3 dest = getDestination();
-    Ogre::Real dist = pos.squaredDistance(dest);
-    Ogre::Real rad = DESTINATION_RADIUS;
-    bool res = dist < DESTINATION_RADIUS;
-    return (getPosition().squaredDistance(getDestination()) <= Character::DESTINATION_RADIUS);
+    if(!isLoaded())
+        return false;
+
+    return mDetourCrowd->destinationReached(getAgent(), Character::DESTINATION_RADIUS);
 }
 
 void Character::setDestination(Ogre::Vector3 destination)
@@ -239,7 +232,7 @@ void Character::stop()
 
 Ogre::Vector3 Character::getLookingDirection()
 {
-    return mNode->getOrientation() * Ogre::Vector3::NEGATIVE_UNIT_Z;    // Character looks in negative Z direction
+    return mNode->getOrientation() * getRelativeLookingDirection();
 }
 
 void Character::moveForward()
@@ -374,12 +367,23 @@ void Character::unLoad()
 
 void Character::show()
 {
-    if(getNode())
+    if(getNode()) {
         getNode()->setVisible(true);
+    }
 }
 
 void Character::hide()
 {
     if(getNode())
         getNode()->setVisible(false);
+}
+
+Ogre::Vector3 Character::getRelativeLookingDirection()
+{
+    return mLookingDirection;
+}
+
+void Character::setRelativeLookingDirection(Ogre::Vector3 direction)
+{
+    mLookingDirection = direction;
 }

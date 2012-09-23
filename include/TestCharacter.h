@@ -56,6 +56,11 @@ public:
     TestCharacter(Ogre::String name, Ogre::SceneManager *sceneMgr, OgreDetourCrowd* detourCrowd, Ogre::Vector3 position = Ogre::Vector3::ZERO);
 
     /**
+      * The entity that represents this character in the scene
+      **/
+    virtual Ogre::Entity* getEntity(void);
+
+    /**
       * @see{Character::update(Ogre::Real)}
       **/
     virtual void update(Ogre::Real timeSinceLastFrame);
@@ -64,6 +69,12 @@ public:
       * @see{Character::setDebugVisibility(bool)}
       **/
     virtual void setDebugVisibility(bool visible);
+
+protected:
+    /**
+      * Main entity that represents this character.
+      **/
+    Ogre::Entity *mEnt;
 };
 
 #endif // TESTCHARACTER_H

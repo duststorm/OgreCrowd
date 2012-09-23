@@ -245,7 +245,7 @@ void OgreRecastApplication::createScene(void)
     mDetourCrowd = new OgreDetourCrowd(mRecast);
     Character *character = createCharacter("Agent0", beginPos);    // create initial agent at start marker
     if(!HUMAN_CHARACTERS)
-        character->getEntity()->setMaterialName("Cylinder/LightBlue");  // Give the first agent a different color
+        ((TestCharacter*)character)->getEntity()->setMaterialName("Cylinder/LightBlue");  // Give the first agent a different color
     setDestinationForAllAgents(endPos, false);  // Move all agents in crowd to destination
 
 
@@ -1071,6 +1071,8 @@ void OgreRecastApplication::loadConfig(Ogre::String configFileName)
         OgreRecastTerrainApplication::TERRAIN_TILE_SIZE = sfp.mTerrainTileSize;
         OgreRecastTerrainApplication::TERRAIN_HEIGHT_SCALE = sfp.mTerrainHeightScale;
         OgreRecastTerrainApplication::TERRAIN_TILE_RESOLUTION = sfp.mTerrainTileResolution;
+
+        OgreRecastPagedCrowdApplication::INSTANCED_CROWD = sfp.mInstancedCrowd;
     } catch (Ogre::Exception e) {
         std::cout << "WARNING: Could not find file " << configFileName << ". Using default settings." << std::endl;
     }

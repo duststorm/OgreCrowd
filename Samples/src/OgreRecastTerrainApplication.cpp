@@ -34,6 +34,7 @@
 */
 
 #include "OgreRecastTerrainApplication.h"
+#include "TestCharacter.h"
 #include <Terrain/OgreTerrain.h>
 
 
@@ -239,7 +240,7 @@ void OgreRecastTerrainApplication::createScene()
     mDetourCrowd = new OgreDetourCrowd(mRecast);
     Character *character = createCharacter("Agent0", beginPos);    // create initial agent at start marker
     if(!HUMAN_CHARACTERS)
-        character->getEntity()->setMaterialName("Cylinder/LightBlue");  // Give the first agent a different color
+        ((TestCharacter*)character)->getEntity()->setMaterialName("Cylinder/LightBlue");  // Give the first agent a different color
     setDestinationForAllAgents(endPos, false);  // Move all agents in crowd to destination
 
 

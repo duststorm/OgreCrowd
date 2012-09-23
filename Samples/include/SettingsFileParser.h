@@ -82,6 +82,7 @@ public:
     bool mComplexObstacles;
     bool mTerrain;
     bool mPaged;
+    bool mInstancedCrowd;
 
     bool mRestoreConfig;
     bool mLockMouse;

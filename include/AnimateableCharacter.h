@@ -57,6 +57,11 @@ public:
     AnimateableCharacter(Ogre::String name, Ogre::SceneManager* sceneMgr, OgreDetourCrowd* detourCrowd, bool debugDraw = false, Ogre::Vector3 position = Ogre::Vector3::ZERO);
 
     /**
+      * The entity that represents this character in the scene
+      **/
+    virtual Ogre::Entity* getEntity(void);
+
+    /**
       * Update one tick in the render loop. Advances animation and character position.
       * In order for the agents to be updated, you first need to call the detourCrowd
       * update function.
@@ -68,7 +73,18 @@ public:
       **/
     virtual void setDebugVisibility(bool visible);
 
+    virtual bool getDebugVisibility(void);
+
+    virtual void show(void);
+
 protected:
+    bool mDebugDraw;
+
+    /**
+      * Main entity that represents this character.
+      **/
+    Ogre::Entity *mEnt;
+
     /**
       * Currently active animation state.
       **/

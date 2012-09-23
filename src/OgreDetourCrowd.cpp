@@ -373,3 +373,20 @@ bool OgreDetourCrowd::stopAgent(int agentId)
     float zeroVel[] = {0,0,0};
     return m_crowd->resetMoveTarget(agentId) && m_crowd->requestMoveVelocity(agentId, zeroVel);
 }
+
+float OgreDetourCrowd::getDistanceToGoal(const dtCrowdAgent* agent, const float maxRange)
+{
+    if (!agent->ncorners)
+        return maxRange;
+
+    const bool endOfPath = (agent->cornerFlags[agent->ncorners-1] & DT_STRAIGHTPATH_END) ? true : false;
+    if (endOfPath)
+        return dtMin(dtVdist2D(agent->npos, &agent->cornerVerts[(agent->ncorners-1)*3]), maxRange);
+
+    return maxRange;
+}
+
+bool OgreDetourCrowd::destinationReached(const dtCrowdAgent* agent, const float maxDistanceFromTarget)
+{
+    return getDistanceToGoal(agent, maxDistanceFromTarget) < maxDistanceFromTarget;
+}

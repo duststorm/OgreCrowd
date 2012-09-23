@@ -39,21 +39,23 @@
 #include "TestCharacter.h"
 #include "RecastInputGeom.h"
 #include "OgreRecastNavmeshPruner.h"
+#include "InstancedCharacter.h"
 
 const Ogre::Real OgreRecastPagedCrowdApplication::CROWD_PAGE_UPDATE_DELTA = 1;
 const bool OgreRecastPagedCrowdApplication::EXTRACT_WALKABLE_AREAS = true;
+
+bool OgreRecastPagedCrowdApplication::INSTANCED_CROWD = false;
 
 
 // TODO extract CrowdInstancer class
 
 // TODO incorporate instancing + hardware skinning
 
+// TODO manage sets of character types, and when instancing also manage their fitting instanceManagers
+
 // TODO larger scale demo (and more interesting scene)
 
 // TODO make crowd wandering more purposeful by use of waypoints, maybe make the exact behaviour configurable
-
-
-// TODO make crowd wander more robust (periodically check liveliness of agents so they don't get stuck)
 
 
 // TODO consider this alternative way of placing new agents that walked off the grid: place them on the outer edge of the page, not just on a border tile
@@ -88,6 +90,7 @@ OgreRecastPagedCrowdApplication::OgreRecastPagedCrowdApplication()
     , mGoingRight(false)
     , mDebugDraw(false)
     , mBorderTiles()
+    , mInstanceManager(0)
 {
     // Number of tiles filled with agents
     if(mPagedAreaDistance == 0) {
@@ -135,15 +138,17 @@ void OgreRecastPagedCrowdApplication::initAgents()
                 debugPrint("Init: load "+Ogre::StringConverter::toString(agentsPerTile)+" agents on tile "+tileToStr(x,y)+".");
                 for(int i = 0; i < agentsPerTile; i++) {
                     nbAgents++;
-    // TODO another option is to place agents randomly in a circle around the whole paged area, same for a complete move to another position!
                     //Ogre::Vector3 position = getRandomPositionInNavmeshTileSet(NavmeshTileSet);
                     Ogre::Vector3 position = getRandomPositionInNavmeshTile(x, y);
                     Character *character;
 // TODO make configurable which type of character is exactly instanced (maybe allow keeping sets of different populations)
-                    if(OgreRecastApplication::HUMAN_CHARACTERS)
+                    if(OgreRecastPagedCrowdApplication::INSTANCED_CROWD) {
+                        character = new InstancedCharacter("Character_"+Ogre::StringConverter::toString(nbAgents), mSceneMgr, mDetourCrowd, mInstanceManager, false, position);
+                    } else if(OgreRecastApplication::HUMAN_CHARACTERS) {
                         character = new AnimateableCharacter("Character_"+Ogre::StringConverter::toString(nbAgents), mSceneMgr, mDetourCrowd, false, position);
-                    else
+                    } else {
                         character = new TestCharacter("Character_"+Ogre::StringConverter::toString(nbAgents), mSceneMgr, mDetourCrowd, position);
+                    }
                     mCharacters.push_back(character);
                     mAssignedCharacters.push_back(character);
                     assignAgentDestination(character);
@@ -158,10 +163,13 @@ void OgreRecastPagedCrowdApplication::initAgents()
     nbAgents++;
     while(nbAgents < mCrowdSize) {
         Character *character;
-        if(OgreRecastApplication::HUMAN_CHARACTERS)
+        if(OgreRecastPagedCrowdApplication::INSTANCED_CROWD) {
+            character = new InstancedCharacter("Character_"+Ogre::StringConverter::toString(nbAgents), mSceneMgr, mDetourCrowd, mInstanceManager);
+        } else if(OgreRecastApplication::HUMAN_CHARACTERS) {
             character = new AnimateableCharacter("Character_"+Ogre::StringConverter::toString(nbAgents), mSceneMgr, mDetourCrowd);
-        else
+        } else {
             character = new TestCharacter("Character_"+Ogre::StringConverter::toString(nbAgents), mSceneMgr, mDetourCrowd);
+        }
         character->unLoad();
         mCharacters.push_back(character);
         mUnassignedCharacters.push_back(character);
@@ -247,6 +255,16 @@ void OgreRecastPagedCrowdApplication::createScene(void)
         navMeshPruner->pruneSelected();
     }
 
+    if(INSTANCED_CROWD) {
+        // Most compatible SM2+ technique
+        Ogre::InstanceManager::InstancingTechnique instanceTechnique = Ogre::InstanceManager::ShaderBased;
+
+        // Create instance manager for managing instances of the robot mesh
+        mInstanceManager = mSceneMgr->createInstanceManager(
+                    "RobotInstanceMgr", "robot.mesh",
+                    Ogre::ResourceGroupManager::AUTODETECT_RESOURCE_GROUP_NAME, instanceTechnique,
+                    mCrowdSize); // TODO experiment with batch size
+    }
 
     // DETOUR CROWD PAGING
     setDebugVisibility(true);

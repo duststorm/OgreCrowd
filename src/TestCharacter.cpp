@@ -37,7 +37,8 @@
 #include "OgreRecastApplication.h"
 
 TestCharacter::TestCharacter(Ogre::String name, Ogre::SceneManager *sceneMgr, OgreDetourCrowd* detourCrowd, Ogre::Vector3 position)
-    : Character(name, sceneMgr, detourCrowd, position)
+    : Character(name, sceneMgr, detourCrowd, position),
+    mEnt(NULL)
 {
     // Depict agent as blue cylinder
     mNode = mSceneMgr->getRootSceneNode()->createChildSceneNode(name+"Node");
@@ -50,6 +51,11 @@ TestCharacter::TestCharacter(Ogre::String name, Ogre::SceneManager *sceneMgr, Og
     mNode->setScale(detourCrowd->getAgentRadius()*2, detourCrowd->getAgentHeight(), detourCrowd->getAgentRadius()*2);
 
     mEnt->setQueryFlags(OgreRecastApplication::DEFAULT_MASK);   // Exclude from ray queries
+}
+
+Ogre::Entity* TestCharacter::getEntity()
+{
+    return mEnt;
 }
 
 void TestCharacter::update(Ogre::Real timeSinceLastFrame)

@@ -131,7 +131,8 @@ SOURCES += Samples/src/BaseApplication.cpp \
     Samples/src/OgreRecastTerrainApplication.cpp \
     Samples/src/SettingsFileParser.cpp \
     Samples/src/OgreRecastPagedCrowdApplication.cpp \
-    src/OgreRecastNavmeshPruner.cpp
+    src/OgreRecastNavmeshPruner.cpp \
+    src/InstancedCharacter.cpp
 HEADERS += Samples/include/BaseApplication.h \
     Samples/include/OgreRecastApplication.h \
     include/OgreRecastDefinitions.h \
@@ -170,4 +171,5 @@ HEADERS += Samples/include/BaseApplication.h \
     Samples/include/OgreRecastTerrainApplication.h \
     Samples/include/SettingsFileParser.h \
     Samples/include/OgreRecastPagedCrowdApplication.h \
-    include/OgreRecastNavmeshPruner.h
+    include/OgreRecastNavmeshPruner.h \
+    include/InstancedCharacter.h

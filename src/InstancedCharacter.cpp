@@ -1,60 +1,20 @@
-/*
-    OgreCrowd
-    ---------
+#include "InstancedCharacter.h"
+#include "OgreRecastApplication.h"  // TODO remove this dependency
 
-    Copyright (c) 2012 Jonas Hauquier
-
-    Additional contributions by:
-
-    - mkultra333
-    - Paul Wilson
-
-    Sincere thanks and to:
-
-    - Mikko Mononen (developer of Recast navigation libraries)
-
-    Permission is hereby granted, free of charge, to any person obtaining a copy
-    of this software and associated documentation files (the "Software"), to deal
-    in the Software without restriction, including without limitation the rights
-    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-    copies of the Software, and to permit persons to whom the Software is
-    furnished to do so, subject to the following conditions:
-
-    The above copyright notice and this permission notice shall be included in
-    all copies or substantial portions of the Software.
-
-    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-    THE SOFTWARE.
-
-*/
-
-#include "AnimateableCharacter.h"
-#include "OgreRecastApplication.h"
-
-AnimateableCharacter::AnimateableCharacter(Ogre::String name, Ogre::SceneManager *sceneMgr, OgreDetourCrowd* detourCrowd, bool debugDraw, Ogre::Vector3 position)
+InstancedCharacter::InstancedCharacter(Ogre::String name, Ogre::SceneManager* sceneMgr, OgreDetourCrowd* detourCrowd, Ogre::InstanceManager* instanceMgr, bool debugDraw, Ogre::Vector3 position)
     : Character(name, sceneMgr, detourCrowd, position),
     mAnimState(NULL),
-    mEnt(NULL),
     mAnimSpeedScale(1),
     mDebugNode(NULL),
-    mDebugDraw(debugDraw)
+    mEnt(NULL),
+    mDebugDraw(debugDraw),
+    mInstanceManager(instanceMgr)
 {
     mNode = sceneMgr->getRootSceneNode()->createChildSceneNode(name+"Node");
-    mEnt = sceneMgr->createEntity(name, "Gamechar-male.mesh");
+    mEnt = mInstanceManager->createInstancedEntity("Examples/Instancing/ShaderBased/Robot");
 
-    // Set looking direction for this model
-    setRelativeLookingDirection( -Ogre::Vector3::UNIT_Z );
-
-    // Assign random texture
-    int i = (int)Ogre::Math::RangeRandom(0,14);
-    if (i > 13)
-        i = 13;
-    mEnt->setMaterialName("GameChar_Male_Mat_"+Ogre::StringConverter::toString(i));
+    // Set looking direction for robot model
+    setRelativeLookingDirection( Ogre::Vector3::UNIT_X );
 
     mEnt->setQueryFlags(OgreRecastApplication::DEFAULT_MASK);   // Exclude from ray queries
 
@@ -72,12 +32,11 @@ AnimateableCharacter::AnimateableCharacter(Ogre::String name, Ogre::SceneManager
     Ogre::Real agentHeight = mDetourCrowd->getAgentHeight();
 
     // Set Height to match that of agent
-    //mNode->setScale((agentRadius*2)/bBoxSize.y, agentHeight/bBoxSize.y, (agentRadius*2)/bBoxSize.y);
     Ogre::Real scale = agentHeight/bBoxSize.y;
     mNode->setScale(scale, scale, scale);
 
     // Set animation speed scaling
-    mAnimSpeedScale = 0.35*(scale*4);
+    mAnimSpeedScale = 1;
 
 
     // Debug draw agent
@@ -93,7 +52,7 @@ AnimateableCharacter::AnimateableCharacter(Ogre::String name, Ogre::SceneManager
     mDebugNode->setVisible(mDebugDraw);
 }
 
-void AnimateableCharacter::update(Ogre::Real timeSinceLastFrame)
+void InstancedCharacter::update(Ogre::Real timeSinceLastFrame)
 {
     updatePosition(timeSinceLastFrame);
 
@@ -122,23 +81,22 @@ void AnimateableCharacter::update(Ogre::Real timeSinceLastFrame)
     }
 }
 
-Ogre::Entity* AnimateableCharacter::getEntity()
+Ogre::InstancedEntity* InstancedCharacter::getEntity()
 {
     return mEnt;
 }
 
-void AnimateableCharacter::setDebugVisibility(bool visible)
+void InstancedCharacter ::setDebugVisibility(bool visible)
 {
-    mDebugDraw = visible;
-    mDebugNode->setVisible(mDebugDraw);
+    mDebugNode->setVisible(visible);
 }
 
-bool AnimateableCharacter::getDebugVisibility()
+bool InstancedCharacter::getDebugVisibility()
 {
     return mDebugDraw;
 }
 
-void AnimateableCharacter::show()
+void InstancedCharacter::show()
 {
     Character::show();
 
