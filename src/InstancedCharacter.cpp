@@ -46,10 +46,15 @@ InstancedCharacter::InstancedCharacter(Ogre::String name, Ogre::SceneManager* sc
     mInstanceManager(instanceMgr)
 {
     mNode = sceneMgr->getRootSceneNode()->createChildSceneNode(name+"Node");
-    mEnt = mInstanceManager->createInstancedEntity("Examples/Instancing/ShaderBased/Robot");
 
-    // Set looking direction for robot model
-    setRelativeLookingDirection( Ogre::Vector3::UNIT_X );
+    // Assign random texture
+    int i = (int)Ogre::Math::RangeRandom(0,14);
+    if (i > 13)
+        i = 13;
+    mEnt = mInstanceManager->createInstancedEntity("Examples/Instancing/ShaderBased/Male_"+Ogre::StringConverter::toString(i));
+
+    // Set looking direction for model
+    setRelativeLookingDirection( - Ogre::Vector3::UNIT_Z );
 
     mEnt->setQueryFlags(OgreRecastApplication::DEFAULT_MASK);   // Exclude from ray queries
 
@@ -71,7 +76,7 @@ InstancedCharacter::InstancedCharacter(Ogre::String name, Ogre::SceneManager* sc
     mNode->setScale(scale, scale, scale);
 
     // Set animation speed scaling
-    mAnimSpeedScale = 1;
+    mAnimSpeedScale = 0.2;
 
 
     // Debug draw agent
@@ -109,6 +114,7 @@ void InstancedCharacter::update(Ogre::Real timeSinceLastFrame)
             velocity.y = 0;
             velocity.normalise();
             mNode->rotate(src.getRotationTo(velocity));
+                // TODO average direction over multiple velocity samples
         }
     } else {    // Assume character has stopped
         mAnimState->setEnabled(false);
@@ -136,4 +142,9 @@ void InstancedCharacter::show()
     Character::show();
 
     mDebugNode->setVisible(getDebugVisibility());
+}
+
+void InstancedCharacter::randomizeAnimationPosition()
+{
+    mAnimState->setTimePosition( Ogre::Math::RangeRandom(0, mAnimState->getLength()) );
 }

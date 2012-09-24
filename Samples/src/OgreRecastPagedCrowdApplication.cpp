@@ -63,7 +63,7 @@ bool OgreRecastPagedCrowdApplication::INSTANCED_CROWD = false;
 
 
 // TODO this can also be DetourCrowd::MAX_AGENTS or allow setting of Max agents in detourCrowd
-const Ogre::Real OgreRecastPagedCrowdApplication::MAX_CROWD_SIZE = 50;
+const Ogre::Real OgreRecastPagedCrowdApplication::MAX_CROWD_SIZE = 100; // TODO make this a cfg parameter
 
 const Ogre::Real OgreRecastPagedCrowdApplication::RADIUS_EPSILON = 1;
 
@@ -111,8 +111,6 @@ OgreRecastPagedCrowdApplication::OgreRecastPagedCrowdApplication()
         mCrowdSize = MAX_CROWD_SIZE;
     else
         mCrowdSize = OgreDetourCrowd::MAX_AGENTS;
-
-    mCrowdSize = 100;
 
 // TODO make sure crowdSize is a multiple of nbPagedTiles?
 
@@ -262,7 +260,7 @@ void OgreRecastPagedCrowdApplication::createScene(void)
 
         // Create instance manager for managing instances of the robot mesh
         mInstanceManager = mSceneMgr->createInstanceManager(
-                    "RobotInstanceMgr", "robot.mesh",
+                    "CrowdCharacter_1_InstanceMgr", "Gamechar-male.mesh",
                     Ogre::ResourceGroupManager::AUTODETECT_RESOURCE_GROUP_NAME, instanceTechnique,
                     mCrowdSize); // TODO experiment with batch size
     }
@@ -610,18 +608,13 @@ void OgreRecastPagedCrowdApplication::loadAgents(int tx, int ty, int nbAgents)
 
     // Iterate over free agent list and distribute evenly
 // TODO allow other distributions
-
-    //for(std::vector<Character*>::iterator iter = mUnassignedCharacters.begin(); iter != mUnassignedCharacters.end(); iter++) {
     int agentsPlaced = 0;
-//    Ogre::String agentsString = "  ";
     while(mUnassignedCharacters.size() != 0 && agentsPlaced < nbAgents) {
         Character *character = mUnassignedCharacters[mUnassignedCharacters.size()-1];
         mUnassignedCharacters.pop_back();
 
         Ogre::Vector3 pos = placeAgent(character, tx, ty);
         mAssignedCharacters.push_back(character);
-        Ogre::Vector2 tilePos = mDetourTileCache->getTileAtPos(pos);
-//        agentsString += Ogre::StringConverter::toString(character->getPosition())+" "+tileToStr(tilePos.x, tilePos.y)+" ";
 
         agentsPlaced++;
     }
@@ -646,6 +639,13 @@ Ogre::Vector3 OgreRecastPagedCrowdApplication::placeAgent(Character* character, 
     Ogre::Vector3 rndPos = getRandomPositionInNavmeshTile(tx, ty);
 
     character->load(rndPos);
+
+    // Start walking animation at random position to avoid obvious synchronized movement
+    if(INSTANCED_CROWD)
+        ((InstancedCharacter*) character)->randomizeAnimationPosition();
+    else if(OgreRecastApplication::HUMAN_CHARACTERS)
+        ((AnimateableCharacter*) character)->randomizeAnimationPosition();
+// TODO this code replication is stupid. Fix up character classes with a better inheritance scheme, abstracting out demo specific and reusable classes
 
     assignAgentDestination(character);
 

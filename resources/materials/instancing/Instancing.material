@@ -213,3 +213,73 @@ material Examples/Instancing/ShaderBased/Robot : Examples/Instancing/ShaderBased
 {
 	set_texture_alias	DiffuseMap	r2skin.jpg
 }
+
+material Examples/Instancing/ShaderBased/Male_0 : Examples/Instancing/ShaderBased
+{
+	set_texture_alias	DiffuseMap	gameTex_0.png
+}
+
+material Examples/Instancing/ShaderBased/Male_1 : Examples/Instancing/ShaderBased
+{
+	set_texture_alias	DiffuseMap	gameTex_1.png
+}
+
+material Examples/Instancing/ShaderBased/Male_2 : Examples/Instancing/ShaderBased
+{
+	set_texture_alias	DiffuseMap	gameTex_2.png
+}
+
+material Examples/Instancing/ShaderBased/Male_3 : Examples/Instancing/ShaderBased
+{
+	set_texture_alias	DiffuseMap	gameTex_3.png
+}
+
+material Examples/Instancing/ShaderBased/Male_4 : Examples/Instancing/ShaderBased
+{
+	set_texture_alias	DiffuseMap	gameTex_4.png
+}
+
+material Examples/Instancing/ShaderBased/Male_5 : Examples/Instancing/ShaderBased
+{
+	set_texture_alias	DiffuseMap	gameTex_5.png
+}
+
+material Examples/Instancing/ShaderBased/Male_6 : Examples/Instancing/ShaderBased
+{
+	set_texture_alias	DiffuseMap	gameTex_6.png
+}
+
+material Examples/Instancing/ShaderBased/Male_7 : Examples/Instancing/ShaderBased
+{
+	set_texture_alias	DiffuseMap	gameTex_7.png
+}
+
+material Examples/Instancing/ShaderBased/Male_8 : Examples/Instancing/ShaderBased
+{
+	set_texture_alias	DiffuseMap	gameTex_8.png
+}
+
+material Examples/Instancing/ShaderBased/Male_9 : Examples/Instancing/ShaderBased
+{
+	set_texture_alias	DiffuseMap	gameTex_9.png
+}
+
+material Examples/Instancing/ShaderBased/Male_10 : Examples/Instancing/ShaderBased
+{
+	set_texture_alias	DiffuseMap	gameTex_10.png
+}
+
+material Examples/Instancing/ShaderBased/Male_11 : Examples/Instancing/ShaderBased
+{
+	set_texture_alias	DiffuseMap	gameTex_11.png
+}
+
+material Examples/Instancing/ShaderBased/Male_12 : Examples/Instancing/ShaderBased
+{
+	set_texture_alias	DiffuseMap	gameTex_12.png
+}
+
+material Examples/Instancing/ShaderBased/Male_13 : Examples/Instancing/ShaderBased
+{
+	set_texture_alias	DiffuseMap	gameTex_13.png
+}

@@ -144,3 +144,8 @@ void AnimateableCharacter::show()
 
     mDebugNode->setVisible(getDebugVisibility());
 }
+
+void AnimateableCharacter::randomizeAnimationPosition()
+{
+    mAnimState->setTimePosition( Ogre::Math::RangeRandom(0, mAnimState->getLength()) );
+}

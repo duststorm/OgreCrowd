@@ -64,6 +64,8 @@ public:
 
     virtual void show(void);
 
+    void randomizeAnimationPosition(void);
+
 protected:
     bool mDebugDraw;
 
