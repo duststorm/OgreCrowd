@@ -39,7 +39,6 @@
 #include "AnimateableCharacter.h"
 #include "InstancedCharacter.h"
 #include "TestCharacter.h"
-#include <SdkTrays.h>       // TODO maybe it's not such a good idea to have this dependency
 
 
 const Ogre::Real CrowdManager::CROWD_PAGE_UPDATE_DELTA = 1;
