@@ -132,7 +132,8 @@ SOURCES += Samples/src/BaseApplication.cpp \
     Samples/src/SettingsFileParser.cpp \
     Samples/src/OgreRecastPagedCrowdApplication.cpp \
     src/OgreRecastNavmeshPruner.cpp \
-    src/InstancedCharacter.cpp
+    src/InstancedCharacter.cpp \
+    src/CrowdManager.cpp
 HEADERS += Samples/include/BaseApplication.h \
     Samples/include/OgreRecastApplication.h \
     include/OgreRecastDefinitions.h \
@@ -172,4 +173,5 @@ HEADERS += Samples/include/BaseApplication.h \
     Samples/include/SettingsFileParser.h \
     Samples/include/OgreRecastPagedCrowdApplication.h \
     include/OgreRecastNavmeshPruner.h \
-    include/InstancedCharacter.h
+    include/InstancedCharacter.h \
+    include/CrowdManager.h

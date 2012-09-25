@@ -40,11 +40,8 @@
 #include "RecastInputGeom.h"
 #include "OgreRecastNavmeshPruner.h"
 #include "InstancedCharacter.h"
+#include "CrowdManager.h"
 
-const Ogre::Real OgreRecastPagedCrowdApplication::CROWD_PAGE_UPDATE_DELTA = 1;
-const bool OgreRecastPagedCrowdApplication::EXTRACT_WALKABLE_AREAS = true;
-
-bool OgreRecastPagedCrowdApplication::INSTANCED_CROWD = false;
 
 // TODO fix bug where a lot of agents are located on world origin
 
@@ -62,128 +59,29 @@ bool OgreRecastPagedCrowdApplication::INSTANCED_CROWD = false;
 // TODO consider this alternative way of placing new agents that walked off the grid: place them on the outer edge of the page, not just on a border tile
 
 
-// TODO this can also be DetourCrowd::MAX_AGENTS or allow setting of Max agents in detourCrowd
-const Ogre::Real OgreRecastPagedCrowdApplication::MAX_CROWD_SIZE = 100; // TODO make this a cfg parameter
-
-const Ogre::Real OgreRecastPagedCrowdApplication::RADIUS_EPSILON = 1;
-
-const Ogre::Real OgreRecastPagedCrowdApplication::TOPDOWN_CAMERA_HEIGHT = 80;
 
 // TODO actual loaded navmesh grid (in detourTileCache) should be at least one tile larger than the one loaded with crowd agents, so that agents can effectively walk out of the paged area (and reappear somewhere else)!! Document/enforce this
 
 
+const Ogre::Real OgreRecastPagedCrowdApplication::TOPDOWN_CAMERA_HEIGHT = 80;
+const bool OgreRecastPagedCrowdApplication::EXTRACT_WALKABLE_AREAS = true;
+
+
 OgreRecastPagedCrowdApplication::OgreRecastPagedCrowdApplication()
     : mRecast(0)
-    , mDetourCrowd(0)
-    , mCharacters()
     , mNavMeshNode(0)
-    , mDebugEntities()
     , mDetourTileCache(0)
-    , mCurrentlyPagedArea()
-    , mPagedAreaDistance(2)
-    , mNbPagedTiles(0)
-    , mNbTilesInBorder(0)
-    , mAreaDebug(0)
+    , mDebugEntities()
     , mTopDownCamera(false)
     , mGoingUp(false)
     , mGoingDown(false)
     , mGoingLeft(false)
     , mGoingRight(false)
     , mDebugDraw(false)
-    , mBorderTiles()
-    , mInstanceManager(0)
 {
-    // Number of tiles filled with agents
-    if(mPagedAreaDistance == 0) {
-        mNbPagedTiles = 1;
-        mNbTilesInBorder = 1;
-        mDimension = 1;
-    } else {
-        // Dimensions of the square grid (dimension x dimension)
-        mDimension = (2*(mPagedAreaDistance+1))-1;
-        mNbPagedTiles = mDimension*mDimension;
-
-        // Number of tiles in the outer border
-        mNbTilesInBorder = (2*mDimension) + 2*(mDimension-2);
-    }
-
-    if(MAX_CROWD_SIZE < OgreDetourCrowd::MAX_AGENTS)
-        mCrowdSize = MAX_CROWD_SIZE;
-    else
-        mCrowdSize = OgreDetourCrowd::MAX_AGENTS;
-
-// TODO make sure crowdSize is a multiple of nbPagedTiles?
-
-    mCharacters.reserve(mCrowdSize);
-    mUnassignedCharacters.reserve(mCrowdSize);
-    mAssignedCharacters.reserve(mCrowdSize);
-    mBorderTiles.reserve(mNbTilesInBorder);
+    CrowdManager::HUMAN_CHARACTERS = OgreRecastApplication::HUMAN_CHARACTERS;
 }
 
-void OgreRecastPagedCrowdApplication::initAgents()
-{
-    // Make sure camera is already set!
-    mCurrentlyPagedArea = calculatePopulatedArea();
-    updateBorderTiles();    // Make sure agents that walk out of the area are placed in the right border tiles
-
-    updatePagedAreaDebug(mCurrentlyPagedArea);
-
-    // Initialize and place agents: distribute uniformly
-    int agentsPerTile = mCrowdSize/mNbPagedTiles;
-    int nbAgents = -1;
-    for (int x = mCurrentlyPagedArea.xMin; x <= mCurrentlyPagedArea.xMax; x++) {
-        for (int y = mCurrentlyPagedArea.yMin; y <= mCurrentlyPagedArea.yMax; y++) {
-            if(tileExists(x,y)) {
-                debugPrint("Init: load "+Ogre::StringConverter::toString(agentsPerTile)+" agents on tile "+tileToStr(x,y)+".");
-                for(int i = 0; i < agentsPerTile; i++) {
-                    nbAgents++;
-                    //Ogre::Vector3 position = getRandomPositionInNavmeshTileSet(NavmeshTileSet);
-                    Ogre::Vector3 position = getRandomPositionInNavmeshTile(x, y);
-                    Character *character;
-// TODO make configurable which type of character is exactly instanced (maybe allow keeping sets of different populations)
-                    if(OgreRecastPagedCrowdApplication::INSTANCED_CROWD) {
-                        character = new InstancedCharacter("Character_"+Ogre::StringConverter::toString(nbAgents), mSceneMgr, mDetourCrowd, mInstanceManager, false, position);
-                    } else if(OgreRecastApplication::HUMAN_CHARACTERS) {
-                        character = new AnimateableCharacter("Character_"+Ogre::StringConverter::toString(nbAgents), mSceneMgr, mDetourCrowd, false, position);
-                    } else {
-                        character = new TestCharacter("Character_"+Ogre::StringConverter::toString(nbAgents), mSceneMgr, mDetourCrowd, position);
-                    }
-                    mCharacters.push_back(character);
-                    mAssignedCharacters.push_back(character);
-                    assignAgentDestination(character);
-                }
-            } else {
-                debugPrint("Init: Tile "+tileToStr(x,y)+" does not exist, 0 agents loaded.");
-            }
-        }
-    }
-
-    // Create any remaining unassigned characters
-    nbAgents++;
-    while(nbAgents < mCrowdSize) {
-        Character *character;
-        if(OgreRecastPagedCrowdApplication::INSTANCED_CROWD) {
-            character = new InstancedCharacter("Character_"+Ogre::StringConverter::toString(nbAgents), mSceneMgr, mDetourCrowd, mInstanceManager);
-        } else if(OgreRecastApplication::HUMAN_CHARACTERS) {
-            character = new AnimateableCharacter("Character_"+Ogre::StringConverter::toString(nbAgents), mSceneMgr, mDetourCrowd);
-        } else {
-            character = new TestCharacter("Character_"+Ogre::StringConverter::toString(nbAgents), mSceneMgr, mDetourCrowd);
-        }
-        character->unLoad();
-        mCharacters.push_back(character);
-        mUnassignedCharacters.push_back(character);
-        nbAgents++;
-    }
-}
-
-Ogre::Vector3 OgreRecastPagedCrowdApplication::assignAgentDestination(Character* character)
-{
-    // Assign a random destination (wandering)
-    Ogre::Vector3 rndPt = mRecast->getRandomNavMeshPoint();
-    character->updateDestination(rndPt);
-
-    return rndPt;
-}
 
 void OgreRecastPagedCrowdApplication::createScene(void)
 {
@@ -242,10 +140,6 @@ void OgreRecastPagedCrowdApplication::createScene(void)
         return;
     }
 
-
-    // DETOUR CROWD (local steering for independent agents)
-    mDetourCrowd = new OgreDetourCrowd(mRecast);        // TODO add option of specifying max crowd size?
-
     if(EXTRACT_WALKABLE_AREAS) {
         // Mark walkable area (where agents will be spawned)
         OgreRecastNavmeshPruner *navMeshPruner = mRecast->getNavmeshPruner();
@@ -254,21 +148,12 @@ void OgreRecastPagedCrowdApplication::createScene(void)
         navMeshPruner->pruneSelected();
     }
 
-    if(INSTANCED_CROWD) {
-        // Most compatible SM2+ technique
-        Ogre::InstanceManager::InstancingTechnique instanceTechnique = Ogre::InstanceManager::ShaderBased;
 
-        // Create instance manager for managing instances of the robot mesh
-        mInstanceManager = mSceneMgr->createInstanceManager(
-                    "CrowdCharacter_1_InstanceMgr", "Gamechar-male.mesh",
-                    Ogre::ResourceGroupManager::AUTODETECT_RESOURCE_GROUP_NAME, instanceTechnique,
-                    mCrowdSize); // TODO experiment with batch size
-    }
+    // Setup crowd manager
+    mCrowdManager = new CrowdManager(mDetourTileCache, mSceneMgr, mCamera);
 
-    // DETOUR CROWD PAGING
+
     setDebugVisibility(true);
-    // Determine size of populated area (centered around camera and navmesh tile-aligned)
-    initAgents();
 
 
     // ADJUST CAMERA MOVING SPEED (default is 150)
@@ -279,17 +164,14 @@ void OgreRecastPagedCrowdApplication::setDebugVisibility(bool visible)
 {
     mDebugDraw = visible;
 
+    mCrowdManager->setDebugVisibility(visible);
+
 //    mNavMeshNode->setVisible(visible);
 
     // Change visibility of all registered debug entities for the application
     for(std::vector<Ogre::Entity*>::iterator iter = mDebugEntities.begin(); iter != mDebugEntities.end(); iter++) {
         Ogre::Entity *ent = *iter;
         ent->setVisible(visible);
-    }
-
-    for(std::vector<Character*>::iterator iter = mCharacters.begin(); iter != mCharacters.end(); iter++) {
-        Character *character = *iter;
-        character->setDebugVisibility(visible);
     }
 }
 
@@ -298,25 +180,11 @@ bool OgreRecastPagedCrowdApplication::frameRenderingQueued(const Ogre::FrameEven
     // Perform navmesh updates
     mDetourTileCache->handleUpdate(evt.timeSinceLastFrame);
 
-    // Update crowd agents
-    mDetourCrowd->updateTick(evt.timeSinceLastFrame);
+    // Update crowd
+    mCrowdManager->update(evt.timeSinceLastFrame);
 
-    // Then update all characters controlled by the agents
-    for(std::vector<Character*>::iterator iter=mCharacters.begin(); iter != mCharacters.end(); iter++) {
-        Character *character = *iter;
 
-        // Update character (position, animations, state)
-        character->update(evt.timeSinceLastFrame);
-
-        // Set new destinations when agents reach their current destination (random wander)
-        if ( character->destinationReached() ) {
-            character->updateDestination( mRecast->getRandomNavMeshPoint() );
-        }
-    }
-
-    // Update paged crowd
-    updatePagedCrowd(evt.timeSinceLastFrame);
-
+    // Update top-down Camera
     if(mTopDownCamera) {
         // build our acceleration vector based on keyboard input composite
         Ogre::Vector3 accel = Ogre::Vector3::ZERO;
@@ -331,375 +199,12 @@ bool OgreRecastPagedCrowdApplication::frameRenderingQueued(const Ogre::FrameEven
             accel *= (mCameraMan->getTopSpeed()/ 20);
             mCamera->setPosition(mCamera->getPosition()+accel);
         }
-
     }
 
-    return BaseApplication::frameRenderingQueued(evt);
-
-}
-
-// TODO make Camera a parameter?
-OgreRecastPagedCrowdApplication::NavmeshTileSet OgreRecastPagedCrowdApplication::calculatePopulatedArea()
-{
-    NavmeshTileSet result;
-
-    Ogre::Vector3 cameraPos = mCamera->getPosition();
-    Ogre::Vector2 camTilePos = mDetourTileCache->getTileAtPos(cameraPos);
-
-    result.xMin = camTilePos.x - (mPagedAreaDistance);
-    result.xMax = camTilePos.x + (mPagedAreaDistance);
-
-    result.yMin = camTilePos.y - (mPagedAreaDistance);
-    result.yMax = camTilePos.y + (mPagedAreaDistance);
-
-    return result;
-}
-
-bool OgreRecastPagedCrowdApplication::updatePagedCrowd(Ogre::Real timeSinceLastFrame)
-{
-    // Update paged area when camera has moved, also re-add agents that walked out of the grid
-
-    mTimeSinceLastUpdate += timeSinceLastFrame;
-    bool update = false;
-    NavmeshTileSet newPagedArea = calculatePopulatedArea();
-
-
-    // DETECT wheter the grid has changed (ie. whether tiles should be unloaded and others loaded)
-    if(newPagedArea.xMin != mCurrentlyPagedArea.xMin || newPagedArea.yMin != mCurrentlyPagedArea.yMin) {
-        // Paged area has changed
-
-        if((int)Ogre::Math::Abs(newPagedArea.xMin - mCurrentlyPagedArea.xMin) < 2
-                &&
-           (int)Ogre::Math::Abs(newPagedArea.yMin - mCurrentlyPagedArea.yMin) < 2) {
-            // Paged area has slid by one tile, only perform one update per time delta
-            if(mTimeSinceLastUpdate > CROWD_PAGE_UPDATE_DELTA)
-                update = true;
-            else
-                return false;   // Don't update now, also don't re-add agents that walked out of the grid (this could be useless as the grid will soon change)
-        } else {
-            // Paged area has moved somewhere else, update immediately
-            update = true;
-        }
-    }
-
-
-    if(!update) {
-        // Unload agents that walked of the grid, add them somewhere in some random border tile
-        for(std::vector<Character*>::iterator iter = mAssignedCharacters.begin(); iter != mAssignedCharacters.end(); iter++) {
-            Character *character = *iter;
-            if(walkedOffGrid(character)) {
-                Ogre::Vector3 oldPos = character->getPosition();
-                // Place agent in new random border tile
-                placeAgentOnRandomBorderTile(character);
-                debugPrint("Agent "+Ogre::StringConverter::toString(character->getAgentID())+" walked off grid ("+Ogre::StringConverter::toString(oldPos)+"   "+tileToStr(mDetourTileCache->getTileAtPos(oldPos))+") placed on new random tile "+tileToStr(mDetourTileCache->getTileAtPos(character->getPosition()))+"  "+Ogre::StringConverter::toString(character->getPosition()));
-            }
-        }
-    }
-
-
-    // Remove all agents outside of the new paged area
-    unloadAgentsOutsideArea(newPagedArea);
-
-
-    // Grid has changed: unload tiles, load others
-    if(update) {
-        updatePagedAreaDebug(newPagedArea);
-
-        // Add agents to newly loaded tiles
-        for (int x = newPagedArea.xMin; x <= newPagedArea.xMax; x++) {
-            if(x < mCurrentlyPagedArea.xMin) {
-                for(int y = newPagedArea.yMin; y <= newPagedArea.yMax; y++)
-                    loadAgents(x,y, mCrowdSize/mNbPagedTiles);
-            } else if(x > mCurrentlyPagedArea.xMax) {
-                for(int y = newPagedArea.yMin; y <= newPagedArea.yMax; y++)
-                    loadAgents(x,y, mCrowdSize/mNbPagedTiles);
-            } else /*if(x >= mCurrentlyPagedArea.xMin && x <= mCurrentlyPagedArea.xMax)*/ {
-                for (int y = newPagedArea.yMin; y <= newPagedArea.yMax; y++) {
-                    if(y < mCurrentlyPagedArea.yMin) {
-                        loadAgents(x,y, mCrowdSize/mNbPagedTiles);
-                    } else if(y > mCurrentlyPagedArea.yMax) {
-                        loadAgents(x,y, mCrowdSize/mNbPagedTiles);
-                    }// else x,y were also in current paged area
-                }
-            }
-        }
-
-        mTimeSinceLastUpdate = 0;
-        mCurrentlyPagedArea = newPagedArea;
-
-
-        // Update list with existing border tiles
-        updateBorderTiles();
-    }
-
-
+    // Update debug info panel
     updateDebugInfo();
 
-    return update;
-}
-
-void OgreRecastPagedCrowdApplication::updateBorderTiles()
-{
-    // TODO is it a good idea to use existing area, or really only use outer borders of area? the disadvantage of this approach is that agents could appear closer to the camera, the advantage that new agents can always appear, even if there is only one tile available in the current grid
-    NavmeshTileSet existingArea = getExistingArea(mCurrentlyPagedArea);
-    mBorderTiles.clear();
-    for(int y = existingArea.yMin; y <= existingArea.yMax; y++) {
-        if(tileExists(existingArea.xMin, y))
-            mBorderTiles.push_back(Ogre::Vector2(existingArea.xMin, y));
-        if(tileExists(existingArea.xMax, y))
-            mBorderTiles.push_back(Ogre::Vector2(existingArea.xMax, y));
-    }
-}
-
-OgreRecastPagedCrowdApplication::NavmeshTileSet OgreRecastPagedCrowdApplication::getExistingArea(NavmeshTileSet area)
-{
-    TileSelection bounds = mDetourTileCache->getBounds();
-
-    if(area.xMin < bounds.minTx)
-        area.xMin = bounds.minTx;
-    if(area.yMin < bounds.minTy)
-        area.yMin = bounds.minTy;
-    if(area.xMax > bounds.maxTx)
-        area.xMax = bounds.maxTx;
-    if(area.yMax > bounds.maxTy)
-        area.yMax = bounds.maxTy;
-
-    return area;    // Note: there can still be non-existing tiles in-between tiles. Use tileExists() to test.
-}
-
-void OgreRecastPagedCrowdApplication::updateDebugInfo()
-{
-    if(mDebugPanel->isVisible()) {
-        mDebugPanel->setParamValue(0, Ogre::StringConverter::toString(mCrowdSize));                 // Total agents
-        mDebugPanel->setParamValue(1, Ogre::StringConverter::toString(mAssignedCharacters.size())); // Loaded agents
-        Ogre::String dimensionStr = Ogre::StringConverter::toString(mDimension);
-        mDebugPanel->setParamValue(2, dimensionStr+"x"+dimensionStr);                               // Grid size
-        mDebugPanel->setParamValue(3, Ogre::StringConverter::toString(getNbLoadedTiles()));         // Loaded tiles
-        mDebugPanel->setParamValue(4, Ogre::StringConverter::toString(getNbBorderTiles()));         // Border tiles
-        mDebugPanel->setParamValue(5, mTopDownCamera?"Top-down":"Free");                            // Camera type
-    }
-}
-
-int OgreRecastPagedCrowdApplication::getNbLoadedTiles()
-{
-    int count = 0;
-    for (int x = mCurrentlyPagedArea.xMin; x <= mCurrentlyPagedArea.xMax; x++) {
-        for (int y = mCurrentlyPagedArea.yMin; y <= mCurrentlyPagedArea.yMax; y++) {
-            if(tileExists(x,y))
-                count++;
-        }
-    }
-
-    return count;
-}
-
-int OgreRecastPagedCrowdApplication::getNbBorderTiles()
-{
-    return mBorderTiles.size();
-}
-
-void OgreRecastPagedCrowdApplication::placeAgentOnRandomBorderTile(Character *character)
-{
-    if(mBorderTiles.size() == 0 )
-        return;
-
-    int borderTile = (int)Ogre::Math::RangeRandom(0, mBorderTiles.size());
-    Ogre::Vector2 tile = mBorderTiles[borderTile];
-
-    placeAgent(character, tile.x,tile.y);
-}
-
-bool OgreRecastPagedCrowdApplication::tileExists(int tx, int ty)
-{
-    return mDetourTileCache->tileExists(tx, ty);
-}
-
-bool OgreRecastPagedCrowdApplication::walkedOffGrid(const Character *character)
-{
-// TODO detect whether agent is at border tile, at the outer edge, and is pointing towards walking off (or has no velocity anymore, but beware of recently added agents that were not yet assigned a velocity)
-// TODO also think about how to assign waypoint destinations, could be a problem if they are to locations of which no navmesh is loaded. Then agents will navigate to the closest point on the navmesh and stop, this is not necessarily the right path. Maybe a higher-level checkpoint graph.
-
-    // Detect whether an agent has moved to a tile outside of the current area
-    // NOTE: for this to work, the navmesh tiles that extend at least one tile outside of the currently populated area
-    // have to be loaded in the tilecache.
-    Ogre::Vector2 tpos = mDetourTileCache->getTileAtPos(character->getPosition());
-
-    if(tpos.x < mCurrentlyPagedArea.xMin || tpos.x > mCurrentlyPagedArea.xMax)
-        return true;
-
-    if(tpos.y < mCurrentlyPagedArea.yMin || tpos.y > mCurrentlyPagedArea.yMax)
-        return true;
-
-
-    return false;
-}
-
-void OgreRecastPagedCrowdApplication::unloadAgents(int tx, int ty)
-{
-    if(! tileExists(tx,ty))
-        return;
-
-    u_int i = 0;
-    int agentsRemoved = 0;
-    while(i < mAssignedCharacters.size()) {
-        Character *character = mAssignedCharacters[i];
-        Ogre::Vector2 tilePos = mDetourTileCache->getTileAtPos(character->getPosition());
-        if(tilePos.x == tx && tilePos.y == ty) {    //TODO Is this safe? tile positions are ints, but they were stored in a float
-            agentsRemoved++;
-            character->unLoad();
-            mUnassignedCharacters.push_back(character);
-            mAssignedCharacters.erase(mAssignedCharacters.begin()+i);
-            // Don't advance i, current position contains the next element
-        } else {
-            i++;
-        }
-    }
-
-    debugPrint("Unloaded "+Ogre::StringConverter::toString(agentsRemoved)+" agents from tile "+tileToStr(tx,ty)+".");
-}
-
-void OgreRecastPagedCrowdApplication::unloadAgentsOutsideArea(NavmeshTileSet tileSet)
-{
-    u_int i = 0;
-    int agentsRemoved = 0;
-    while(i < mAssignedCharacters.size()) {
-        Character *character = mAssignedCharacters[i];
-        Ogre::Vector2 tilePos = mDetourTileCache->getTileAtPos(character->getPosition());
-
-        if( tilePos.x < tileSet.xMin || tilePos.x > tileSet.xMax
-         || tilePos.y < tileSet.yMin || tilePos.y > tileSet.yMax) {
-            agentsRemoved++;
-            character->unLoad();
-            mUnassignedCharacters.push_back(character);
-            mAssignedCharacters.erase(mAssignedCharacters.begin()+i);
-
-            // Don't advance i, current position contains the next element
-        } else {
-            i++;
-        }
-    }
-
-    if(agentsRemoved)
-        debugPrint("Unloaded "+Ogre::StringConverter::toString(agentsRemoved)+" agents.");
-}
-
-void OgreRecastPagedCrowdApplication::debugPrint(Ogre::String message)
-{
-    if(mDebugDraw)
-        Ogre::LogManager::getSingletonPtr()->logMessage(message);
-}
-
-Ogre::String OgreRecastPagedCrowdApplication::tileToStr(Ogre::Vector2 tilePos)
-{
-    return tileToStr(tilePos.x, tilePos.y);
-}
-
-Ogre::String OgreRecastPagedCrowdApplication::tileToStr(int tx, int ty)
-{
-    return "("+Ogre::StringConverter::toString(tx)+", "+Ogre::StringConverter::toString(ty)+")";
-}
-
-void OgreRecastPagedCrowdApplication::loadAgents(int tx, int ty, int nbAgents)
-{
-    if(! tileExists(tx,ty)) {
-        debugPrint("Will not load agents on tile "+tileToStr(tx,ty)+": does not exist.");
-        return;
-    }
-
-    // Iterate over free agent list and distribute evenly
-// TODO allow other distributions
-    int agentsPlaced = 0;
-    while(mUnassignedCharacters.size() != 0 && agentsPlaced < nbAgents) {
-        Character *character = mUnassignedCharacters[mUnassignedCharacters.size()-1];
-        mUnassignedCharacters.pop_back();
-
-        Ogre::Vector3 pos = placeAgent(character, tx, ty);
-        mAssignedCharacters.push_back(character);
-
-        agentsPlaced++;
-    }
-
-    debugPrint("Loaded "+Ogre::StringConverter::toString(agentsPlaced)+" agents on tile "+tileToStr(tx,ty)+"." /*+agentsString*/);
-}
-
-Ogre::Vector3 OgreRecastPagedCrowdApplication::getRandomPositionInNavmeshTile(int tx, int ty)
-{
-    Ogre::AxisAlignedBox tileBounds = mDetourTileCache->getTileBounds(tx, ty);
-    Ogre::Vector3 center = tileBounds.getCenter();  // Center of the specified tile
-    //center.y = tileBounds.getMinimum().y;   // Place on the ground
-        // TODO centering probably has the biggest change of the point clipping to the navmesh
-
-    // Get random point in tile (in circle in the middle of the tile with radius of tilesize/2)
-    Ogre::Real radius = mDetourTileCache->getTileSize()/2;
-    return mRecast->getRandomNavMeshPointInCircle(center, radius-RADIUS_EPSILON);   // TODO I could also make RADIUS_EPSILON be a fraction of the tileSize
-}
-
-Ogre::Vector3 OgreRecastPagedCrowdApplication::placeAgent(Character* character, int tx, int ty)
-{
-    Ogre::Vector3 rndPos = getRandomPositionInNavmeshTile(tx, ty);
-
-    character->load(rndPos);
-
-    // Start walking animation at random position to avoid obvious synchronized movement
-    if(INSTANCED_CROWD)
-        ((InstancedCharacter*) character)->randomizeAnimationPosition();
-    else if(OgreRecastApplication::HUMAN_CHARACTERS)
-        ((AnimateableCharacter*) character)->randomizeAnimationPosition();
-// TODO this code replication is stupid. Fix up character classes with a better inheritance scheme, abstracting out demo specific and reusable classes
-
-    assignAgentDestination(character);
-
-    return rndPos;
-}
-
-Ogre::AxisAlignedBox OgreRecastPagedCrowdApplication::getNavmeshTileSetBounds(NavmeshTileSet tileSet)
-{
-    // TODO if I declare NavmeshTileSet struct in OgreDetourTileCache I can move this method to the tilecache
-    Ogre::AxisAlignedBox tileMinBounds = mDetourTileCache->getTileBounds(tileSet.xMin, tileSet.yMin);
-    Ogre::AxisAlignedBox tileMaxBounds = mDetourTileCache->getTileBounds(tileSet.xMax, tileSet.yMax);
-
-    Ogre::AxisAlignedBox tileSetBounds;
-    tileSetBounds.setMinimum(tileMinBounds.getMinimum());
-    tileSetBounds.setMaximum(tileMaxBounds.getMaximum());
-
-    return tileSetBounds;
-}
-
-Ogre::Vector3 OgreRecastPagedCrowdApplication::getRandomPositionInNavmeshTileSet(NavmeshTileSet tileSet)
-{
-    Ogre::AxisAlignedBox tileSetBounds = getNavmeshTileSetBounds(tileSet);
-    Ogre::Vector3 center = tileSetBounds.getCenter();
-    //center.y = tileSetBounds.getMinimum().y;
-        // TODO centering probably has the biggest change of the point clipping to the navmesh
-
-    Ogre::Real radius = ( tileSet.getNbTiles()*mDetourTileCache->getTileSize() )/2;
-    return mRecast->getRandomNavMeshPointInCircle(center, radius - RADIUS_EPSILON);
-}
-
-void OgreRecastPagedCrowdApplication::updatePagedAreaDebug(NavmeshTileSet pagedArea)
-{
-    /*
-    if(mAreaDebug) {
-        mAreaDebug->detachFromParent();
-        mSceneMgr->destroyManualObject(mAreaDebug);
-    }
-    */
-
-    Ogre::AxisAlignedBox areaBounds = getNavmeshTileSetBounds(pagedArea);
-
-    if(! mAreaDebug) {
-        Ogre::SceneNode *areaSn = mSceneMgr->getRootSceneNode()->createChildSceneNode();
-        mAreaDebug = mSceneMgr->createEntity("AreaDemarkationDebug", "Demarkation.mesh");
-        areaSn->attachObject(mAreaDebug);
-        Ogre::Vector3 scale = areaBounds.getSize();
-        if(scale.y < 5)
-            scale.y = 10;
-        areaSn->setScale(scale);
-    }
-
-    Ogre::Vector3 position = areaBounds.getCenter();
-    position.y = areaBounds.getMinimum().y;
-    mAreaDebug->getParentSceneNode()->setPosition(position);
+    return BaseApplication::frameRenderingQueued(evt);
 }
 
 
@@ -719,6 +224,19 @@ void OgreRecastPagedCrowdApplication::createFrameListener()
     mDebugPanel = mTrayMgr->createParamsPanel(OgreBites::TL_TOPLEFT, "PagedCrowdDebugPanel", 200, items);
     if(mDebugDraw)
         mDebugPanel->show();
+}
+
+void OgreRecastPagedCrowdApplication::updateDebugInfo()
+{
+    if(mDebugPanel->isVisible()) {
+        mDebugPanel->setParamValue(0, Ogre::StringConverter::toString(mCrowdManager->getSize()));                 // Total agents
+        mDebugPanel->setParamValue(1, Ogre::StringConverter::toString(mCrowdManager->getNbAssignedAgents())); // Loaded agents
+        Ogre::String dimensionStr = Ogre::StringConverter::toString(mCrowdManager->getGridDimensions());
+        mDebugPanel->setParamValue(2, dimensionStr+"x"+dimensionStr);                               // Grid size
+        mDebugPanel->setParamValue(3, Ogre::StringConverter::toString(mCrowdManager->getNbLoadedTiles()));         // Loaded tiles
+        mDebugPanel->setParamValue(4, Ogre::StringConverter::toString(mCrowdManager->getNbBorderTiles()));         // Border tiles
+        mDebugPanel->setParamValue(5, mTopDownCamera?"Top-down":"Free");                            // Camera type
+    }
 }
 
 

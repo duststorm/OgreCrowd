@@ -58,6 +58,7 @@ This source file is part of the
 #include "OgreRecastTerrainApplication.h"
 #include "SettingsFileParser.h"
 #include "OgreRecastPagedCrowdApplication.h"
+#include "CrowdManager.h"
 
 
 //--- SETTINGS ------------------------------------------------------------------------
@@ -1072,7 +1073,7 @@ void OgreRecastApplication::loadConfig(Ogre::String configFileName)
         OgreRecastTerrainApplication::TERRAIN_HEIGHT_SCALE = sfp.mTerrainHeightScale;
         OgreRecastTerrainApplication::TERRAIN_TILE_RESOLUTION = sfp.mTerrainTileResolution;
 
-        OgreRecastPagedCrowdApplication::INSTANCED_CROWD = sfp.mInstancedCrowd;
+        CrowdManager::INSTANCED_CROWD = sfp.mInstancedCrowd;
     } catch (Ogre::Exception e) {
         std::cout << "WARNING: Could not find file " << configFileName << ". Using default settings." << std::endl;
     }

@@ -36,6 +36,7 @@
 #ifndef OGREDETOURTILECACHE_H
 #define OGREDETOURTILECACHE_H
 
+#include <Ogre.h>
 #include "OgreRecast.h"
 #include "DetourTileCache/DetourTileCacheBuilder.h"
 #include "DetourTileCache/DetourTileCache.h"
@@ -45,7 +46,6 @@
 
 const float TEMP_OBSTACLE_RADIUS = 1.0f;
 const float TEMP_OBSTACLE_HEIGHT = 2.0f;
-
 
 struct TileSelection
 {
@@ -395,6 +395,7 @@ public:
       **/
     inline Ogre::Real getTileSize(void) { return m_tileSize*m_cellSize; }
 
+    OgreRecast* getRecast(void) { return m_recast; }
 
     /**
       * Build all tiles of the tilecache and construct a recast navmesh from the
