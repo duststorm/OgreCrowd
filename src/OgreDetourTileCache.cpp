@@ -1291,3 +1291,191 @@ std::vector<dtCompressedTileRef> OgreDetourTileCache::getTilesContainingBox(Ogre
     return result;
 }
 
+void OgreDetourTileCache::saveAll(Ogre::String filename)
+{
+       if (!m_tileCache) return;
+
+       FILE* fp = fopen(filename.data(), "wb");
+       if (!fp)
+               return;
+
+// Store header.
+       TileCacheSetHeader header;
+       header.magic = TILECACHESET_MAGIC;
+       header.version = TILECACHESET_VERSION;
+       header.numTiles = 0;
+       for (int i = 0; i < m_tileCache->getTileCount(); ++i)
+       {
+               const dtCompressedTile* tile = m_tileCache->getTile(i);
+               if (!tile || !tile->header || !tile->dataSize) continue;
+               header.numTiles++;
+       }
+       memcpy(&header.cacheParams, m_tileCache->getParams(), sizeof(dtTileCacheParams));
+       memcpy(&header.meshParams, m_recast->m_navMesh->getParams(), sizeof(dtNavMeshParams));
+       fwrite(&header, sizeof(TileCacheSetHeader), 1, fp);
+
+       // Store tiles.
+       for (int i = 0; i < m_tileCache->getTileCount(); ++i)
+       {
+               const dtCompressedTile* tile = m_tileCache->getTile(i);
+               if (!tile || !tile->header || !tile->dataSize) continue;
+
+               TileCacheTileHeader tileHeader;
+               tileHeader.tileRef = m_tileCache->getTileRef(tile);
+               tileHeader.dataSize = tile->dataSize;
+               fwrite(&tileHeader, sizeof(tileHeader), 1, fp);
+
+               fwrite(tile->data, tile->dataSize, 1, fp);
+       }
+
+       fclose(fp);
+}
+
+void OgreDetourTileCache::loadAll(Ogre::String filename)
+{
+       FILE* fp = fopen(filename.data(), "rb");
+       if (!fp) return;
+
+       // Read header.
+       TileCacheSetHeader header;
+       fread(&header, sizeof(TileCacheSetHeader), 1, fp);
+       if (header.magic != TILECACHESET_MAGIC)
+       {
+               fclose(fp);
+               return;
+       }
+       if (header.version != TILECACHESET_VERSION)
+       {
+               fclose(fp);
+               return;
+       }
+
+       m_recast->m_navMesh = dtAllocNavMesh();
+       if (!m_recast->m_navMesh)
+       {
+               fclose(fp);
+               return;
+       }
+       dtStatus status = m_recast->m_navMesh->init(&header.meshParams);
+       if (dtStatusFailed(status))
+       {
+               fclose(fp);
+               return;
+       }
+
+       m_tileCache = dtAllocTileCache();
+       if (!m_tileCache)
+       {
+               fclose(fp);
+               return;
+       }
+       status = m_tileCache->init(&header.cacheParams, m_talloc, m_tcomp, m_tmproc);
+       if (dtStatusFailed(status))
+       {
+               fclose(fp);
+               return;
+       }
+
+       // Read tiles.
+       for (int i = 0; i < header.numTiles; ++i)
+       {
+               TileCacheTileHeader tileHeader;
+               fread(&tileHeader, sizeof(tileHeader), 1, fp);
+               if (!tileHeader.tileRef || !tileHeader.dataSize)
+                       break;
+
+               unsigned char* data = (unsigned char*)dtAlloc(tileHeader.dataSize, DT_ALLOC_PERM);
+               if (!data) break;
+               memset(data, 0, tileHeader.dataSize);
+               fread(data, tileHeader.dataSize, 1, fp);
+
+               dtCompressedTileRef tile = 0;
+               m_tileCache->addTile(data, tileHeader.dataSize, DT_COMPRESSEDTILE_FREE_DATA, &tile);
+
+               if (tile)
+                       m_tileCache->buildNavMeshTile(tile, m_recast->m_navMesh);
+       }
+
+       fclose(fp);
+
+
+       // Config
+       // TODO handle this nicer, also inputGeom is not inited, making some functions crash
+       m_recast->m_cfg.ch = m_tileCache->getParams()->ch;
+       m_recast->m_cfg.cs = m_tileCache->getParams()->cs;
+       m_recast->m_cfg.tileSize = m_recast->m_navMesh->getParams()->tileWidth;
+       m_recast->m_cfg.height = m_tileCache->getParams()->height;
+       m_recast->m_cfg.width = m_tileCache->getParams()->width;
+
+       int width = m_tileCache->getParams()->width;
+       int height = m_tileCache->getParams()->height;
+
+       const float *bmin = m_tileCache->getParams()->orig;
+       float bmax[3];
+       bmax[0] = bmin[0] + width * m_recast->m_cfg.tileSize * m_recast->m_cfg.cs;
+       bmax[1] = bmin[1] + 100;      // TODO don't know how to calculate this
+       bmax[2] = bmin[2] + height * m_recast->m_cfg.tileSize * m_recast->m_cfg.cs;
+
+       rcVcopy(m_recast->m_cfg.bmin, bmin);
+       rcVcopy(m_recast->m_cfg.bmax, bmax);
+
+
+       m_cfg = m_recast->m_cfg;
+       m_cellSize = m_cfg.cs;
+       m_tileSize = m_cfg.tileSize;
+
+       int gw = 0, gh = 0;
+       rcCalcGridSize(m_cfg.bmin, m_cfg.bmax, m_cellSize, &gw, &gh);   // Calculates total size of voxel grid
+       const int ts = m_tileSize;
+       m_tw = (gw + ts-1) / ts;    // Tile width
+       m_th = (gh + ts-1) / ts;    // Tile height
+
+       // Init recast navmeshquery with created navmesh (in OgreRecast component)
+       m_recast->m_navQuery = dtAllocNavMeshQuery();
+       m_recast->m_navQuery->init(m_recast->m_navMesh, 2048);
+       // End config ////
+
+
+       Ogre::LogManager::getSingletonPtr()->logMessage("Total Voxels: "+Ogre::StringConverter::toString(gw) + " x " + Ogre::StringConverter::toString(gh));
+       Ogre::LogManager::getSingletonPtr()->logMessage("Tilesize: "+Ogre::StringConverter::toString(m_tileSize)+"  Cellsize: "+Ogre::StringConverter::toString(m_cellSize));
+       Ogre::LogManager::getSingletonPtr()->logMessage("Tiles: "+Ogre::StringConverter::toString(m_tw)+" x "+Ogre::StringConverter::toString(m_th));
+
+
+
+       // Max tiles and max polys affect how the tile IDs are caculated.
+       // There are 22 bits available for identifying a tile and a polygon.
+       int tileBits = rcMin((int)dtIlog2(dtNextPow2(m_tw*m_th*EXPECTED_LAYERS_PER_TILE)), 14);
+       if (tileBits > 14) tileBits = 14;
+       int polyBits = 22 - tileBits;
+       m_maxTiles = 1 << tileBits;
+       m_maxPolysPerTile = 1 << polyBits;
+       Ogre::LogManager::getSingletonPtr()->logMessage("Max Tiles: " + Ogre::StringConverter::toString(m_maxTiles));
+       Ogre::LogManager::getSingletonPtr()->logMessage("Max Polys: " + Ogre::StringConverter::toString(m_maxPolysPerTile));
+
+
+
+       // Build initial meshes
+       // Builds detour compatible navmesh from all tiles.
+       // A tile will have to be rebuilt if something changes, eg. a temporary obstacle is placed on it.
+       for (int y = 0; y < m_th; ++y)
+           for (int x = 0; x < m_tw; ++x)
+               m_tileCache->buildNavMeshTilesAt(x,y, m_recast->m_navMesh); // This immediately builds the tile, without the need of a dtTileCache::update()
+
+   //    m_cacheBuildTimeMs = ctx->getAccumulatedTime(RC_TIMER_TOTAL)/1000.0f;
+       m_cacheBuildMemUsage = m_talloc->high;
+
+
+       // Count the total size of all generated tiles of the tiled navmesh
+       const dtNavMesh* nav = m_recast->m_navMesh;
+       int navmeshMemUsage = 0;
+       for (int i = 0; i < nav->getMaxTiles(); ++i)
+       {
+           const dtMeshTile* tile = nav->getTile(i);
+           if (tile->header)
+               navmeshMemUsage += tile->dataSize;
+       }
+
+
+       Ogre::LogManager::getSingletonPtr()->logMessage("Navmesh Mem Usage = "+ Ogre::StringConverter::toString(navmeshMemUsage/1024.0f) +" kB");
+       Ogre::LogManager::getSingletonPtr()->logMessage("Tilecache Mem Usage = " +Ogre::StringConverter::toString(m_cacheCompressedSize/1024.0f) +" kB");
+}

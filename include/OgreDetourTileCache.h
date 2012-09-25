@@ -507,6 +507,11 @@ public:
 
     TileSelection getBounds(void);
 
+    void saveAll(Ogre::String filename);
+
+    void loadAll(Ogre::String filename);
+
+
 
     /**
       * Update (tick) the tilecache.
@@ -791,6 +796,26 @@ protected:
       * Used when DEBUG_DRAW_REBUILT_BB is true.
       **/
     Ogre::ManualObject* mDebugRebuiltBB;
+
+
+
+    static const int TILECACHESET_MAGIC = 'T'<<24 | 'S'<<16 | 'E'<<8 | 'T'; //'TSET';
+    static const int TILECACHESET_VERSION = 1;
+
+    struct TileCacheSetHeader
+    {
+           int magic;
+           int version;
+           int numTiles;
+           dtNavMeshParams meshParams;
+           dtTileCacheParams cacheParams;
+    };
+
+    struct TileCacheTileHeader
+    {
+           dtCompressedTileRef tileRef;
+           int dataSize;
+    };
 };
 
 #endif // OGREDETOURTILECACHE_H
