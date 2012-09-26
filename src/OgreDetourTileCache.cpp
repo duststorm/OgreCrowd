@@ -1312,6 +1312,7 @@ void OgreDetourTileCache::saveAll(Ogre::String filename)
        }
        memcpy(&header.cacheParams, m_tileCache->getParams(), sizeof(dtTileCacheParams));
        memcpy(&header.meshParams, m_recast->m_navMesh->getParams(), sizeof(dtNavMeshParams));
+       memcpy(&header.recastConfig, &m_cfg, sizeof(rcConfig));
        fwrite(&header, sizeof(TileCacheSetHeader), 1, fp);
 
        // Store tiles.
@@ -1376,6 +1377,8 @@ void OgreDetourTileCache::loadAll(Ogre::String filename)
                return;
        }
 
+       memcpy(&m_cfg, &header.recastConfig, sizeof(rcConfig));
+
        // Read tiles.
        for (int i = 0; i < header.numTiles; ++i)
        {
@@ -1399,41 +1402,35 @@ void OgreDetourTileCache::loadAll(Ogre::String filename)
        fclose(fp);
 
 
-       // Config
-       // TODO handle this nicer, also inputGeom is not inited, making some functions crash
-       m_recast->m_cfg.ch = m_tileCache->getParams()->ch;
-       m_recast->m_cfg.cs = m_tileCache->getParams()->cs;
-       m_recast->m_cfg.tileSize = m_recast->m_navMesh->getParams()->tileWidth;
-       m_recast->m_cfg.height = m_tileCache->getParams()->height;
-       m_recast->m_cfg.width = m_tileCache->getParams()->width;
-
-       int width = m_tileCache->getParams()->width;
-       int height = m_tileCache->getParams()->height;
-
-       const float *bmin = m_tileCache->getParams()->orig;
-       float bmax[3];
-       bmax[0] = bmin[0] + width * m_recast->m_cfg.tileSize * m_recast->m_cfg.cs;
-       bmax[1] = bmin[1] + 100;      // TODO don't know how to calculate this
-       bmax[2] = bmin[2] + height * m_recast->m_cfg.tileSize * m_recast->m_cfg.cs;
-
-       rcVcopy(m_recast->m_cfg.bmin, bmin);
-       rcVcopy(m_recast->m_cfg.bmax, bmax);
-
-
-       m_cfg = m_recast->m_cfg;
-       m_cellSize = m_cfg.cs;
-       m_tileSize = m_cfg.tileSize;
-
-       int gw = 0, gh = 0;
-       rcCalcGridSize(m_cfg.bmin, m_cfg.bmax, m_cellSize, &gw, &gh);   // Calculates total size of voxel grid
-       const int ts = m_tileSize;
-       m_tw = (gw + ts-1) / ts;    // Tile width
-       m_th = (gh + ts-1) / ts;    // Tile height
-
        // Init recast navmeshquery with created navmesh (in OgreRecast component)
        m_recast->m_navQuery = dtAllocNavMeshQuery();
        m_recast->m_navQuery->init(m_recast->m_navMesh, 2048);
-       // End config ////
+
+
+       // Config
+       // TODO handle this nicer, also inputGeom is not inited, making some functions crash
+       m_cellSize = m_cfg.cs;
+       m_tileSize = m_cfg.tileSize;
+
+       // cache bounding box
+       const float* bmin = m_cfg.bmin;
+       const float* bmax = m_cfg.bmax;
+
+       // Copy loaded config back to recast module
+       memcpy(&m_recast->m_cfg, &m_cfg, sizeof(rcConfig));
+
+       m_tileSize = m_cfg.tileSize;
+       m_cellSize = m_cfg.cs;
+       m_tcparams = header.cacheParams;
+
+       // Determine grid size (number of tiles) based on bounding box and grid cell size
+       int gw = 0, gh = 0;
+       rcCalcGridSize(bmin, bmax, m_cellSize, &gw, &gh);   // Calculates total size of voxel grid
+       const int ts = m_tileSize;
+       const int tw = (gw + ts-1) / ts;    // Tile width
+       const int th = (gh + ts-1) / ts;    // Tile height
+       m_tw = tw;
+       m_th = th;
 
 
        Ogre::LogManager::getSingletonPtr()->logMessage("Total Voxels: "+Ogre::StringConverter::toString(gw) + " x " + Ogre::StringConverter::toString(gh));
@@ -1441,16 +1438,18 @@ void OgreDetourTileCache::loadAll(Ogre::String filename)
        Ogre::LogManager::getSingletonPtr()->logMessage("Tiles: "+Ogre::StringConverter::toString(m_tw)+" x "+Ogre::StringConverter::toString(m_th));
 
 
-
        // Max tiles and max polys affect how the tile IDs are caculated.
        // There are 22 bits available for identifying a tile and a polygon.
-       int tileBits = rcMin((int)dtIlog2(dtNextPow2(m_tw*m_th*EXPECTED_LAYERS_PER_TILE)), 14);
+       int tileBits = rcMin((int)dtIlog2(dtNextPow2(tw*th*EXPECTED_LAYERS_PER_TILE)), 14);
        if (tileBits > 14) tileBits = 14;
        int polyBits = 22 - tileBits;
        m_maxTiles = 1 << tileBits;
        m_maxPolysPerTile = 1 << polyBits;
        Ogre::LogManager::getSingletonPtr()->logMessage("Max Tiles: " + Ogre::StringConverter::toString(m_maxTiles));
        Ogre::LogManager::getSingletonPtr()->logMessage("Max Polys: " + Ogre::StringConverter::toString(m_maxPolysPerTile));
+       // End config ////
+
+
 
 
 

@@ -800,7 +800,7 @@ protected:
 
 
     static const int TILECACHESET_MAGIC = 'T'<<24 | 'S'<<16 | 'E'<<8 | 'T'; //'TSET';
-    static const int TILECACHESET_VERSION = 1;
+    static const int TILECACHESET_VERSION = 2;
 
     struct TileCacheSetHeader
     {
@@ -809,6 +809,7 @@ protected:
            int numTiles;
            dtNavMeshParams meshParams;
            dtTileCacheParams cacheParams;
+           rcConfig recastConfig;
     };
 
     struct TileCacheTileHeader

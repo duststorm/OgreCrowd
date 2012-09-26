@@ -214,7 +214,7 @@ CrowdManager::NavmeshTileSet CrowdManager::calculatePopulatedArea()
 {
     NavmeshTileSet result;
 
-    Ogre::Vector3 cameraPos = mCamera->getPosition();
+    Ogre::Vector3 cameraPos = mCamera->getRealPosition();
     Ogre::Vector2 camTilePos = mDetourTileCache->getTileAtPos(cameraPos);
 
     result.xMin = camTilePos.x - (mPagedAreaDistance);
@@ -551,7 +551,11 @@ void CrowdManager::updatePagedAreaDebug(NavmeshTileSet pagedArea)
         if(scale.y < 5)
             scale.y = 10;
         areaSn->setScale(scale);
+        mAreaDebug->setVisible(mDebugDraw);
     }
+
+    if(!mDebugDraw)
+        return;
 
     Ogre::Vector3 position = areaBounds.getCenter();
     position.y = areaBounds.getMinimum().y;

@@ -36,7 +36,7 @@
 #include "OgreRecast.h"
 #include "RecastInputGeom.h"
 #include "DetourTileCache/DetourTileCacheBuilder.h"
-#include "include/OgreRecastNavmeshPruner.h"
+#include "OgreRecastNavmeshPruner.h"
 
 
 bool OgreRecast::STATIC_GEOM_DEBUG = false;
@@ -80,8 +80,8 @@ OgreRecast::OgreRecast(Ogre::SceneManager* sceneMgr, OgreRecastConfigParams conf
 
    // Setup the default query filter
    mFilter = new dtQueryFilter();
-   mFilter->setIncludeFlags(0xFFFF) ;
-   mFilter->setExcludeFlags(0);
+   mFilter->setIncludeFlags(0xFFFF);    // Include all
+   mFilter->setExcludeFlags(0);         // Exclude none
    // Area flags for polys to consider in search, and their cost
    mFilter->setAreaCost(SAMPLE_POLYAREA_GROUND, 1.0f);       // TODO have a way of configuring the filter
    mFilter->setAreaCost(DT_TILECACHE_WALKABLE_AREA, 1.0f);
