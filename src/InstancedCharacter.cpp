@@ -32,6 +32,8 @@
     THE SOFTWARE.
 
 */
+#include <OgrePrerequisites.h>
+#if OGRE_VERSION_MINOR >= 8
 
 #include "InstancedCharacter.h"
 #include "OgreRecastApplication.h"  // TODO remove this dependency
@@ -148,3 +150,5 @@ void InstancedCharacter::randomizeAnimationPosition()
 {
     mAnimState->setTimePosition( Ogre::Math::RangeRandom(0, mAnimState->getLength()) );
 }
+
+#endif

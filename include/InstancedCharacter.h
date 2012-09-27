@@ -36,6 +36,8 @@
 #ifndef INSTANCEDCHARACTER_H
 #define INSTANCEDCHARACTER_H
 
+#include <OgrePrerequisites.h>
+#if OGRE_VERSION_MINOR >= 8
 #include "Character.h"
 
 class InstancedCharacter : public Character
@@ -93,5 +95,6 @@ protected:
       **/
     Ogre::SceneNode *mDebugNode;
 };
+#endif
 
 #endif // INSTANCEDCHARACTER_H
