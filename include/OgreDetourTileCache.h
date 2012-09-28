@@ -507,9 +507,9 @@ public:
 
     TileSelection getBounds(void);
 
-    void saveAll(Ogre::String filename);
+    bool saveAll(Ogre::String filename);
 
-    void loadAll(Ogre::String filename);
+    bool loadAll(Ogre::String filename);
 
 
 

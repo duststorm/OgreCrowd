@@ -1291,13 +1291,18 @@ std::vector<dtCompressedTileRef> OgreDetourTileCache::getTilesContainingBox(Ogre
     return result;
 }
 
-void OgreDetourTileCache::saveAll(Ogre::String filename)
+bool OgreDetourTileCache::saveAll(Ogre::String filename)
 {
-       if (!m_tileCache) return;
+    if (!m_tileCache) {
+        Ogre::LogManager::getSingletonPtr()->logMessage("Error: OgreDetourTileCache::saveAll("+filename+"). Could not save tilecache, no tilecache to save.");
+        return false;
+    }
 
        FILE* fp = fopen(filename.data(), "wb");
-       if (!fp)
-               return;
+       if (!fp) {
+           Ogre::LogManager::getSingletonPtr()->logMessage("Error: OgreDetourTileCache::saveAll("+filename+"). Could not save file.");
+           return false;
+       }
 
 // Store header.
        TileCacheSetHeader header;
@@ -1330,51 +1335,61 @@ void OgreDetourTileCache::saveAll(Ogre::String filename)
        }
 
        fclose(fp);
+       return true;
 }
 
-void OgreDetourTileCache::loadAll(Ogre::String filename)
+bool OgreDetourTileCache::loadAll(Ogre::String filename)
 {
        FILE* fp = fopen(filename.data(), "rb");
-       if (!fp) return;
+       if (!fp) {
+           Ogre::LogManager::getSingletonPtr()->logMessage("Error: OgreDetourTileCache::loadAll("+filename+"). Could not open file.");
+           return false;
+       }
 
        // Read header.
        TileCacheSetHeader header;
        fread(&header, sizeof(TileCacheSetHeader), 1, fp);
        if (header.magic != TILECACHESET_MAGIC)
        {
-               fclose(fp);
-               return;
+           fclose(fp);
+           Ogre::LogManager::getSingletonPtr()->logMessage("Error: OgreDetourTileCache::loadAll("+filename+"). File does not appear to contain valid tilecache data.");
+           return false;
        }
        if (header.version != TILECACHESET_VERSION)
        {
-               fclose(fp);
-               return;
+           fclose(fp);
+           Ogre::LogManager::getSingletonPtr()->logMessage("Error: OgreDetourTileCache::loadAll("+filename+"). File contains a different version of the tilecache data format ("+Ogre::StringConverter::toString(header.version)+" instead of "+Ogre::StringConverter::toString(TILECACHESET_VERSION)+").");
+           return false;
        }
 
        m_recast->m_navMesh = dtAllocNavMesh();
        if (!m_recast->m_navMesh)
        {
-               fclose(fp);
-               return;
+           fclose(fp);
+           Ogre::LogManager::getSingletonPtr()->logMessage("Error: OgreDetourTileCache::loadAll("+filename+"). Could not allocate navmesh.");
+           return false;
        }
        dtStatus status = m_recast->m_navMesh->init(&header.meshParams);
        if (dtStatusFailed(status))
        {
-               fclose(fp);
-               return;
+           fclose(fp);
+           Ogre::LogManager::getSingletonPtr()->logMessage("Error: OgreDetourTileCache::loadAll("+filename+"). Could not init navmesh.");
+           return false;
        }
 
        m_tileCache = dtAllocTileCache();
        if (!m_tileCache)
        {
-               fclose(fp);
-               return;
+           fclose(fp);
+           Ogre::LogManager::getSingletonPtr()->logMessage("Error: OgreDetourTileCache::loadAll("+filename+"). Could not allocate tilecache.");
+           return false;
        }
        status = m_tileCache->init(&header.cacheParams, m_talloc, m_tcomp, m_tmproc);
        if (dtStatusFailed(status))
        {
-               fclose(fp);
-               return;
+           fclose(fp);
+           Ogre::LogManager::getSingletonPtr()->logMessage("Error: OgreDetourTileCache::loadAll("+filename+"). Could not init tilecache.");
+           return false;
        }
 
        memcpy(&m_cfg, &header.recastConfig, sizeof(rcConfig));
@@ -1477,4 +1492,6 @@ void OgreDetourTileCache::loadAll(Ogre::String filename)
 
        Ogre::LogManager::getSingletonPtr()->logMessage("Navmesh Mem Usage = "+ Ogre::StringConverter::toString(navmeshMemUsage/1024.0f) +" kB");
        Ogre::LogManager::getSingletonPtr()->logMessage("Tilecache Mem Usage = " +Ogre::StringConverter::toString(m_cacheCompressedSize/1024.0f) +" kB");
+
+       return true;
 }
