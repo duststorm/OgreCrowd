@@ -450,10 +450,10 @@ bool OgreRecastTerrainApplication::keyPressed( const OIS::KeyEvent &arg )
             bb = mDetourTileCache->getTileAlignedBox(bb);
 
             // Create partial input geom only for the tiles we want to rebuild
-            InputGeom geom = InputGeom(bb, mTerrainGroup, mNavmeshEnts);
+            InputGeom *geom = new InputGeom(bb, mTerrainGroup, mNavmeshEnts);
 
             // Rebuild tiles that touch inputGeom bounding box
-            mDetourTileCache->buildTiles(&geom);
+            mDetourTileCache->buildTiles(geom);
         }
     }
 
