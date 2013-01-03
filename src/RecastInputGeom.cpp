@@ -337,6 +337,10 @@ InputGeom::InputGeom(Ogre::TerrainGroup *terrainGroup, std::vector<Ogre::Entity*
                  ++x;
              }
 
+			 // if we just did the final square, we're done
+			 if(x+1+MapSize == (MapSize*MapSize)-1)
+				 break;
+
              // make a square of 2 triangles
              meshIndices[trnCount][i] = x;
              meshIndices[trnCount][i+1] = x + 1;
@@ -345,10 +349,6 @@ InputGeom::InputGeom(Ogre::TerrainGroup *terrainGroup, std::vector<Ogre::Entity*
              meshIndices[trnCount][i+3] = x + 1;
              meshIndices[trnCount][i+4] = x + 1 + MapSize;
              meshIndices[trnCount][i+5] = x + MapSize;
-
-             // if we just did the final square, we're done
-             if(x+1+MapSize == (MapSize*MapSize)-1)
-                 break;
 
              i += 6;
          }
